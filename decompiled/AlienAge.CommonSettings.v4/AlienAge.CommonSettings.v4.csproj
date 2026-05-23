@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>AlienAge.CommonSettings.v4</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net472</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="AlienAge.CommonSettings.v4.dll.licenses" />
+    <EmbeddedResource Include="AlienAge.CommonSettings.v4.dll.licenses" LogicalName="AlienAge.CommonSettings.v4.dll.licenses" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="DevExpress.XtraEditors.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraEditors.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="DevExpress.XtraBars.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraBars.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Connectivity.v4">
+      <HintPath>..\..\backup\AlienAge.Connectivity.v4.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

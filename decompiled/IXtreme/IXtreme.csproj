@@ -1,0 +1,161 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>IXtreme</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Resources.Extensions" Version="8.0.0" />
+  </ItemGroup>
+  <PropertyGroup>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="IXtreme.exe.licenses" />
+    <EmbeddedResource Include="IXtreme.exe.licenses" LogicalName="IXtreme.exe.licenses" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="DevExpress.XtraReports.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraReports.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Printing.v23.2.Core">
+      <HintPath>..\..\backup\DevExpress.Printing.v23.2.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Utils.v23.2">
+      <HintPath>..\..\backup\DevExpress.Utils.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraEditors.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraEditors.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraBars.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraBars.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraPrinting.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraPrinting.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.CommonSettings.v4">
+      <HintPath>..\..\backup\AlienAge.CommonSettings.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="DevExpress.XtraGrid.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraGrid.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="DevExpress.XtraLayout.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraLayout.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.CustomGrid.v4">
+      <HintPath>..\..\backup\AlienAge.CustomGrid.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraVerticalGrid.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraVerticalGrid.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.ArabicTheology.v4">
+      <HintPath>..\..\backup\AlienAge.ArabicTheology.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Connectivity.v4">
+      <HintPath>..\..\backup\AlienAge.Connectivity.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraPivotGrid.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraPivotGrid.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.TermlySettings.v4">
+      <HintPath>..\..\backup\AlienAge.TermlySettings.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraCharts.v23.2.UI">
+      <HintPath>..\..\backup\DevExpress.XtraCharts.v23.2.UI.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Charts.v23.2.Core">
+      <HintPath>..\..\backup\DevExpress.Charts.v23.2.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.ReportHeaders.v4">
+      <HintPath>..\..\backup\AlienAge.ReportHeaders.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.GradingScales.v4">
+      <HintPath>..\..\backup\AlienAge.GradingScales.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="DevExpress.DataAccess.v23.2">
+      <HintPath>..\..\backup\DevExpress.DataAccess.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.PivotGrid.v23.2.Core">
+      <HintPath>..\..\backup\DevExpress.PivotGrid.v23.2.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Data.v23.2">
+      <HintPath>..\..\backup\DevExpress.Data.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="SMDFastLane">
+      <HintPath>..\..\backup\SMDFastLane.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="DevExpress.XtraCharts.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraCharts.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraNavBar.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraNavBar.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Accounts.v4">
+      <HintPath>..\..\backup\AlienAge.Accounts.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraWizard.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraWizard.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.ExtremeMessenger.v4">
+      <HintPath>..\..\backup\AlienAge.ExtremeMessenger.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Drawing.v23.2">
+      <HintPath>..\..\backup\DevExpress.Drawing.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Security.v4">
+      <HintPath>..\..\backup\AlienAge.Security.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Data.Desktop.v23.2">
+      <HintPath>..\..\backup\DevExpress.Data.Desktop.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Semesters.v4">
+      <HintPath>..\..\backup\AlienAge.Semesters.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.ReportDesigner.v4">
+      <HintPath>..\..\backup\AlienAge.ReportDesigner.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="BiotimeDevice">
+      <HintPath>..\..\backup\BiotimeDevice.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Office.Interop.Excel">
+      <HintPath>..\..\backup\Microsoft.Office.Interop.Excel.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="office">
+      <HintPath>..\..\backup\office.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Interop.zkemkeeper">
+      <HintPath>..\..\backup\Interop.zkemkeeper.dll</HintPath>
+      <EmbedInteropTypes>True</EmbedInteropTypes>
+    </Reference>
+    <Reference Include="DevExpress.BonusSkins.v23.2">
+      <HintPath>..\..\backup\DevExpress.BonusSkins.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework">
+      <HintPath>..\..\backup\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.DataSync.v4">
+      <HintPath>..\..\backup\AlienAge.DataSync.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\backup\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

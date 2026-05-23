@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>AlienAge.Accounts.v4</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net472</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup />
+  <ItemGroup />
+  <ItemGroup>
+    <Reference Include="DevExpress.XtraBars.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraBars.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="AlienAge.Connectivity.v4">
+      <HintPath>..\..\backup\AlienAge.Connectivity.v4.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

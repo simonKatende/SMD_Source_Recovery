@@ -1,0 +1,39 @@
+# Recovery-specific
+backup/
+smoke_test/
+
+# Build outputs
+**/bin/
+**/obj/
+**/AppPackages/
+**/BundleArtifacts/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+
+# Rider / ReSharper
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+# Build logs (we keep these in notes/ instead of letting them litter)
+*.binlog
+
+# NuGet
+packages/
+*.nupkg
+
+# OS junk
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Temp & autosaves
+*.tmp
+*~
+*.swp

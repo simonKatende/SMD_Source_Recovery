@@ -1,0 +1,11 @@
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.NavigationForms\usrStudentList.cs(38,7): error CS0246: The type or namespace name 'zkemkeeper' could not be found (are you missing a using directive or an assembly reference?) [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme\MainForm.cs(74,7): error CS0246: The type or namespace name 'zkemkeeper' could not be found (are you missing a using directive or an assembly reference?) [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\Microsoft.Office.Interop.Excel\DocEvents_Event.cs(6,2): error CS0596: The Guid attribute must be specified with the ComImport attribute [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\Microsoft.Office.Interop.Excel\AppEvents_Event.cs(6,2): error CS0596: The Guid attribute must be specified with the ComImport attribute [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\Microsoft.Office.Interop.Excel\WorkbookEvents_Event.cs(6,2): error CS0596: The Guid attribute must be specified with the ComImport attribute [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+
+Build FAILED.
+    1 Warning(s)
+    5 Error(s)
+
+Time Elapsed 00:00:09.62

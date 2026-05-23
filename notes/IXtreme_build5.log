@@ -1,0 +1,17 @@
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.NavigationForms\usrStudentList.cs(38,7): error CS0246: The type or namespace name 'zkemkeeper' could not be found (are you missing a using directive or an assembly reference?) [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme\MainForm.cs(74,7): error CS0246: The type or namespace name 'zkemkeeper' could not be found (are you missing a using directive or an assembly reference?) [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\StudentImport.cs(36,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\EmployeeImport.cs(35,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\StudentImport.cs(38,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\StudentImport.cs(40,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\EmployeeImport.cs(37,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\StudentImport.cs(42,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\StudentImport.cs(44,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\EmployeeImport.cs(39,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\EmployeeImport.cs(41,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+
+Build FAILED.
+    0 Warning(s)
+    11 Error(s)
+
+Time Elapsed 00:00:05.19

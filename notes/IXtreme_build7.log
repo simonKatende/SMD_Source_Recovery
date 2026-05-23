@@ -1,0 +1,15 @@
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\SynchPaymentsFromOnline.cs(118,51): error CS1501: No overload for method 'FeesBalance' takes 2 arguments [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\SynchPaymentsFromOnline.cs(282,51): error CS1501: No overload for method 'FeesBalance' takes 2 arguments [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.DialogForms\SynchPaymentsFromOnline.cs(473,8): error CS0165: Use of unassigned local variable 'num' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.NavigationForms\usrOnlinePayments.cs(123,8): error CS0165: Use of unassigned local variable 'num' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.NavigationForms\usrOnlinePayments.cs(156,8): error CS0165: Use of unassigned local variable 'num' [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.NavigationForms\usrStudentList.cs(1062,92): error CS1620: Argument 4 must be passed with the 'out' keyword [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme.NavigationForms\usrStudentList.cs(1062,120): error CS1620: Argument 5 must be passed with the 'out' keyword [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme\MainForm.cs(10417,92): error CS1620: Argument 4 must be passed with the 'out' keyword [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+C:\SMD_Source_Recovery\decompiled\IXtreme\I_Xtreme\MainForm.cs(10417,120): error CS1620: Argument 5 must be passed with the 'out' keyword [C:\SMD_Source_Recovery\decompiled\IXtreme\IXtreme.csproj]
+
+Build FAILED.
+    86 Warning(s)
+    9 Error(s)
+
+Time Elapsed 00:00:07.04

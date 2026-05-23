@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>ExtremeMessenger</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="ExtremeMessenger.exe.licenses" />
+    <EmbeddedResource Include="ExtremeMessenger.exe.licenses" LogicalName="ExtremeMessenger.exe.licenses" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="DevExpress.Utils.v23.2">
+      <HintPath>..\..\backup\DevExpress.Utils.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraEditors.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraEditors.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraBars.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraBars.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="AlienAge.ExtremeMessenger.v4">
+      <HintPath>..\..\backup\AlienAge.ExtremeMessenger.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraLayout.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraLayout.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Connectivity.v4">
+      <HintPath>..\..\backup\AlienAge.Connectivity.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.CommonSettings.v4">
+      <HintPath>..\..\backup\AlienAge.CommonSettings.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Data.v23.2">
+      <HintPath>..\..\backup\DevExpress.Data.v23.2.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

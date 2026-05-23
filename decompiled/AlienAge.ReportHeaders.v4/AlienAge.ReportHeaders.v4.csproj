@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>AlienAge.ReportHeaders.v4</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net472</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="AlienAge.ReportHeaders.v4.dll.licenses" />
+    <EmbeddedResource Include="AlienAge.ReportHeaders.v4.dll.licenses" LogicalName="AlienAge.ReportHeaders.v4.dll.licenses" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="DevExpress.Utils.v23.2">
+      <HintPath>..\..\backup\DevExpress.Utils.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraPrinting.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraPrinting.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="DevExpress.XtraReports.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraReports.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Printing.v23.2.Core">
+      <HintPath>..\..\backup\DevExpress.Printing.v23.2.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.BonusSkins.v23.2">
+      <HintPath>..\..\backup\DevExpress.BonusSkins.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Connectivity.v4">
+      <HintPath>..\..\backup\AlienAge.Connectivity.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Security.v4">
+      <HintPath>..\..\backup\AlienAge.Security.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraEditors.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraEditors.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Data.v23.2">
+      <HintPath>..\..\backup\DevExpress.Data.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Drawing.v23.2">
+      <HintPath>..\..\backup\DevExpress.Drawing.v23.2.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

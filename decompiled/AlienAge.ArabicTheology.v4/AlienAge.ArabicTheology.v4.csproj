@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>AlienAge.ArabicTheology.v4</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net472</TargetFramework>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="AlienAge.ArabicTheology.v4.dll.licenses" />
+    <EmbeddedResource Include="AlienAge.ArabicTheology.v4.dll.licenses" LogicalName="AlienAge.ArabicTheology.v4.dll.licenses" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="DevExpress.XtraEditors.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraEditors.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="DevExpress.Data.v23.2">
+      <HintPath>..\..\backup\DevExpress.Data.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraGrid.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraGrid.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Utils.v23.2">
+      <HintPath>..\..\backup\DevExpress.Utils.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraLayout.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraLayout.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Connectivity.v4">
+      <HintPath>..\..\backup\AlienAge.Connectivity.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Security.v4">
+      <HintPath>..\..\backup\AlienAge.Security.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Semesters.v4">
+      <HintPath>..\..\backup\AlienAge.Semesters.v4.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

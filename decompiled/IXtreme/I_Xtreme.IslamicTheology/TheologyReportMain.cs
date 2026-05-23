@@ -1,0 +1,896 @@
+using System;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using AlienAge.ReportHeaders;
+using DevExpress.Drawing;
+using DevExpress.Drawing.Printing;
+using DevExpress.Utils;
+using DevExpress.XtraPrinting;
+using DevExpress.XtraPrinting.BarCode;
+using DevExpress.XtraPrinting.Shape;
+using DevExpress.XtraReports.Parameters;
+using DevExpress.XtraReports.UI;
+using I_Xtreme.IslamicTheology.TheologyStudSourceTableAdapters;
+
+namespace I_Xtreme.IslamicTheology;
+
+public class TheologyReportMain : XtraReport
+{
+	private IContainer components = null;
+
+	private DetailBand Detail;
+
+	private XRControlStyle Title;
+
+	private XRControlStyle FieldCaption;
+
+	private XRControlStyle PageInfo;
+
+	private XRControlStyle DataField;
+
+	private TopMarginBand topMarginBand1;
+
+	private BottomMarginBand bottomMarginBand1;
+
+	private Parameter semester;
+
+	private Parameter studentClass;
+
+	private XRSubreport xrSubreport2;
+
+	private GroupFooterBand footerLearningOutcomeScale;
+
+	private XRLabel xrLabel13;
+
+	private GroupHeaderBand groupHeaderBand1;
+
+	private XRLabel xrLabel9;
+
+	private XRLabel lblStudentNumber2;
+
+	private PageFooterBand PageFooter;
+
+	private XRShape xrShape1;
+
+	private XRTable tblTermBegins;
+
+	private XRTableRow xrTableRow6;
+
+	private XRTableCell xrTableCell2;
+
+	private XRTableRow xrTableRow1;
+
+	private XRTableCell lblNextTermBegins;
+
+	private XRBarCode xrBarCode2;
+
+	private SubBand SubBand2;
+
+	private XRPictureBox xrPictureBox1;
+
+	private XRTable xrTable2;
+
+	private XRTableRow xrTableRow8;
+
+	private XRTableCell xrTableCell24;
+
+	private XRTableCell xrTableCell28;
+
+	private XRTableRow xrTableRow2;
+
+	private XRTableCell xrTableCell17;
+
+	private XRTableCell xrTableCell21;
+
+	private XRTable xrTable3;
+
+	private XRTableRow xrTableRow12;
+
+	private XRTableCell xrTableCell34;
+
+	private XRTableRow xrTableRow9;
+
+	private XRTableCell xrTableCell29;
+
+	private XRTable xrTable5;
+
+	private XRTableRow xrTableRow14;
+
+	private XRTableCell xrTableCell37;
+
+	private XRTableRow xrTableRow13;
+
+	private XRTableCell lblSemester;
+
+	private XRShape xrShape4;
+
+	private XRShape xrShape2;
+
+	private XRLabel xrLabel1;
+
+	private XRLabel lblClassteacherComment;
+
+	private XRLabel xrLabel17;
+
+	private XRShape xrShape3;
+
+	private XRLabel lblHeadteacherComment;
+
+	private XRLabel xrLabel19;
+
+	private XRLabel xrLabel15;
+
+	private XRShape xrShape5;
+
+	private XRShape xrShape6;
+
+	private XRLabel xrLabel2;
+
+	private TheologyStudSource theologyStudSource1;
+
+	private tbl_StudTableAdapter tbl_StudTableAdapter;
+
+	private XRLabel xrLabel4;
+
+	private XRLabel xrLabel3;
+
+	private XRTableCell xrTableCell1;
+
+	private XRTableCell xrTableCell3;
+
+	private XRTableCell xrTableCell4;
+
+	private XRTableCell xrTableCell5;
+
+	private XRTableCell xrTableCell6;
+
+	private XRTableCell xrTableCell7;
+
+	private string studNo = string.Empty;
+
+	protected override void Dispose(bool disposing)
+	{
+		if (disposing && components != null)
+		{
+			components.Dispose();
+		}
+		base.Dispose(disposing);
+	}
+
+	private void InitializeComponent()
+	{
+		ShapeLine shape = new ShapeLine();
+		ShapeRectangle shape2 = new ShapeRectangle();
+		ShapeLine shape3 = new ShapeLine();
+		ShapeRectangle shape4 = new ShapeRectangle();
+		EAN13Generator symbology = new EAN13Generator();
+		ShapeRectangle shapeRectangle = new ShapeRectangle();
+		ShapePolygon shape5 = new ShapePolygon();
+		Detail = new DetailBand();
+		xrSubreport2 = new XRSubreport();
+		Title = new XRControlStyle();
+		FieldCaption = new XRControlStyle();
+		PageInfo = new XRControlStyle();
+		DataField = new XRControlStyle();
+		topMarginBand1 = new TopMarginBand();
+		bottomMarginBand1 = new BottomMarginBand();
+		semester = new Parameter();
+		studentClass = new Parameter();
+		footerLearningOutcomeScale = new GroupFooterBand();
+		lblHeadteacherComment = new XRLabel();
+		xrLabel19 = new XRLabel();
+		xrLabel15 = new XRLabel();
+		xrShape5 = new XRShape();
+		xrShape6 = new XRShape();
+		xrShape2 = new XRShape();
+		xrLabel1 = new XRLabel();
+		lblClassteacherComment = new XRLabel();
+		xrLabel17 = new XRLabel();
+		xrShape3 = new XRShape();
+		SubBand2 = new SubBand();
+		xrBarCode2 = new XRBarCode();
+		tblTermBegins = new XRTable();
+		xrTableRow6 = new XRTableRow();
+		xrTableCell2 = new XRTableCell();
+		xrTableRow1 = new XRTableRow();
+		lblNextTermBegins = new XRTableCell();
+		xrLabel13 = new XRLabel();
+		groupHeaderBand1 = new GroupHeaderBand();
+		xrLabel2 = new XRLabel();
+		xrShape4 = new XRShape();
+		xrPictureBox1 = new XRPictureBox();
+		xrTable2 = new XRTable();
+		xrTableRow8 = new XRTableRow();
+		xrTableCell24 = new XRTableCell();
+		xrTableCell28 = new XRTableCell();
+		xrTableRow2 = new XRTableRow();
+		xrTableCell17 = new XRTableCell();
+		xrTableCell21 = new XRTableCell();
+		xrTable3 = new XRTable();
+		xrTableRow12 = new XRTableRow();
+		xrTableCell34 = new XRTableCell();
+		xrTableRow9 = new XRTableRow();
+		xrTableCell29 = new XRTableCell();
+		xrTable5 = new XRTable();
+		xrTableRow14 = new XRTableRow();
+		xrTableCell37 = new XRTableCell();
+		xrTableRow13 = new XRTableRow();
+		lblSemester = new XRTableCell();
+		lblStudentNumber2 = new XRLabel();
+		xrLabel9 = new XRLabel();
+		PageFooter = new PageFooterBand();
+		xrShape1 = new XRShape();
+		theologyStudSource1 = new TheologyStudSource();
+		tbl_StudTableAdapter = new tbl_StudTableAdapter();
+		xrLabel3 = new XRLabel();
+		xrLabel4 = new XRLabel();
+		xrTableCell1 = new XRTableCell();
+		xrTableCell3 = new XRTableCell();
+		xrTableCell4 = new XRTableCell();
+		xrTableCell5 = new XRTableCell();
+		xrTableCell6 = new XRTableCell();
+		xrTableCell7 = new XRTableCell();
+		((ISupportInitialize)tblTermBegins).BeginInit();
+		((ISupportInitialize)xrTable2).BeginInit();
+		((ISupportInitialize)xrTable3).BeginInit();
+		((ISupportInitialize)xrTable5).BeginInit();
+		((ISupportInitialize)theologyStudSource1).BeginInit();
+		((ISupportInitialize)this).BeginInit();
+		Detail.Controls.AddRange(new XRControl[1] { xrSubreport2 });
+		Detail.HeightF = 32.57898f;
+		Detail.Name = "Detail";
+		Detail.Padding = new PaddingInfo(0, 0, 0, 0, 100f);
+		Detail.StyleName = "DataField";
+		Detail.TextAlignment = TextAlignment.TopLeft;
+		xrSubreport2.LocationFloat = new PointFloat(0f, 0f);
+		xrSubreport2.Name = "xrSubreport2";
+		xrSubreport2.ParameterBindings.Add(new ParameterBinding("studentNo", null, "tbl_Stud.StudentNumber"));
+		xrSubreport2.ReportSource = new TheologyReportSub();
+		xrSubreport2.SizeF = new SizeF(778.9999f, 23f);
+		Title.BackColor = Color.White;
+		Title.BorderColor = SystemColors.ControlText;
+		Title.Borders = BorderSide.None;
+		Title.BorderWidth = 1f;
+		Title.Font = new DXFont("Times New Roman", 24f);
+		Title.ForeColor = Color.Black;
+		Title.Name = "Title";
+		FieldCaption.BackColor = Color.White;
+		FieldCaption.BorderColor = SystemColors.ControlText;
+		FieldCaption.Borders = BorderSide.None;
+		FieldCaption.BorderWidth = 1f;
+		FieldCaption.Font = new DXFont("Times New Roman", 10f, DXFontStyle.Bold);
+		FieldCaption.ForeColor = Color.Black;
+		FieldCaption.Name = "FieldCaption";
+		PageInfo.BackColor = Color.White;
+		PageInfo.BorderColor = SystemColors.ControlText;
+		PageInfo.Borders = BorderSide.None;
+		PageInfo.BorderWidth = 1f;
+		PageInfo.Font = new DXFont("Times New Roman", 8f);
+		PageInfo.ForeColor = Color.Black;
+		PageInfo.Name = "PageInfo";
+		DataField.BackColor = Color.White;
+		DataField.BorderColor = SystemColors.ControlText;
+		DataField.Borders = BorderSide.None;
+		DataField.BorderWidth = 1f;
+		DataField.Font = new DXFont("Times New Roman", 8f);
+		DataField.ForeColor = SystemColors.ControlText;
+		DataField.Name = "DataField";
+		DataField.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		topMarginBand1.HeightF = 23f;
+		topMarginBand1.Name = "topMarginBand1";
+		bottomMarginBand1.HeightF = 23f;
+		bottomMarginBand1.Name = "bottomMarginBand1";
+		semester.Description = "Semester:";
+		semester.Name = "semester";
+		studentClass.Description = "Student Class:";
+		studentClass.Name = "studentClass";
+		footerLearningOutcomeScale.Controls.AddRange(new XRControl[12]
+		{
+			xrLabel4, xrLabel3, lblHeadteacherComment, xrLabel19, xrLabel15, xrShape5, xrShape6, xrShape2, xrLabel1, lblClassteacherComment,
+			xrLabel17, xrShape3
+		});
+		footerLearningOutcomeScale.HeightF = 168.9849f;
+		footerLearningOutcomeScale.KeepTogether = true;
+		footerLearningOutcomeScale.Name = "footerLearningOutcomeScale";
+		footerLearningOutcomeScale.SubBands.AddRange(new SubBand[1] { SubBand2 });
+		lblHeadteacherComment.BorderColor = Color.Black;
+		lblHeadteacherComment.BorderDashStyle = BorderDashStyle.Solid;
+		lblHeadteacherComment.Borders = BorderSide.None;
+		lblHeadteacherComment.CanGrow = false;
+		lblHeadteacherComment.Font = new DXFont("Cascadia Mono", 11f);
+		lblHeadteacherComment.ForeColor = Color.Black;
+		lblHeadteacherComment.LocationFloat = new PointFloat(7.500005f, 120f);
+		lblHeadteacherComment.Name = "lblHeadteacherComment";
+		lblHeadteacherComment.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		lblHeadteacherComment.SizeF = new SizeF(355.5f, 23f);
+		lblHeadteacherComment.StylePriority.UseBorderColor = false;
+		lblHeadteacherComment.StylePriority.UseBorderDashStyle = false;
+		lblHeadteacherComment.StylePriority.UseBorders = false;
+		lblHeadteacherComment.StylePriority.UseFont = false;
+		lblHeadteacherComment.StylePriority.UseForeColor = false;
+		lblHeadteacherComment.StylePriority.UsePadding = false;
+		lblHeadteacherComment.StylePriority.UseTextAlignment = false;
+		lblHeadteacherComment.TextAlignment = TextAlignment.MiddleLeft;
+		lblHeadteacherComment.WordWrap = false;
+		xrLabel19.BackColor = Color.Transparent;
+		xrLabel19.BorderColor = Color.Black;
+		xrLabel19.BorderDashStyle = BorderDashStyle.Dash;
+		xrLabel19.Borders = BorderSide.None;
+		xrLabel19.CanGrow = false;
+		xrLabel19.Font = new DXFont("Consolas", 11f, DXFontStyle.Bold);
+		xrLabel19.ForeColor = Color.Black;
+		xrLabel19.LocationFloat = new PointFloat(7.500013f, 96.50002f);
+		xrLabel19.Name = "xrLabel19";
+		xrLabel19.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		xrLabel19.SizeF = new SizeF(196f, 23f);
+		xrLabel19.StylePriority.UseBackColor = false;
+		xrLabel19.StylePriority.UseBorderColor = false;
+		xrLabel19.StylePriority.UseBorderDashStyle = false;
+		xrLabel19.StylePriority.UseBorders = false;
+		xrLabel19.StylePriority.UseFont = false;
+		xrLabel19.StylePriority.UseForeColor = false;
+		xrLabel19.StylePriority.UseTextAlignment = false;
+		xrLabel19.Text = "Headteacher Remarks:";
+		xrLabel19.TextAlignment = TextAlignment.BottomLeft;
+		xrLabel19.WordWrap = false;
+		xrLabel15.Font = new DXFont("KFGQPC Uthman Taha Naskh", 12f, DXFontStyle.Bold);
+		xrLabel15.LocationFloat = new PointFloat(670f, 95.5f);
+		xrLabel15.Multiline = true;
+		xrLabel15.Name = "xrLabel15";
+		xrLabel15.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		xrLabel15.RightToLeft = RightToLeft.Yes;
+		xrLabel15.SizeF = new SizeF(100f, 23f);
+		xrLabel15.StylePriority.UseFont = false;
+		xrLabel15.StylePriority.UseTextAlignment = false;
+		xrLabel15.Text = "التوقيع";
+		xrLabel15.TextAlignment = TextAlignment.MiddleLeft;
+		xrShape5.LocationFloat = new PointFloat(616.5f, 93.5f);
+		xrShape5.Name = "xrShape5";
+		xrShape5.Shape = shape;
+		xrShape5.SizeF = new SizeF(2f, 64f);
+		xrShape6.LocationFloat = new PointFloat(1f, 93.5f);
+		xrShape6.Name = "xrShape6";
+		xrShape6.Shape = shape2;
+		xrShape6.SizeF = new SizeF(774.9998f, 64f);
+		xrShape2.LocationFloat = new PointFloat(616f, 10f);
+		xrShape2.Name = "xrShape2";
+		xrShape2.Shape = shape3;
+		xrShape2.SizeF = new SizeF(2f, 64f);
+		xrLabel1.Font = new DXFont("KFGQPC Uthman Taha Naskh", 12f, DXFontStyle.Bold);
+		xrLabel1.LocationFloat = new PointFloat(670f, 11.99999f);
+		xrLabel1.Multiline = true;
+		xrLabel1.Name = "xrLabel1";
+		xrLabel1.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		xrLabel1.RightToLeft = RightToLeft.Yes;
+		xrLabel1.SizeF = new SizeF(100f, 23f);
+		xrLabel1.StylePriority.UseFont = false;
+		xrLabel1.StylePriority.UseTextAlignment = false;
+		xrLabel1.Text = "التوقيع";
+		xrLabel1.TextAlignment = TextAlignment.MiddleLeft;
+		lblClassteacherComment.BorderColor = Color.Black;
+		lblClassteacherComment.BorderDashStyle = BorderDashStyle.Solid;
+		lblClassteacherComment.Borders = BorderSide.None;
+		lblClassteacherComment.CanGrow = false;
+		lblClassteacherComment.Font = new DXFont("Cascadia Mono", 11f);
+		lblClassteacherComment.ForeColor = Color.Black;
+		lblClassteacherComment.LocationFloat = new PointFloat(7.000001f, 36.49998f);
+		lblClassteacherComment.Multiline = true;
+		lblClassteacherComment.Name = "lblClassteacherComment";
+		lblClassteacherComment.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		lblClassteacherComment.SizeF = new SizeF(356f, 23f);
+		lblClassteacherComment.StylePriority.UseBorderColor = false;
+		lblClassteacherComment.StylePriority.UseBorderDashStyle = false;
+		lblClassteacherComment.StylePriority.UseBorders = false;
+		lblClassteacherComment.StylePriority.UseFont = false;
+		lblClassteacherComment.StylePriority.UseForeColor = false;
+		lblClassteacherComment.StylePriority.UsePadding = false;
+		lblClassteacherComment.StylePriority.UseTextAlignment = false;
+		lblClassteacherComment.TextAlignment = TextAlignment.MiddleLeft;
+		xrLabel17.BackColor = Color.Transparent;
+		xrLabel17.BorderColor = Color.Black;
+		xrLabel17.BorderDashStyle = BorderDashStyle.Dash;
+		xrLabel17.Borders = BorderSide.None;
+		xrLabel17.CanGrow = false;
+		xrLabel17.Font = new DXFont("Cascadia Mono", 11f, DXFontStyle.Bold);
+		xrLabel17.ForeColor = Color.Black;
+		xrLabel17.LocationFloat = new PointFloat(7.000017f, 12.99998f);
+		xrLabel17.Name = "xrLabel17";
+		xrLabel17.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		xrLabel17.SizeF = new SizeF(221f, 23f);
+		xrLabel17.StylePriority.UseBackColor = false;
+		xrLabel17.StylePriority.UseBorderColor = false;
+		xrLabel17.StylePriority.UseBorderDashStyle = false;
+		xrLabel17.StylePriority.UseBorders = false;
+		xrLabel17.StylePriority.UseFont = false;
+		xrLabel17.StylePriority.UseForeColor = false;
+		xrLabel17.StylePriority.UseTextAlignment = false;
+		xrLabel17.Text = "Classteacher Remarks:";
+		xrLabel17.TextAlignment = TextAlignment.MiddleLeft;
+		xrLabel17.WordWrap = false;
+		xrShape3.LocationFloat = new PointFloat(1f, 10f);
+		xrShape3.Name = "xrShape3";
+		xrShape3.Shape = shape4;
+		xrShape3.SizeF = new SizeF(774.9998f, 64f);
+		SubBand2.Controls.AddRange(new XRControl[2] { xrBarCode2, tblTermBegins });
+		SubBand2.HeightF = 50f;
+		SubBand2.Name = "SubBand2";
+		xrBarCode2.AutoModule = true;
+		xrBarCode2.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[StudentNumber]")
+		});
+		xrBarCode2.ForeColor = Color.DarkSlateBlue;
+		xrBarCode2.LocationFloat = new PointFloat(653.9999f, 0f);
+		xrBarCode2.Module = 1f;
+		xrBarCode2.Name = "xrBarCode2";
+		xrBarCode2.Padding = new PaddingInfo(0, 0, 0, 0, 100f);
+		xrBarCode2.SizeF = new SizeF(125f, 50f);
+		xrBarCode2.StylePriority.UseForeColor = false;
+		xrBarCode2.StylePriority.UsePadding = false;
+		xrBarCode2.Symbology = symbology;
+		tblTermBegins.Borders = BorderSide.All;
+		tblTermBegins.LocationFloat = new PointFloat(0f, 0f);
+		tblTermBegins.Name = "tblTermBegins";
+		tblTermBegins.Rows.AddRange(new XRTableRow[2] { xrTableRow6, xrTableRow1 });
+		tblTermBegins.SizeF = new SizeF(180.75f, 50f);
+		tblTermBegins.StylePriority.UseBorders = false;
+		xrTableRow6.Cells.AddRange(new XRTableCell[1] { xrTableCell2 });
+		xrTableRow6.Name = "xrTableRow6";
+		xrTableRow6.Weight = 1.0;
+		xrTableCell2.BackColor = Color.Black;
+		xrTableCell2.BorderDashStyle = BorderDashStyle.Solid;
+		xrTableCell2.Borders = BorderSide.All;
+		xrTableCell2.Font = new DXFont("KFGQPC Uthman Taha Naskh", 12f, DXFontStyle.Bold);
+		xrTableCell2.ForeColor = Color.White;
+		xrTableCell2.Multiline = true;
+		xrTableCell2.Name = "xrTableCell2";
+		xrTableCell2.RightToLeft = RightToLeft.Yes;
+		xrTableCell2.StylePriority.UseBackColor = false;
+		xrTableCell2.StylePriority.UseBorderDashStyle = false;
+		xrTableCell2.StylePriority.UseBorders = false;
+		xrTableCell2.StylePriority.UseFont = false;
+		xrTableCell2.StylePriority.UseForeColor = false;
+		xrTableCell2.StylePriority.UseTextAlignment = false;
+		xrTableCell2.Text = "تبدأ الفترة القادمة";
+		xrTableCell2.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell2.Weight = 0.5614441542693065;
+		xrTableRow1.Cells.AddRange(new XRTableCell[1] { lblNextTermBegins });
+		xrTableRow1.Name = "xrTableRow1";
+		xrTableRow1.Weight = 1.0;
+		lblNextTermBegins.BorderDashStyle = BorderDashStyle.Solid;
+		lblNextTermBegins.Borders = BorderSide.All;
+		lblNextTermBegins.Font = new DXFont("Tahoma", 9.75f, DXFontStyle.Regular, DXGraphicsUnit.Point, new DXFontAdditionalProperty[1]
+		{
+			new DXFontAdditionalProperty("GdiCharSet", (byte)0)
+		});
+		lblNextTermBegins.ForeColor = Color.Black;
+		lblNextTermBegins.Name = "lblNextTermBegins";
+		lblNextTermBegins.StylePriority.UseBorderDashStyle = false;
+		lblNextTermBegins.StylePriority.UseBorders = false;
+		lblNextTermBegins.StylePriority.UseFont = false;
+		lblNextTermBegins.StylePriority.UseForeColor = false;
+		lblNextTermBegins.StylePriority.UseTextAlignment = false;
+		lblNextTermBegins.TextAlignment = TextAlignment.MiddleCenter;
+		lblNextTermBegins.Weight = 0.5614441542693065;
+		xrLabel13.BackColor = Color.Transparent;
+		xrLabel13.CanGrow = false;
+		xrLabel13.Font = new DXFont("SimSun-ExtB", 12f, DXFontStyle.Bold);
+		xrLabel13.ForeColor = Color.Black;
+		xrLabel13.LocationFloat = new PointFloat(207.5f, 106.5f);
+		xrLabel13.Name = "xrLabel13";
+		xrLabel13.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		xrLabel13.SizeF = new SizeF(363.4999f, 22.99999f);
+		xrLabel13.StylePriority.UseBackColor = false;
+		xrLabel13.StylePriority.UseFont = false;
+		xrLabel13.StylePriority.UseForeColor = false;
+		xrLabel13.StylePriority.UseTextAlignment = false;
+		xrLabel13.Text = "xrLabel13";
+		xrLabel13.TextAlignment = TextAlignment.MiddleCenter;
+		xrLabel13.WordWrap = false;
+		groupHeaderBand1.Controls.AddRange(new XRControl[7] { xrLabel2, xrShape4, xrPictureBox1, xrTable2, xrTable3, xrTable5, xrLabel13 });
+		groupHeaderBand1.GroupFields.AddRange(new GroupField[1]
+		{
+			new GroupField("StudentNumber", XRColumnSortOrder.Ascending)
+		});
+		groupHeaderBand1.HeightF = 264.0416f;
+		groupHeaderBand1.KeepTogether = true;
+		groupHeaderBand1.Name = "groupHeaderBand1";
+		groupHeaderBand1.PageBreak = PageBreak.BeforeBandExceptFirstEntry;
+		xrLabel2.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[StudentNumber]")
+		});
+		xrLabel2.LocationFloat = new PointFloat(20.46391f, 100f);
+		xrLabel2.Multiline = true;
+		xrLabel2.Name = "xrLabel2";
+		xrLabel2.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		xrLabel2.SizeF = new SizeF(100f, 23f);
+		xrLabel2.Text = "xrLabel2";
+		xrLabel2.Visible = false;
+		xrLabel2.AfterPrint += xrLabel2_AfterPrint;
+		xrShape4.LineWidth = 3;
+		xrShape4.LocationFloat = new PointFloat(194.25f, 100f);
+		xrShape4.Name = "xrShape4";
+		shapeRectangle.Fillet = 60;
+		xrShape4.Shape = shapeRectangle;
+		xrShape4.SizeF = new SizeF(390.4999f, 35.00001f);
+		xrShape4.Stretch = true;
+		xrPictureBox1.BorderColor = Color.Gainsboro;
+		xrPictureBox1.Borders = BorderSide.All;
+		xrPictureBox1.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "ImageSource", "[Picture]")
+		});
+		xrPictureBox1.LocationFloat = new PointFloat(667f, 141.5f);
+		xrPictureBox1.Name = "xrPictureBox1";
+		xrPictureBox1.SizeF = new SizeF(107f, 109f);
+		xrPictureBox1.Sizing = ImageSizeMode.StretchImage;
+		xrPictureBox1.StylePriority.UseBorderColor = false;
+		xrPictureBox1.StylePriority.UseBorders = false;
+		xrTable2.BorderColor = Color.MidnightBlue;
+		xrTable2.Borders = BorderSide.All;
+		xrTable2.LocationFloat = new PointFloat(3.500001f, 143.5f);
+		xrTable2.Name = "xrTable2";
+		xrTable2.Padding = new PaddingInfo(0, 0, 0, 0, 100f);
+		xrTable2.Rows.AddRange(new XRTableRow[2] { xrTableRow8, xrTableRow2 });
+		xrTable2.SizeF = new SizeF(662.5f, 50f);
+		xrTable2.StylePriority.UseBorderColor = false;
+		xrTable2.StylePriority.UseBorders = false;
+		xrTable2.StylePriority.UsePadding = false;
+		xrTable2.StylePriority.UseTextAlignment = false;
+		xrTable2.TextAlignment = TextAlignment.MiddleLeft;
+		xrTableRow8.Cells.AddRange(new XRTableCell[3] { xrTableCell24, xrTableCell1, xrTableCell28 });
+		xrTableRow8.Name = "xrTableRow8";
+		xrTableRow8.Weight = 1.0;
+		xrTableCell24.Font = new DXFont("KFGQPC Uthman Taha Naskh", 12f);
+		xrTableCell24.Multiline = true;
+		xrTableCell24.Name = "xrTableCell24";
+		xrTableCell24.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell24.RightToLeft = RightToLeft.Yes;
+		xrTableCell24.StylePriority.UseFont = false;
+		xrTableCell24.StylePriority.UsePadding = false;
+		xrTableCell24.StylePriority.UseTextAlignment = false;
+		xrTableCell24.Text = "الاسم";
+		xrTableCell24.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell24.Weight = 0.9724526877269858;
+		xrTableCell28.Font = new DXFont("KFGQPC Uthman Taha Naskh", 12f);
+		xrTableCell28.Multiline = true;
+		xrTableCell28.Name = "xrTableCell28";
+		xrTableCell28.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell28.RightToLeft = RightToLeft.Yes;
+		xrTableCell28.StylePriority.UseFont = false;
+		xrTableCell28.StylePriority.UsePadding = false;
+		xrTableCell28.StylePriority.UseTextAlignment = false;
+		xrTableCell28.Text = "الجنس";
+		xrTableCell28.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell28.Weight = 0.33139287595710387;
+		xrTableRow2.Cells.AddRange(new XRTableCell[3] { xrTableCell17, xrTableCell4, xrTableCell21 });
+		xrTableRow2.Name = "xrTableRow2";
+		xrTableRow2.Weight = 1.0;
+		xrTableCell17.CanShrink = true;
+		xrTableCell17.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[fullNameAr]")
+		});
+		xrTableCell17.Font = new DXFont("KFGQPC Uthman Taha Naskh", 12f, DXFontStyle.Bold);
+		xrTableCell17.Name = "xrTableCell17";
+		xrTableCell17.RightToLeft = RightToLeft.Yes;
+		xrTableCell17.StylePriority.UseFont = false;
+		xrTableCell17.StylePriority.UseTextAlignment = false;
+		xrTableCell17.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell17.Weight = 0.9724528259197923;
+		xrTableCell17.WordWrap = false;
+		xrTableCell17.PrintOnPage += xrTableCell17_PrintOnPage;
+		xrTableCell21.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[SexAr]")
+		});
+		xrTableCell21.Font = new DXFont("Tahoma", 12f, DXFontStyle.Bold);
+		xrTableCell21.Multiline = true;
+		xrTableCell21.Name = "xrTableCell21";
+		xrTableCell21.RightToLeft = RightToLeft.Yes;
+		xrTableCell21.StylePriority.UseFont = false;
+		xrTableCell21.StylePriority.UseTextAlignment = false;
+		xrTableCell21.Text = "xrTableCell21";
+		xrTableCell21.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell21.Weight = 0.33139310034617264;
+		xrTable3.BorderColor = Color.MidnightBlue;
+		xrTable3.Borders = BorderSide.All;
+		xrTable3.LocationFloat = new PointFloat(3.500001f, 200.5f);
+		xrTable3.Name = "xrTable3";
+		xrTable3.Padding = new PaddingInfo(0, 0, 0, 0, 100f);
+		xrTable3.Rows.AddRange(new XRTableRow[2] { xrTableRow12, xrTableRow9 });
+		xrTable3.SizeF = new SizeF(482.9166f, 49.99998f);
+		xrTable3.StylePriority.UseBorderColor = false;
+		xrTable3.StylePriority.UseBorders = false;
+		xrTable3.StylePriority.UsePadding = false;
+		xrTable3.StylePriority.UseTextAlignment = false;
+		xrTable3.TextAlignment = TextAlignment.MiddleLeft;
+		xrTableRow12.Cells.AddRange(new XRTableCell[3] { xrTableCell34, xrTableCell3, xrTableCell6 });
+		xrTableRow12.Name = "xrTableRow12";
+		xrTableRow12.Weight = 1.0;
+		xrTableCell34.Font = new DXFont("KFGQPC Uthman Taha Naskh", 14f);
+		xrTableCell34.Multiline = true;
+		xrTableCell34.Name = "xrTableCell34";
+		xrTableCell34.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell34.RightToLeft = RightToLeft.Yes;
+		xrTableCell34.StylePriority.UseFont = false;
+		xrTableCell34.StylePriority.UsePadding = false;
+		xrTableCell34.StylePriority.UseTextAlignment = false;
+		xrTableCell34.Text = "الصف";
+		xrTableCell34.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell34.Weight = 0.24233149172987406;
+		xrTableRow9.Cells.AddRange(new XRTableCell[3] { xrTableCell29, xrTableCell5, xrTableCell7 });
+		xrTableRow9.Name = "xrTableRow9";
+		xrTableRow9.Weight = 1.0;
+		xrTableCell29.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[ClassIdAr]")
+		});
+		xrTableCell29.Font = new DXFont("KFGQPC Uthman Taha Naskh", 10f, DXFontStyle.Bold);
+		xrTableCell29.Multiline = true;
+		xrTableCell29.Name = "xrTableCell29";
+		xrTableCell29.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell29.StylePriority.UseFont = false;
+		xrTableCell29.StylePriority.UsePadding = false;
+		xrTableCell29.StylePriority.UseTextAlignment = false;
+		xrTableCell29.Text = "xrTableCell29";
+		xrTableCell29.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell29.Weight = 0.24233149172987406;
+		xrTable5.BorderColor = Color.MidnightBlue;
+		xrTable5.Borders = BorderSide.All;
+		xrTable5.LocationFloat = new PointFloat(486.4166f, 200.5f);
+		xrTable5.Name = "xrTable5";
+		xrTable5.Padding = new PaddingInfo(0, 0, 0, 0, 100f);
+		xrTable5.Rows.AddRange(new XRTableRow[2] { xrTableRow14, xrTableRow13 });
+		xrTable5.SizeF = new SizeF(179.5833f, 49.99998f);
+		xrTable5.StylePriority.UseBorderColor = false;
+		xrTable5.StylePriority.UseBorders = false;
+		xrTable5.StylePriority.UsePadding = false;
+		xrTable5.StylePriority.UseTextAlignment = false;
+		xrTable5.TextAlignment = TextAlignment.MiddleLeft;
+		xrTableRow14.Cells.AddRange(new XRTableCell[1] { xrTableCell37 });
+		xrTableRow14.Name = "xrTableRow14";
+		xrTableRow14.Weight = 1.0;
+		xrTableCell37.Font = new DXFont("KFGQPC Uthman Taha Naskh", 14f, DXFontStyle.Bold);
+		xrTableCell37.Multiline = true;
+		xrTableCell37.Name = "xrTableCell37";
+		xrTableCell37.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell37.RightToLeft = RightToLeft.Yes;
+		xrTableCell37.StylePriority.UseFont = false;
+		xrTableCell37.StylePriority.UsePadding = false;
+		xrTableCell37.StylePriority.UseTextAlignment = false;
+		xrTableCell37.Text = "الفترة الدراسية";
+		xrTableCell37.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell37.Weight = 0.655303159322368;
+		xrTableRow13.Cells.AddRange(new XRTableCell[1] { lblSemester });
+		xrTableRow13.Name = "xrTableRow13";
+		xrTableRow13.Weight = 1.0;
+		lblSemester.CanGrow = false;
+		lblSemester.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[SemesterId]")
+		});
+		lblSemester.Font = new DXFont("Tahoma", 8.5f, DXFontStyle.Bold);
+		lblSemester.Name = "lblSemester";
+		lblSemester.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		lblSemester.StylePriority.UseFont = false;
+		lblSemester.StylePriority.UsePadding = false;
+		lblSemester.StylePriority.UseTextAlignment = false;
+		lblSemester.Text = "lblSemester";
+		lblSemester.TextAlignment = TextAlignment.MiddleCenter;
+		lblSemester.Weight = 0.655303159322368;
+		lblSemester.WordWrap = false;
+		lblStudentNumber2.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[StudentNumber]")
+		});
+		lblStudentNumber2.Font = new DXFont("Cascadia Code", 11.25f, DXFontStyle.Regular, DXGraphicsUnit.Point, new DXFontAdditionalProperty[1]
+		{
+			new DXFontAdditionalProperty("GdiCharSet", (byte)0)
+		});
+		lblStudentNumber2.LocationFloat = new PointFloat(600f, 5.500031f);
+		lblStudentNumber2.Multiline = true;
+		lblStudentNumber2.Name = "lblStudentNumber2";
+		lblStudentNumber2.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		lblStudentNumber2.SizeF = new SizeF(178f, 23f);
+		lblStudentNumber2.StylePriority.UseFont = false;
+		lblStudentNumber2.StylePriority.UseTextAlignment = false;
+		lblStudentNumber2.Text = "lblStudentNumber2";
+		lblStudentNumber2.TextAlignment = TextAlignment.MiddleRight;
+		xrLabel9.CanGrow = false;
+		xrLabel9.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[fullNameAr]")
+		});
+		xrLabel9.Font = new DXFont("Cascadia Code", 11.25f, DXFontStyle.Regular, DXGraphicsUnit.Point, new DXFontAdditionalProperty[1]
+		{
+			new DXFontAdditionalProperty("GdiCharSet", (byte)0)
+		});
+		xrLabel9.LocationFloat = new PointFloat(28.5f, 5.500031f);
+		xrLabel9.Name = "xrLabel9";
+		xrLabel9.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		xrLabel9.SizeF = new SizeF(403f, 23f);
+		xrLabel9.StylePriority.UseFont = false;
+		xrLabel9.StylePriority.UseTextAlignment = false;
+		xrLabel9.Text = "xrLabel9";
+		xrLabel9.TextAlignment = TextAlignment.MiddleLeft;
+		xrLabel9.WordWrap = false;
+		PageFooter.Controls.AddRange(new XRControl[3] { xrShape1, lblStudentNumber2, xrLabel9 });
+		PageFooter.HeightF = 35.16229f;
+		PageFooter.Name = "PageFooter";
+		xrShape1.Angle = 270;
+		xrShape1.FillColor = Color.DimGray;
+		xrShape1.LocationFloat = new PointFloat(0f, 5.500031f);
+		xrShape1.Name = "xrShape1";
+		xrShape1.Shape = shape5;
+		xrShape1.SizeF = new SizeF(21.99999f, 23f);
+		theologyStudSource1.DataSetName = "TheologyStudSource";
+		theologyStudSource1.SchemaSerializationMode = SchemaSerializationMode.IncludeSchema;
+		tbl_StudTableAdapter.ClearBeforeFill = true;
+		xrLabel3.BackColor = Color.Transparent;
+		xrLabel3.BorderColor = Color.Black;
+		xrLabel3.BorderDashStyle = BorderDashStyle.Dash;
+		xrLabel3.Borders = BorderSide.None;
+		xrLabel3.CanGrow = false;
+		xrLabel3.Font = new DXFont("KFGQPC Uthman Taha Naskh", 12f, DXFontStyle.Bold);
+		xrLabel3.ForeColor = Color.Black;
+		xrLabel3.LocationFloat = new PointFloat(392.5f, 12.5f);
+		xrLabel3.Name = "xrLabel3";
+		xrLabel3.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		xrLabel3.RightToLeft = RightToLeft.Yes;
+		xrLabel3.SizeF = new SizeF(221f, 23f);
+		xrLabel3.StylePriority.UseBackColor = false;
+		xrLabel3.StylePriority.UseBorderColor = false;
+		xrLabel3.StylePriority.UseBorderDashStyle = false;
+		xrLabel3.StylePriority.UseBorders = false;
+		xrLabel3.StylePriority.UseFont = false;
+		xrLabel3.StylePriority.UseForeColor = false;
+		xrLabel3.StylePriority.UseTextAlignment = false;
+		xrLabel3.Text = "ملاحظة مشرف الفصل:";
+		xrLabel3.TextAlignment = TextAlignment.MiddleLeft;
+		xrLabel3.WordWrap = false;
+		xrLabel4.BackColor = Color.Transparent;
+		xrLabel4.BorderColor = Color.Black;
+		xrLabel4.BorderDashStyle = BorderDashStyle.Dash;
+		xrLabel4.Borders = BorderSide.None;
+		xrLabel4.CanGrow = false;
+		xrLabel4.Font = new DXFont("KFGQPC Uthman Taha Naskh", 12f, DXFontStyle.Bold);
+		xrLabel4.ForeColor = Color.Black;
+		xrLabel4.LocationFloat = new PointFloat(392.5f, 96.99999f);
+		xrLabel4.Name = "xrLabel4";
+		xrLabel4.Padding = new PaddingInfo(2, 2, 0, 0, 100f);
+		xrLabel4.RightToLeft = RightToLeft.Yes;
+		xrLabel4.SizeF = new SizeF(221f, 23f);
+		xrLabel4.StylePriority.UseBackColor = false;
+		xrLabel4.StylePriority.UseBorderColor = false;
+		xrLabel4.StylePriority.UseBorderDashStyle = false;
+		xrLabel4.StylePriority.UseBorders = false;
+		xrLabel4.StylePriority.UseFont = false;
+		xrLabel4.StylePriority.UseForeColor = false;
+		xrLabel4.StylePriority.UseTextAlignment = false;
+		xrLabel4.Text = "ملاحظة مدير المدرسة:";
+		xrLabel4.TextAlignment = TextAlignment.BottomLeft;
+		xrLabel4.WordWrap = false;
+		xrTableCell1.Font = new DXFont("Cascadia Mono", 10f);
+		xrTableCell1.Multiline = true;
+		xrTableCell1.Name = "xrTableCell1";
+		xrTableCell1.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell1.StylePriority.UseFont = false;
+		xrTableCell1.StylePriority.UsePadding = false;
+		xrTableCell1.StylePriority.UseTextAlignment = false;
+		xrTableCell1.Text = "Name";
+		xrTableCell1.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell1.Weight = 1.1317631444387424;
+		xrTableCell3.Font = new DXFont("Cascadia Mono", 10f);
+		xrTableCell3.Multiline = true;
+		xrTableCell3.Name = "xrTableCell3";
+		xrTableCell3.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell3.StylePriority.UseFont = false;
+		xrTableCell3.StylePriority.UsePadding = false;
+		xrTableCell3.StylePriority.UseTextAlignment = false;
+		xrTableCell3.Text = "Class";
+		xrTableCell3.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell3.Weight = 0.24233149172987406;
+		xrTableCell4.CanGrow = false;
+		xrTableCell4.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[fullName]")
+		});
+		xrTableCell4.Font = new DXFont("Tahoma", 12f, DXFontStyle.Bold);
+		xrTableCell4.Name = "xrTableCell4";
+		xrTableCell4.StylePriority.UseFont = false;
+		xrTableCell4.StylePriority.UseTextAlignment = false;
+		xrTableCell4.Text = "xrTableCell4";
+		xrTableCell4.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell4.Weight = 1.131762781856867;
+		xrTableCell4.WordWrap = false;
+		xrTableCell5.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[ClassIdEn]")
+		});
+		xrTableCell5.Font = new DXFont("Tahoma", 10f, DXFontStyle.Bold);
+		xrTableCell5.Multiline = true;
+		xrTableCell5.Name = "xrTableCell5";
+		xrTableCell5.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell5.StylePriority.UseFont = false;
+		xrTableCell5.StylePriority.UsePadding = false;
+		xrTableCell5.StylePriority.UseTextAlignment = false;
+		xrTableCell5.Text = "xrTableCell5";
+		xrTableCell5.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell5.Weight = 0.24233149172987406;
+		xrTableCell6.Font = new DXFont("KFGQPC Uthman Taha Naskh", 14f);
+		xrTableCell6.Multiline = true;
+		xrTableCell6.Name = "xrTableCell6";
+		xrTableCell6.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell6.StylePriority.UseFont = false;
+		xrTableCell6.StylePriority.UsePadding = false;
+		xrTableCell6.StylePriority.UseTextAlignment = false;
+		xrTableCell6.Text = "القسم";
+		xrTableCell6.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell6.Weight = 0.24233149172987406;
+		xrTableCell7.ExpressionBindings.AddRange(new ExpressionBinding[1]
+		{
+			new ExpressionBinding("BeforePrint", "Text", "[StreamAr]")
+		});
+		xrTableCell7.Font = new DXFont("KFGQPC Uthman Taha Naskh", 10f, DXFontStyle.Bold);
+		xrTableCell7.Multiline = true;
+		xrTableCell7.Name = "xrTableCell7";
+		xrTableCell7.Padding = new PaddingInfo(5, 2, 0, 0, 100f);
+		xrTableCell7.RightToLeft = RightToLeft.Yes;
+		xrTableCell7.StylePriority.UseFont = false;
+		xrTableCell7.StylePriority.UsePadding = false;
+		xrTableCell7.StylePriority.UseTextAlignment = false;
+		xrTableCell7.Text = "xrTableCell7";
+		xrTableCell7.TextAlignment = TextAlignment.MiddleCenter;
+		xrTableCell7.Weight = 0.24233149172987406;
+		base.Bands.AddRange(new Band[6] { Detail, topMarginBand1, bottomMarginBand1, groupHeaderBand1, footerLearningOutcomeScale, PageFooter });
+		base.ComponentStorage.AddRange(new IComponent[1] { theologyStudSource1 });
+		base.DataAdapter = tbl_StudTableAdapter;
+		base.DataMember = "tbl_Stud";
+		base.DataSource = theologyStudSource1;
+		base.Margins = new DXMargins(23f, 23f, 23f, 23f);
+		base.PageHeight = 1169;
+		base.PageWidth = 827;
+		base.PaperKind = DXPaperKind.A4;
+		base.ShowPreviewMarginLines = false;
+		base.ShowPrintMarginsWarning = false;
+		base.SnapGridSize = 0.5f;
+		base.StyleSheet.AddRange(new XRControlStyle[4] { Title, FieldCaption, PageInfo, DataField });
+		base.Version = "22.2";
+		BeforePrint += MainReportNCDescriptive_BeforePrint;
+		((ISupportInitialize)tblTermBegins).EndInit();
+		((ISupportInitialize)xrTable2).EndInit();
+		((ISupportInitialize)xrTable3).EndInit();
+		((ISupportInitialize)xrTable5).EndInit();
+		((ISupportInitialize)theologyStudSource1).EndInit();
+		((ISupportInitialize)this).EndInit();
+	}
+
+	public TheologyReportMain()
+	{
+		InitializeComponent();
+		lblSemester.Text = ReportParameters.Semester;
+	}
+
+	private void MainReportNCDescriptive_BeforePrint(object sender, CancelEventArgs e)
+	{
+		xrShape4.BorderColor = Color.FromArgb((int)ReportColors.ReportBannerColor);
+		xrShape4.FillColor = Color.FromArgb((int)ReportColors.ReportBannerColor);
+		xrLabel13.ForeColor = Color.FromArgb((int)ReportColors.ReportForeColor);
+		xrLabel13.Text = "END OF " + ReportParameters.Semester + " REPORT CARD";
+		lblNextTermBegins.Text = ReportHeader.NextTermBeginsOn.ToString("dd-MMM-yyyy");
+	}
+
+	private void xrTableCell17_PrintOnPage(object sender, PrintOnPageEventArgs e)
+	{
+		string text = xrTableCell17.Text;
+		((XRLabel)sender).Bookmark += text;
+	}
+
+	private void xrLabel2_AfterPrint(object sender, EventArgs e)
+	{
+		studNo = xrLabel2.Text;
+	}
+}

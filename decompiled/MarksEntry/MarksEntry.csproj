@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <AssemblyName>MarksEntry</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>True</UseWindowsForms>
+    <TargetFramework>net472</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <RootNamespace />
+  </PropertyGroup>
+  <ItemGroup>
+    <None Remove="MarksEntry.exe.licenses" />
+    <EmbeddedResource Include="MarksEntry.exe.licenses" LogicalName="MarksEntry.exe.licenses" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="DevExpress.Utils.v23.2">
+      <HintPath>..\..\backup\DevExpress.Utils.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraEditors.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraEditors.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraGrid.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraGrid.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="AlienAge.Connectivity.v4">
+      <HintPath>..\..\backup\AlienAge.Connectivity.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraBars.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraBars.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.GradingScales.v4">
+      <HintPath>..\..\backup\AlienAge.GradingScales.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.CustomGrid.v4">
+      <HintPath>..\..\backup\AlienAge.CustomGrid.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraPrinting.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraPrinting.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.XtraVerticalGrid.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraVerticalGrid.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.CommonSettings.v4">
+      <HintPath>..\..\backup\AlienAge.CommonSettings.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Core" />
+    <Reference Include="DevExpress.XtraLayout.v23.2">
+      <HintPath>..\..\backup\DevExpress.XtraLayout.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Data.v23.2">
+      <HintPath>..\..\backup\DevExpress.Data.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.Semesters.v4">
+      <HintPath>..\..\backup\AlienAge.Semesters.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="AlienAge.TermlySettings.v4">
+      <HintPath>..\..\backup\AlienAge.TermlySettings.v4.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.BonusSkins.v23.2">
+      <HintPath>..\..\backup\DevExpress.BonusSkins.v23.2.dll</HintPath>
+    </Reference>
+    <Reference Include="DevExpress.Printing.v23.2.Core">
+      <HintPath>..\..\backup\DevExpress.Printing.v23.2.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="DevExpress.Drawing.v23.2">
+      <HintPath>..\..\backup\DevExpress.Drawing.v23.2.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
