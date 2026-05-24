@@ -26,6 +26,8 @@ public class usrStudentAccounts : XtraUserControl
 {
 	private int hotTrackRow = int.MinValue;
 
+	private readonly string _classScope;
+
 	private IContainer components = null;
 
 	private MyGridControl f;
@@ -49,6 +51,8 @@ public class usrStudentAccounts : XtraUserControl
 	private GridColumn gridColSex;
 
 	private GridColumn gridColDB;
+
+	private GridColumn gridColClass;
 
 	private GridColumn gridColSemester;
 
@@ -77,13 +81,15 @@ public class usrStudentAccounts : XtraUserControl
 			dataTable.Columns.Add("Stream", typeof(string));
 			dataTable.Columns.Add("Sex", typeof(string));
 			dataTable.Columns.Add("DB", typeof(string));
+			dataTable.Columns.Add("Class", typeof(string));
 			dataTable.Columns.Add("Semester", typeof(string));
 			dataTable.Columns.Add("B/F", typeof(double));
 			dataTable.Columns.Add("Required", typeof(double));
 			dataTable.Columns.Add("TotalRequired", typeof(double));
 			dataTable.Columns.Add("Paid", typeof(double));
 			dataTable.Columns.Add("Balance", typeof(double));
-			SqlDataAdapter sqlDataAdapter = new SqlDataAdapter($"SELECT UPPER(fullName) AS Name, StudentNumber AS StudentNo, StreamId AS Stream,ClassId,Sex,StudentID, StudyStatus AS DB FROM tbl_Stud WHERE ClassId='{StudentOptions.ActiveClass()}'", DataConnection.ConnectToDatabase());
+			string classFilter = (_classScope == "All Classes") ? "" : $" WHERE ClassId='{_classScope}'";
+			SqlDataAdapter sqlDataAdapter = new SqlDataAdapter($"SELECT UPPER(fullName) AS Name, StudentNumber AS StudentNo, StreamId AS Stream,ClassId,Sex,StudentID, StudyStatus AS DB FROM tbl_Stud{classFilter}", DataConnection.ConnectToDatabase());
 			DataSet dataSet = new DataSet();
 			sqlDataAdapter.Fill(dataSet, "studentsList");
 			DataTable dataTable2 = new DataTable();
@@ -112,7 +118,7 @@ public class usrStudentAccounts : XtraUserControl
 							double num3 = Convert.ToDouble(row2["PreviousBalance"]) + Convert.ToDouble(row3["Required"]);
 							double num4 = Convert.ToDouble(row3["Paid"]);
 							double num5 = num3 - num4;
-							dataTable.Rows.Add(row["Name"], row["StudentNo"], row["StudentID"], row["Stream"], row["Sex"], row["DB"], StudentOptions.ActiveSemester(), num, num2, num3, num4, num5);
+							dataTable.Rows.Add(row["Name"], row["StudentNo"], row["StudentID"], row["Stream"], row["Sex"], row["DB"], row["ClassId"], StudentOptions.ActiveSemester(), num, num2, num3, num4, num5);
 						}
 					}
 				}
@@ -136,13 +142,14 @@ public class usrStudentAccounts : XtraUserControl
 							double num8 = Convert.ToDouble(row4["Required"]);
 							double num9 = Convert.ToDouble(row4["Paid"]);
 							double num10 = num8 - num9;
-							dataTable.Rows.Add(row["Name"], row["StudentNo"], row["StudentID"], row["Stream"], row["Sex"], row["DB"], StudentOptions.ActiveSemester(), num6, num7, num8, num9, num10);
+							dataTable.Rows.Add(row["Name"], row["StudentNo"], row["StudentID"], row["Stream"], row["Sex"], row["DB"], row["ClassId"], StudentOptions.ActiveSemester(), num6, num7, num8, num9, num10);
 						}
 					}
 					continue;
 				}
 			}
-			string selectCommandText3 = string.Format("SELECT UPPER(t1.StudentNumber) AS StudentNo,s.StudentID,SUM(t1.Debit) AS Required, SUM(t1.Credit) AS Paid,SUM(t1.Debit)-SUM(t1.Credit) AS Balance,UPPER(s.fullName) AS Name,(s.StreamId) AS Stream,(s.StudyStatus) AS DB,t1.SemesterId,s.Sex,s.ClassId  FROM FeesPayment t1 INNER JOIN tbl_Stud s ON t1.StudentNumber=s.StudentNumber  WHERE NOT EXISTS (SELECT * FROM FeesPayment t2 WHERE t2.SemesterId='{0}' AND t1.StudentNumber=t2.StudentNumber) AND t1.SemesterId='{0}' AND ClassId='{1}' Group by t1.StudentNumber,s.fullName,s.StreamId,s.StudyStatus,t1.SemesterId,s.Sex,s.ClassId,s.StudentID", GetPreviousSemester(StudentOptions.ActiveSemester()), StudentOptions.ActiveSemester(), StudentOptions.ActiveClass());
+			string classFilter3 = (_classScope == "All Classes") ? "" : " AND ClassId='{1}'";
+			string selectCommandText3 = string.Format("SELECT UPPER(t1.StudentNumber) AS StudentNo,s.StudentID,SUM(t1.Debit) AS Required, SUM(t1.Credit) AS Paid,SUM(t1.Debit)-SUM(t1.Credit) AS Balance,UPPER(s.fullName) AS Name,(s.StreamId) AS Stream,(s.StudyStatus) AS DB,t1.SemesterId,s.Sex,s.ClassId  FROM FeesPayment t1 INNER JOIN tbl_Stud s ON t1.StudentNumber=s.StudentNumber  WHERE NOT EXISTS (SELECT * FROM FeesPayment t2 WHERE t2.SemesterId='{0}' AND t1.StudentNumber=t2.StudentNumber) AND t1.SemesterId='{0}'" + classFilter3 + " Group by t1.StudentNumber,s.fullName,s.StreamId,s.StudyStatus,t1.SemesterId,s.Sex,s.ClassId,s.StudentID", GetPreviousSemester(StudentOptions.ActiveSemester()), StudentOptions.ActiveSemester());
 			using (SqlDataAdapter sqlDataAdapter5 = new SqlDataAdapter(selectCommandText3, DataConnection.ConnectToDatabase()))
 			{
 				using DataSet dataSet5 = new DataSet();
@@ -156,7 +163,7 @@ public class usrStudentAccounts : XtraUserControl
 					double num13 = num11 + Convert.ToDouble(row5["Required"]);
 					double num14 = Convert.ToDouble(row5["Paid"]);
 					double num15 = num13 - num14;
-					dataTable.Rows.Add(row5["Name"], row5["StudentNo"], row5["StudentID"], row5["Stream"], row5["Sex"], row5["DB"], StudentOptions.ActiveSemester(), num11, num12, num13, num14, num15);
+					dataTable.Rows.Add(row5["Name"], row5["StudentNo"], row5["StudentID"], row5["Stream"], row5["Sex"], row5["DB"], row5["ClassId"], StudentOptions.ActiveSemester(), num11, num12, num13, num14, num15);
 				}
 			}
 			return dataTable;
@@ -189,10 +196,11 @@ public class usrStudentAccounts : XtraUserControl
 		}
 	}
 
-	public usrStudentAccounts()
+	public usrStudentAccounts(string classScope)
 	{
+		_classScope = classScope;
 		SplashScreenManager.ShowForm(typeof(WaitForm1));
-		SplashScreenManager.Default.SetWaitFormDescription("Loading " + StudentOptions.ActiveClass() + " Fees Tracking Sheet...");
+		SplashScreenManager.Default.SetWaitFormDescription("Loading " + classScope + " Fees Tracking Sheet...");
 		SplashScreenManager.Default.SendCommand(WaitForm1.WaitFormCommand.InitializeFeesTrackingSheet, 0);
 		Thread.Sleep(25);
 		InitializeComponent();
@@ -225,7 +233,7 @@ public class usrStudentAccounts : XtraUserControl
 		try
 		{
 			f.DataSource = FeesAndOtherRequirement;
-			ActiveFormSelected.SetActiveForm(StudentOptions.ActiveClass() + " Fees Tracking Sheet");
+			ActiveFormSelected.SetActiveForm(_classScope + " Fees Tracking Sheet");
 			PrintableControl.SavePrintableControl(f);
 			PrintableControl.SavePrintableControl(gridViewStudentLists);
 			timer1.Enabled = false;
@@ -300,7 +308,7 @@ public class usrStudentAccounts : XtraUserControl
 	private void timer1_Tick(object sender, EventArgs e)
 	{
 		SplashScreenManager.ShowForm(typeof(WaitForm1));
-		SplashScreenManager.Default.SetWaitFormDescription("Refreshing " + StudentOptions.ActiveClass() + " Fees Tracking Sheet...");
+		SplashScreenManager.Default.SetWaitFormDescription("Refreshing " + _classScope + " Fees Tracking Sheet...");
 		SplashScreenManager.Default.SendCommand(WaitForm1.WaitFormCommand.InitializeFeesTrackingSheet, 0);
 		Thread.Sleep(25);
 		LoadStudentLists();
@@ -327,6 +335,7 @@ public class usrStudentAccounts : XtraUserControl
 		this.gridColStream = new DevExpress.XtraGrid.Columns.GridColumn();
 		this.gridColSex = new DevExpress.XtraGrid.Columns.GridColumn();
 		this.gridColDB = new DevExpress.XtraGrid.Columns.GridColumn();
+		this.gridColClass = new DevExpress.XtraGrid.Columns.GridColumn();
 		this.gridColSemester = new DevExpress.XtraGrid.Columns.GridColumn();
 		this.gridColBF = new DevExpress.XtraGrid.Columns.GridColumn();
 		this.gridColRequired = new DevExpress.XtraGrid.Columns.GridColumn();
@@ -372,10 +381,10 @@ public class usrStudentAccounts : XtraUserControl
 		this.gridViewStudentLists.Appearance.SelectedRow.Options.UseForeColor = true;
 		this.gridViewStudentLists.AppearancePrint.EvenRow.BackColor = System.Drawing.Color.FromArgb(224, 224, 224);
 		this.gridViewStudentLists.AppearancePrint.EvenRow.Options.UseBackColor = true;
-		this.gridViewStudentLists.Columns.AddRange(new DevExpress.XtraGrid.Columns.GridColumn[13]
+		this.gridViewStudentLists.Columns.AddRange(new DevExpress.XtraGrid.Columns.GridColumn[14]
 		{
-			this.gridColNo, this.gridColName, this.gridColumn1, this.gridColStudentNo, this.gridColStream, this.gridColSex, this.gridColDB, this.gridColSemester, this.gridColBF, this.gridColRequired,
-			this.gridColTotalRequired, this.gridColPaid, this.gridColBalance
+			this.gridColNo, this.gridColName, this.gridColumn1, this.gridColStudentNo, this.gridColStream, this.gridColSex, this.gridColDB, this.gridColClass, this.gridColSemester, this.gridColBF,
+			this.gridColRequired, this.gridColTotalRequired, this.gridColPaid, this.gridColBalance
 		});
 		this.gridViewStudentLists.GridControl = this.f;
 		this.gridViewStudentLists.IndicatorWidth = 30;
@@ -429,6 +438,12 @@ public class usrStudentAccounts : XtraUserControl
 		this.gridColDB.Visible = true;
 		this.gridColDB.VisibleIndex = 6;
 		this.gridColDB.Width = 27;
+		this.gridColClass.Caption = "Class";
+		this.gridColClass.FieldName = "Class";
+		this.gridColClass.Name = "gridColClass";
+		this.gridColClass.Visible = true;
+		this.gridColClass.VisibleIndex = 12;
+		this.gridColClass.Width = 50;
 		this.gridColSemester.Caption = "Semester";
 		this.gridColSemester.FieldName = "Semester";
 		this.gridColSemester.Name = "gridColSemester";

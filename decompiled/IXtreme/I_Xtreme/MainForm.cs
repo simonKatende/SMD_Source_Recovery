@@ -3613,6 +3613,7 @@ public class MainForm : RibbonForm
 			comboBoxEdit12, cboRptClass, cboMiniClass, cboMyClasses, cboClassID, cboClassStatic, cboAnnualClass, cboClassFB, cboClassWrite, cboRollCallClass,
 			cboClassNCGM, cboClassIE, cboClassScoreboardRev, cboClassOldData, cboClassOtherReq, cboClassMarkAd, cboClassRankingNC
 		});
+		cbo_Class.Properties.Items.Insert(0, "All Classes");
 		WorkingSemesters.GetSemesters(new ComboBoxEdit[30]
 		{
 			cboTermArrears, cboTermCompetency, cboTermComb, cboTermNewCurMarksheet, cboWorkingSemester, cboTermNC, comboBoxEdit9, cboSemRecoveryAnalysis, cboTermSum, cboPrePrimaryTerm,
@@ -4624,7 +4625,7 @@ public class MainForm : RibbonForm
 				printableComponentLink1.Component = PrintableControl.PrintableGridControl;
 				printableComponentLink1.Landscape = false;
 				printableComponentLink1.PrintingSystem.ClearContent();
-				ReportHeader(string.Format("{0}", StudentOptions.ActiveClass() + " Fees Tracking Sheet"));
+				ReportHeader(ActiveFormSelected.CurrentActiveForm);
 				printableComponentLink1.PrintDlg();
 			}
 			else if (ActiveFormSelected.CurrentActiveForm.Contains("Fees Billing Analysis") || ActiveFormSelected.CurrentActiveForm.Contains("Fees Payment Analysis"))
@@ -6086,7 +6087,7 @@ public class MainForm : RibbonForm
 			}
 			else if (ActiveFormSelected.CurrentActiveForm.Contains("Tracking Sheet"))
 			{
-				ExportReportToExcel(PrintableControl.PrintableGridControl, StudentOptions.ActiveClass() + " Fees Tracking Sheet");
+				ExportReportToExcel(PrintableControl.PrintableGridControl, ActiveFormSelected.CurrentActiveForm);
 			}
 			else if (ActiveFormSelected.CurrentActiveForm.Contains("Fees Payment Modes Analysis"))
 			{
@@ -6532,10 +6533,9 @@ public class MainForm : RibbonForm
 		}
 		else
 		{
-			StudentOptions.SetActiveClass(cbo_Class.Text);
 			StudentOptions.SetActiveSemester(cbo_semester.Text);
 			popupControlContainer14.HidePopup();
-			_usrStudentAccounts = new usrStudentAccounts();
+			_usrStudentAccounts = new usrStudentAccounts(cbo_Class.Text);
 			CurrentControl.LoadControl(_usrStudentAccounts, panelMain);
 		}
 	}
