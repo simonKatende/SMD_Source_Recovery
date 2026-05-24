@@ -5,9 +5,11 @@ Dynamics desktop application, recovered by decompiling the installed binaries
 after the original source code was lost.
 
 The recovery was completed on 2026-05-24. All 21 owned assemblies were
-decompiled successfully (819 source files, ~77 MB of source). The main
-application (`IXtreme.exe`) has been rebuilt from this source and verified
-to launch and render its Login form.
+decompiled successfully (819 source files, ~77 MB of source). All 4
+entry-point executables — `IXtreme.exe`, `LibraryManagement.exe`,
+`MarksEntry.exe`, `ExtremeMessenger.exe` — have been rebuilt from source
+at 99.8%+ size match with their originals. `IXtreme.exe` has additionally
+been smoke-tested (launches, renders its Login form).
 
 ## Layout
 
@@ -52,30 +54,37 @@ winget install Microsoft.DotNet.SDK.8
 
 ### 4. Build
 
+Pick any of the 4 entry-point EXEs (or all of them):
+
 ```powershell
 dotnet build decompiled\IXtreme\IXtreme.csproj
+dotnet build decompiled\LibraryManagement\LibraryManagement.csproj
+dotnet build decompiled\MarksEntry\MarksEntry.csproj
+dotnet build decompiled\ExtremeMessenger\ExtremeMessenger.csproj
 ```
 
-The output appears in `decompiled\IXtreme\bin\Debug\net472\`.
+Each output appears in the project's `bin\Debug\net472\` folder.
 
 ## Status of each project
 
-Only `IXtreme` has been built and verified end-to-end. The other 20 projects
-were decompiled but not yet built — they currently exist as raw decompiler
-output. They were referenced by `IXtreme` via `HintPath` to their original
-DLLs in `backup/`, so the main app builds without them being built from
-source.
+The 4 entry-point EXEs build cleanly from source. The 17 library projects
+were decompiled but not yet built from source — the EXEs currently link
+against the original DLLs in `backup/` via `HintPath`, so they build
+without the libraries being rebuilt.
 
 | Project | Decompiled | Built | Smoke-tested |
 |---|---|---|---|
-| IXtreme | Yes | Yes | Yes (Login form renders) |
-| LibraryManagement | Yes | No | No |
-| MarksEntry | Yes | No | No |
-| ExtremeMessenger | Yes | No | No |
+| IXtreme | Yes | Yes (99.8%) | Yes (Login form renders) |
+| LibraryManagement | Yes | Yes (99.8%) | No |
+| MarksEntry | Yes | Yes (99.9%) | No |
+| ExtremeMessenger | Yes | Yes (99.9%) | No |
 | AlienAge.* (14 libraries) | Yes | No | No |
 | SMDFastLane | Yes | No | No |
 | BiotimeDevice | Yes | No | No |
 | EventLogger | Yes | Yes | n/a (library) |
+
+Percentages are rebuilt-EXE size as a fraction of original EXE size. The
+small gap is mostly compiler-version differences and resource compression.
 
 ## Known fixes applied during recovery
 
@@ -91,14 +100,26 @@ Recorded in detail in commit history. Summary:
 3. **ZK COM interop** — generated `Interop.zkemkeeper.dll` from the registered
    TypeLib via `notes\gen_interop.ps1` (uses `TypeLibConverter`), referenced
    with `EmbedInteropTypes=True`.
-4. **Missing chart reference** — added explicit `<Reference>` for
-   `DevExpress.Charts.v23.2.Core`.
+4. **Missing transitive DevExpress references** — explicit `<Reference>`
+   entries added for assemblies the decompiler omitted but the code uses
+   transitively: `DevExpress.Charts.v23.2.Core` (IXtreme),
+   `DevExpress.Printing.v23.2.Core` and `DevExpress.Data.Desktop.v23.2`
+   (LibraryManagement, MarksEntry, ExtremeMessenger),
+   `DevExpress.Drawing.v23.2` (LibraryManagement).
 5. **Decompiler artifacts**:
    - `ref array[0]` → `out array[0]` on 2 `SSR_GetUserTmp` callsites
-     (`MainForm.cs`, `usrStudentList.cs`)
+     in IXtreme (`MainForm.cs`, `usrStudentList.cs`)
    - `FeesBalance(StudentNo, connectionString)` → `FeesBalance(StudentNo)`
-     in `SynchPaymentsFromOnline.cs` (2 callsites)
-   - `int num;` → `int num = 0;` in 3 unused `finally` blocks
-   - `using DataTable = System.Data.DataTable;` alias added to
-     `StudentImport.cs` and `EmployeeImport.cs` to disambiguate from
-     `Microsoft.Office.Interop.Excel.DataTable`
+     in IXtreme's `SynchPaymentsFromOnline.cs` (2 callsites)
+   - `int num;` → `int num = 0;` in 3 unused `finally` blocks in IXtreme
+   - `using DataTable = System.Data.DataTable;` alias added to disambiguate
+     from `Microsoft.Office.Interop.Excel.DataTable` in: IXtreme
+     (`StudentImport.cs`, `EmployeeImport.cs`), LibraryManagement
+     (`BooksImport.cs`), MarksEntry (`MainALevel.cs`, `MainPrimary.cs`,
+     `MainOLevelNewCur.cs`)
+   - `using Point = System.Drawing.Point;` alias added to MarksEntry
+     `MainALevel.cs` and `MainPrimary.cs` to disambiguate from
+     `Microsoft.Office.Interop.Excel.Point`
+   - `SqlCommand sqlCommand` → `SqlCommand cmd` in one block of
+     MarksEntry's `MainALevel.cs` (CS0136 scope conflict — two declarations
+     of the same name in nested/enclosing scopes within one method)
