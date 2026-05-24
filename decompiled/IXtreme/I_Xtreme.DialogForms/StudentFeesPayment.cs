@@ -589,7 +589,9 @@ public class StudentFeesPayment : RibbonForm
 		{
 			SMSGateWay sMSGateWay = new SMSGateWay(DataConnection.ConnectToDatabase());
 			sMSGateWay.InitializeAccount();
-			string message = string.Format("Fees amount of {0}Ugx has been received from {1} on {2}\n {3}", amount.ToString("#,#"), lblName.Caption, DateTime.Now.ToString("dd-MMM-yyyy"), SMSGateWay.SMSSender);
+			string message = feesBalance <= 0.0
+				? string.Format("Dear Parent, thank you for paying UGX {0} for {1} on {2}. Fees fully cleared.\n- {3}", amount.ToString("#,#"), lblName.Caption, DateTime.Now.ToString("dd-MMM-yyyy"), SMSGateWay.SMSSender)
+				: string.Format("Dear Parent, thank you for paying UGX {0} for {1} on {2}. Outstanding balance: UGX {3}.\n- {4}", amount.ToString("#,#"), lblName.Caption, DateTime.Now.ToString("dd-MMM-yyyy"), feesBalance.ToString("#,#"), SMSGateWay.SMSSender);
 			if (!string.IsNullOrEmpty(contactNo1))
 			{
 				string recipients = "256" + contactNo1.Substring(1, 9);
