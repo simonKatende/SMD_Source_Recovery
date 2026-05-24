@@ -1,0 +1,18 @@
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(61,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(63,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(65,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(81,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(64,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(66,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(68,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(82,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainOLevelNewCur.cs(642,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainOLevelNewCur.cs(94,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainOLevelNewCur.cs(96,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainOLevelNewCur.cs(112,10): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+
+Build FAILED.
+    0 Warning(s)
+    12 Error(s)
+
+Time Elapsed 00:00:03.19

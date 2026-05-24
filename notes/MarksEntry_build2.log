@@ -1,0 +1,9 @@
+C:\SMD_Source_Recovery\decompiled\MarksEntry\Microsoft.Office.Interop.Excel\AppEvents_Event.cs(6,2): error CS0596: The Guid attribute must be specified with the ComImport attribute [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\Microsoft.Office.Interop.Excel\DocEvents_Event.cs(6,2): error CS0596: The Guid attribute must be specified with the ComImport attribute [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\Microsoft.Office.Interop.Excel\WorkbookEvents_Event.cs(6,2): error CS0596: The Guid attribute must be specified with the ComImport attribute [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+
+Build FAILED.
+    0 Warning(s)
+    3 Error(s)
+
+Time Elapsed 00:00:09.52

@@ -37,6 +37,8 @@ using DevExpress.XtraTab;
 using MarksEntry.Properties;
 using Microsoft.Office.Interop.Excel;
 using Microsoft.Win32;
+using DataTable = System.Data.DataTable;
+using Point = System.Drawing.Point;
 
 namespace MarksEntry.MarksEntryForms;
 

@@ -1,0 +1,12 @@
+C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement\BooksImport.cs(125,4): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement.csproj]
+C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement\BooksImport.cs(125,30): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement.csproj]
+C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement\BooksImport.cs(212,4): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement.csproj]
+C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement\BooksImport.cs(212,30): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement.csproj]
+C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement\BooksImport.cs(274,3): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement.csproj]
+C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement\BooksImport.cs(274,29): error CS0104: 'DataTable' is an ambiguous reference between 'System.Data.DataTable' and 'Microsoft.Office.Interop.Excel.DataTable' [C:\SMD_Source_Recovery\decompiled\LibraryManagement\LibraryManagement.csproj]
+
+Build FAILED.
+    2 Warning(s)
+    6 Error(s)
+
+Time Elapsed 00:00:03.42

@@ -1,0 +1,20 @@
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(304,17): error CS0136: A local or parameter named 'sqlCommand' cannot be declared in this scope because that name is used in an enclosing local scope to define a local or parameter [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(1083,54): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(1224,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(1236,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(1254,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(1272,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(1290,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainALevel.cs(1309,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(1431,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(1446,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(1466,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(1486,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(1506,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.MarksEntryForms\MainPrimary.cs(1527,5): error CS0104: 'Point' is an ambiguous reference between 'System.Drawing.Point' and 'Microsoft.Office.Interop.Excel.Point' [C:\SMD_Source_Recovery\decompiled\MarksEntry\MarksEntry.csproj]
+
+Build FAILED.
+    2 Warning(s)
+    14 Error(s)
+
+Time Elapsed 00:00:02.74

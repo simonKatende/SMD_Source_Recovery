@@ -36,6 +36,8 @@ using DevExpress.XtraSplashScreen;
 using MarksEntry.Properties;
 using Microsoft.Office.Interop.Excel;
 using Microsoft.Win32;
+using DataTable = System.Data.DataTable;
+using Point = System.Drawing.Point;
 
 namespace MarksEntry.MarksEntryForms;
 
@@ -339,12 +341,12 @@ public class MainALevel : XtraForm
 			using SqlConnection sqlConnection2 = new SqlConnection(connectionString);
 			sqlConnection2.Open();
 			_trans = sqlConnection2.BeginTransaction();
-			SqlCommand sqlCommand = new SqlCommand();
-			sqlCommand.Connection = sqlConnection2;
-			sqlCommand.Transaction = _trans;
-			sqlCommand.CommandText = string.Format("DELETE FROM tbl_GeneralReport_AL WHERE PaperId='{0}' AND StudentNumber='{1}' AND SemesterId='{2}' AND ClassId='{3}'", cboSelectedSubject.EditValue.ToString(), dataRow["Stud#"], TeacherLogin.CurrentSemester(), TeacherLogin.StudentClass());
-			sqlCommand.CommandType = CommandType.Text;
-			using (SqlCommand sqlCommand5 = sqlCommand)
+			SqlCommand cmd = new SqlCommand();
+			cmd.Connection = sqlConnection2;
+			cmd.Transaction = _trans;
+			cmd.CommandText = string.Format("DELETE FROM tbl_GeneralReport_AL WHERE PaperId='{0}' AND StudentNumber='{1}' AND SemesterId='{2}' AND ClassId='{3}'", cboSelectedSubject.EditValue.ToString(), dataRow["Stud#"], TeacherLogin.CurrentSemester(), TeacherLogin.StudentClass());
+			cmd.CommandType = CommandType.Text;
+			using (SqlCommand sqlCommand5 = cmd)
 			{
 				sqlCommand5.ExecuteNonQuery();
 			}
