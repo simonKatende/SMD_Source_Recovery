@@ -7,6 +7,7 @@ using System.IO;
 using System.Net;
 using System.Windows.Forms;
 using AlienAge.Connectivity;
+using AlienAge.ExtremeMessenger;
 using AlienAge.ReportHeaders;
 using DevExpress.XtraEditors;
 using DevExpress.XtraEditors.Controls;
@@ -104,7 +105,31 @@ public class SMSGuardian : XtraForm
 	{
 		try
 		{
-			GET("http://api.kayesms.com/api/v1/sms/send/?apiKey=2518228a-d923-42a4-83bb-cf90848f773a&message=" + txtMessage.Text + "&from=" + ReportHeader.ShortName + "&to=" + txtReceipient.Text);
+			string raw = (txtReceipient.Text ?? "").Trim();
+			if (string.IsNullOrEmpty(raw))
+			{
+				XtraMessageBox.Show("Recipient is required.", "School Management Dynamics", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+				return;
+			}
+			if (string.IsNullOrEmpty(txtMessage.Text))
+			{
+				XtraMessageBox.Show("Message is required.", "School Management Dynamics", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+				return;
+			}
+			string normalized = NormalizeUgPhone(raw);
+			if (normalized == null)
+			{
+				XtraMessageBox.Show("Recipient must be a Ugandan number: 07XXXXXXXX, 256XXXXXXXXX, or +256XXXXXXXXX.", "School Management Dynamics", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+				return;
+			}
+			SMSGateWay gateway = new SMSGateWay(connectionString);
+			if (!gateway.TrySendSMSViaPOST(normalized, txtMessage.Text, out string error))
+			{
+				XtraMessageBox.Show(error, "Error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+				return;
+			}
+			XtraMessageBox.Show($"Message sent to {normalized}.", "School Management Dynamics", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			Dispose();
 		}
 		catch (Exception ex)
 		{
@@ -112,22 +137,19 @@ public class SMSGuardian : XtraForm
 		}
 	}
 
-	public static string GET(string url)
+	private static string NormalizeUgPhone(string raw)
 	{
-		try
+		if (raw.StartsWith("+256") && raw.Length == 13)
 		{
-			HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(url);
-			HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse();
-			System.IO.Stream responseStream = httpWebResponse.GetResponseStream();
-			StreamReader streamReader = new StreamReader(responseStream);
-			string result = streamReader.ReadToEnd();
-			streamReader.Close();
-			responseStream.Close();
-			return result;
+			return raw.Substring(1);
 		}
-		catch (Exception ex)
+		if (raw.StartsWith("256") && raw.Length == 12)
 		{
-			XtraMessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+			return raw;
+		}
+		if (raw.StartsWith("0") && raw.Length == 10)
+		{
+			return "256" + raw.Substring(1, 9);
 		}
 		return null;
 	}

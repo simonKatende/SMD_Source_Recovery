@@ -174,12 +174,12 @@ public class userFeesReminder : UserControl
 				if (row["PriorityContact"].ToString().Length >= 10)
 				{
 					text = "256" + row["PriorityContact"].ToString().Substring(1, 9);
-					gateWay.SendSMSViaPOST(text, message);
+					gateWay.TrySendSMSViaPOST(text, message, out _);
 				}
 				if (row["OtherContact"].ToString().Length >= 10)
 				{
 					text2 = "256" + row["OtherContact"].ToString().Substring(1, 9);
-					gateWay.SendSMSViaPOST(text2, message);
+					gateWay.TrySendSMSViaPOST(text2, message, out _);
 				}
 				Thread.Sleep(10);
 				backgroundWorker1.ReportProgress(i);

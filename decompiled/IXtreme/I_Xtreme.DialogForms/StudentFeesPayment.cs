@@ -595,12 +595,12 @@ public class StudentFeesPayment : RibbonForm
 			if (!string.IsNullOrEmpty(contactNo1))
 			{
 				string recipients = "256" + contactNo1.Substring(1, 9);
-				sMSGateWay.SendSMSViaPOST(recipients, message);
+				sMSGateWay.TrySendSMSViaPOST(recipients, message, out _);
 			}
 			if (!string.IsNullOrEmpty(contactNo2))
 			{
 				string recipients2 = "256" + contactNo2.Substring(1, 9);
-				sMSGateWay.SendSMSViaPOST(recipients2, message);
+				sMSGateWay.TrySendSMSViaPOST(recipients2, message, out _);
 			}
 		}
 	}

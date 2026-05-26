@@ -28,34 +28,35 @@ public class SMSGateWay
 		connection = ConnectionString;
 	}
 
-	public void SendSMSViaPOST(string Recipients, string Message)
+	public bool TrySendSMSViaPOST(string Recipients, string Message, out string errorMessage)
 	{
-		SMSGateWay sMSGateWay = new SMSGateWay(connection);
-		if (InitializeAccount())
+		if (!InitializeAccount())
 		{
-			try
-			{
-				ServicePointManager.Expect100Continue = true;
-				ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-				string requestUriString = $"https://www.egosms.co/api/v1/plain/?number={Recipients}&message={Message}&username={SMSUserName}&password={SMSPassword}&sender={SMSSender}";
-				HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(requestUriString);
-				httpWebRequest.Method = "POST";
-				httpWebRequest.ContentType = "application/x-www-form-urlencoded";
-				HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse();
-				StreamReader streamReader = new StreamReader(httpWebResponse.GetResponseStream());
-				string response = streamReader.ReadToEnd();
-				streamReader.Close();
-				httpWebResponse.Close();
-				SaveSMSLog(Recipients, response, Message);
-				return;
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(ex.Message.ToString());
-				return;
-			}
+			errorMessage = "SMS account is not configured. Set it up under Settings.";
+			return false;
 		}
-		MessageBox.Show("You cannot send messages now because there is no sending account set", "Invalid settings", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+		try
+		{
+			ServicePointManager.Expect100Continue = true;
+			ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+			string requestUriString = $"https://www.egosms.co/api/v1/plain/?number={Recipients}&message={Message}&username={SMSUserName}&password={SMSPassword}&sender={SMSSender}";
+			HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(requestUriString);
+			httpWebRequest.Method = "POST";
+			httpWebRequest.ContentType = "application/x-www-form-urlencoded";
+			HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse();
+			StreamReader streamReader = new StreamReader(httpWebResponse.GetResponseStream());
+			string response = streamReader.ReadToEnd();
+			streamReader.Close();
+			httpWebResponse.Close();
+			SaveSMSLog(Recipients, response, Message);
+			errorMessage = null;
+			return true;
+		}
+		catch (Exception ex)
+		{
+			errorMessage = ex.Message;
+			return false;
+		}
 	}
 
 	public void SendWithUNRAGateway(string Recipients, string Message, string CreatedBy)
@@ -231,7 +232,7 @@ public class SMSGateWay
 		}
 		catch (Exception ex)
 		{
-			MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+			System.Diagnostics.Debug.WriteLine($"SaveSMSLog failed: {ex.Message}");
 		}
 	}
 }

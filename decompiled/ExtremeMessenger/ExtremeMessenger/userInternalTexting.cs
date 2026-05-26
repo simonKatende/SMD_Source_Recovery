@@ -68,7 +68,14 @@ public class userInternalTexting : UserControl
 		{
 			lblStatus.Text = "";
 			string recipients = "256" + txtReceipient.Text.Substring(1, 9);
-			sMSGateWay.SendSMSViaPOST(recipients, txtMessage.Text);
+			if (!sMSGateWay.TrySendSMSViaPOST(recipients, txtMessage.Text, out string error))
+			{
+				lblStatus.ForeColor = Color.Red;
+				lblStatus.Text = error;
+				return;
+			}
+			lblStatus.ForeColor = Color.Green;
+			lblStatus.Text = $"Message sent to {recipients}.";
 		}
 		catch (Exception ex)
 		{
