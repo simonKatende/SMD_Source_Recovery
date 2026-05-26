@@ -171,15 +171,12 @@ public class userFeesReminder : UserControl
 				string text2 = "";
 				double result = (double.TryParse(row["cashOnAccount"].ToString(), out result) ? result : 0.0);
 				string message = memoEdit1.Text.Replace("$", result.ToString()).Replace("#", row["fullName"].ToString()).ToString();
-				if (row["PriorityContact"].ToString().Length >= 10)
+				string priorityContact = row["PriorityContact"].ToString();
+				string preferredContact = priorityContact.Length >= 10 ? priorityContact : row["OtherContact"].ToString();
+				if (preferredContact.Length >= 10)
 				{
-					text = "256" + row["PriorityContact"].ToString().Substring(1, 9);
+					text = "256" + preferredContact.Substring(1, 9);
 					gateWay.TrySendSMSViaPOST(text, message, out _);
-				}
-				if (row["OtherContact"].ToString().Length >= 10)
-				{
-					text2 = "256" + row["OtherContact"].ToString().Substring(1, 9);
-					gateWay.TrySendSMSViaPOST(text2, message, out _);
 				}
 				Thread.Sleep(10);
 				backgroundWorker1.ReportProgress(i);

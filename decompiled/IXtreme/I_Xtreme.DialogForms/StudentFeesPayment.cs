@@ -592,15 +592,11 @@ public class StudentFeesPayment : RibbonForm
 			string message = feesBalance <= 0.0
 				? string.Format("Dear Parent, thank you for paying UGX {0} for {1} on {2}. Fees fully cleared.\n- {3}", amount.ToString("#,#"), lblName.Caption, DateTime.Now.ToString("dd-MMM-yyyy"), SMSGateWay.SMSSender)
 				: string.Format("Dear Parent, thank you for paying UGX {0} for {1} on {2}. Outstanding balance: UGX {3}.\n- {4}", amount.ToString("#,#"), lblName.Caption, DateTime.Now.ToString("dd-MMM-yyyy"), feesBalance.ToString("#,#"), SMSGateWay.SMSSender);
-			if (!string.IsNullOrEmpty(contactNo1))
+			string preferredContact = !string.IsNullOrEmpty(contactNo1) ? contactNo1 : contactNo2;
+			if (!string.IsNullOrEmpty(preferredContact))
 			{
-				string recipients = "256" + contactNo1.Substring(1, 9);
+				string recipients = "256" + preferredContact.Substring(1, 9);
 				sMSGateWay.TrySendSMSViaPOST(recipients, message, out _);
-			}
-			if (!string.IsNullOrEmpty(contactNo2))
-			{
-				string recipients2 = "256" + contactNo2.Substring(1, 9);
-				sMSGateWay.TrySendSMSViaPOST(recipients2, message, out _);
 			}
 		}
 	}
