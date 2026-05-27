@@ -23,8 +23,8 @@ public class FollowUpSettings : XtraForm
 
     private void InitializeComponent()
     {
-        this.lblStaleness = new LabelControl { Text = "Staleness threshold (days):", Location = new System.Drawing.Point(12, 18) };
-        this.spnStaleness = new SpinEdit { Location = new System.Drawing.Point(170, 14), Width = 80 };
+        this.lblStaleness = new LabelControl { Text = "Flag as overdue after (days):", Location = new System.Drawing.Point(12, 18) };
+        this.spnStaleness = new SpinEdit { Location = new System.Drawing.Point(200, 14), Width = 80 };
         this.spnStaleness.Properties.IsFloatValue = false;
         this.spnStaleness.Properties.MinValue = 0;
         this.spnStaleness.Properties.MaxValue = 365;
@@ -37,7 +37,7 @@ public class FollowUpSettings : XtraForm
             Dispose();
         };
         this.btnCancel.Click += (s, e) => { base.DialogResult = DialogResult.Cancel; Dispose(); };
-        this.ClientSize = new System.Drawing.Size(265, 90);
+        this.ClientSize = new System.Drawing.Size(295, 90);
         this.Controls.Add(lblStaleness);
         this.Controls.Add(spnStaleness);
         this.Controls.Add(btnOK);

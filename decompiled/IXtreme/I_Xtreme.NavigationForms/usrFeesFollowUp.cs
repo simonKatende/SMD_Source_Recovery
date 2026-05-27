@@ -42,6 +42,7 @@ public class usrFeesFollowUp : XtraUserControl
 
     private readonly FeesFollowUpService service = new FeesFollowUpService();
     private List<WorklistRow> currentRows = new List<WorklistRow>();
+    private bool _columnsConfigured = false;
 
     public usrFeesFollowUp()
     {
@@ -263,6 +264,7 @@ public class usrFeesFollowUp : XtraUserControl
         decimal minBalance = (decimal)txtMinBalance.Value;
         currentRows = service.GetWorklist(classFilter, minBalance);
         gridWorklist.DataSource = currentRows;
+        ConfigureWorklistColumns();
     }
 
     private void GridViewWorklist_RowStyle(object sender,
@@ -289,34 +291,42 @@ public class usrFeesFollowUp : XtraUserControl
     private void GridViewWorklist_FocusedRowChanged(object sender,
         DevExpress.XtraGrid.Views.Base.FocusedRowChangedEventArgs e)
     {
-        if (e.FocusedRowHandle < 0 || e.FocusedRowHandle >= currentRows.Count)
+        if (e.FocusedRowHandle < 0)
         {
             lblParentHeader.Text = "(select a parent)";
             lblRecentPayments.Text = "";
             gridHistory.DataSource = null;
             return;
         }
-        var row = currentRows[e.FocusedRowHandle];
+        var row = gridViewWorklist.GetRow(e.FocusedRowHandle) as WorklistRow;
+        if (row == null) return;
         lblParentHeader.Text = $"{row.FullName}  •  {row.ClassId}  •  Balance UGX {row.Balance:N0}";
 
-        var payments = service.GetRecentPayments(row.StudentNumber, 3);
-        if (payments.Rows.Count == 0)
+        try
         {
-            lblRecentPayments.Text = "Last 3 payments: (none)";
-        }
-        else
-        {
-            var parts = new System.Collections.Generic.List<string>();
-            foreach (System.Data.DataRow p in payments.Rows)
+            var payments = service.GetRecentPayments(row.StudentNumber, 3);
+            if (payments.Rows.Count == 0)
             {
-                decimal amt = p["Credit"] is decimal d ? d : 0m;
-                var dt = p["PaymentDate"] is System.DateTime pd ? pd : System.DateTime.MinValue;
-                parts.Add($"{amt:N0} ({dt:yyyy-MM-dd})");
+                lblRecentPayments.Text = "Last 3 payments: (none)";
             }
-            lblRecentPayments.Text = "Last 3 payments: " + string.Join(", ", parts);
-        }
+            else
+            {
+                var parts = new System.Collections.Generic.List<string>();
+                foreach (System.Data.DataRow p in payments.Rows)
+                {
+                    decimal amt = p["Credit"] is decimal d ? d : 0m;
+                    var dt = p["PaymentDate"] is System.DateTime pd ? pd : System.DateTime.MinValue;
+                    parts.Add($"{amt:N0} ({dt:yyyy-MM-dd})");
+                }
+                lblRecentPayments.Text = "Last 3 payments: " + string.Join(", ", parts);
+            }
 
-        gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
+            gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
+        }
+        catch (System.Exception ex)
+        {
+            lblRecentPayments.Text = $"(error loading details: {ex.Message})";
+        }
     }
 
     private void BtnSaveAndNext_Click(object sender, System.EventArgs e)
@@ -332,14 +342,14 @@ public class usrFeesFollowUp : XtraUserControl
     private void BtnSave_Click(object sender, System.EventArgs e)
     {
         int rh = gridViewWorklist.FocusedRowHandle;
-        if (rh < 0 || rh >= currentRows.Count)
+        var row = gridViewWorklist.GetFocusedRow() as WorklistRow;
+        if (rh < 0 || row == null)
         {
             XtraMessageBox.Show("Select a parent on the worklist first.",
                 "School Management Dynamics", System.Windows.Forms.MessageBoxButtons.OK,
                 System.Windows.Forms.MessageBoxIcon.Information);
             return;
         }
-        var row = currentRows[rh];
         var channel = (Models.ContactChannel)rgChannel.EditValue;
         var outcome = (Models.ContactOutcome)cboOutcome.SelectedItem;
 
@@ -419,6 +429,68 @@ public class usrFeesFollowUp : XtraUserControl
         {
             XtraMessageBox.Show(ex.Message, "Error", System.Windows.Forms.MessageBoxButtons.OK,
                 System.Windows.Forms.MessageBoxIcon.Hand);
+        }
+    }
+
+    private void ConfigureWorklistColumns()
+    {
+        if (_columnsConfigured) return;
+        _columnsConfigured = true;
+
+        foreach (string name in new[] { "StudentNumber", "PaymentsSinceLatestPromise", "LatestPromiseAmount", "LatestPromiseDate" })
+        {
+            var col = gridViewWorklist.Columns[name];
+            if (col != null) col.Visible = false;
+        }
+
+        var colBalance = gridViewWorklist.Columns["Balance"];
+        if (colBalance != null)
+        {
+            colBalance.Caption = "Balance (UGX)";
+            colBalance.DisplayFormat.FormatType = DevExpress.Utils.FormatType.Numeric;
+            colBalance.DisplayFormat.FormatString = "N0";
+            colBalance.Width = 120;
+        }
+
+        void SetCaption(string field, string caption)
+        {
+            var c = gridViewWorklist.Columns[field];
+            if (c != null) c.Caption = caption;
+        }
+        SetCaption("FullName", "Name");
+        SetCaption("ClassId", "Class");
+        SetCaption("PriorityContact", "Contact");
+        SetCaption("LastContactDate", "Last Contact");
+        SetCaption("LastOutcome", "Last Outcome");
+        SetCaption("Tier", "Priority");
+
+        gridViewWorklist.CustomColumnDisplayText += GridViewWorklist_CustomColumnDisplayText;
+    }
+
+    private void GridViewWorklist_CustomColumnDisplayText(object sender,
+        DevExpress.XtraGrid.Views.Base.CustomColumnDisplayTextEventArgs e)
+    {
+        if (e.Column.FieldName == "Tier" && e.Value is PriorityTier tier)
+        {
+            e.DisplayText = tier switch
+            {
+                PriorityTier.BrokenPromise => "Missed Promise",
+                PriorityTier.Stale        => "Contact Overdue",
+                PriorityTier.Current      => "Up to Date",
+                _                          => e.DisplayText,
+            };
+        }
+        else if (e.Column.FieldName == "LastOutcome" && e.Value is ContactOutcome outcome)
+        {
+            e.DisplayText = outcome switch
+            {
+                ContactOutcome.NoAnswer     => "No Answer",
+                ContactOutcome.Contacted    => "Contacted",
+                ContactOutcome.Promised     => "Promised Payment",
+                ContactOutcome.Refused      => "Refused",
+                ContactOutcome.WrongContact => "Wrong Contact",
+                _                           => e.DisplayText,
+            };
         }
     }
 }
