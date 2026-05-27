@@ -123,16 +123,6 @@ public class usrFeesFollowUp : XtraUserControl
         filterStrip.Controls.Add(this.cboClassFilter);
         filterStrip.Controls.Add(this.txtMinBalance);
         filterStrip.Controls.Add(this.btnRefresh);
-        var btnSettings = new DevExpress.XtraEditors.SimpleButton { Text = "Settings" };
-        btnSettings.Location = new System.Drawing.Point(396, 7);
-        btnSettings.Width = 80;
-        btnSettings.Click += (s, e) =>
-        {
-            using var dlg = new FollowUpSettings();
-            if (dlg.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
-                LoadWorklist();   // refresh because staleness threshold may have changed
-        };
-        filterStrip.Controls.Add(btnSettings);
 
         this.gridWorklist.Dock = DockStyle.Fill;
         this.leftPanel.Controls.Add(this.gridWorklist);
@@ -292,6 +282,38 @@ public class usrFeesFollowUp : XtraUserControl
         ((System.ComponentModel.ISupportInitialize)this.splitContainer).EndInit();
         this.splitContainer.ResumeLayout(false);
         this.ResumeLayout(false);
+    }
+
+    public void OpenSettings()
+    {
+        using var dlg = new FollowUpSettings();
+        if (dlg.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+            LoadWorklist();
+    }
+
+    public void PrintPreviewWorklist() => gridWorklist.ShowPrintPreview();
+
+    public void PrintWorklist() => gridWorklist.Print();
+
+    public void ExportWorklistToExcel()
+    {
+        using var dlg = new System.Windows.Forms.SaveFileDialog();
+        dlg.Filter   = "Excel files (*.xlsx)|*.xlsx";
+        dlg.FileName = $"FeesCRM_Worklist_{System.DateTime.Today:yyyy-MM-dd}.xlsx";
+        if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        try
+        {
+            gridWorklist.ExportToXlsx(dlg.FileName);
+            DevExpress.XtraEditors.XtraMessageBox.Show($"Exported to {dlg.FileName}", "School Management Dynamics",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Information);
+        }
+        catch (System.Exception ex)
+        {
+            DevExpress.XtraEditors.XtraMessageBox.Show(ex.Message, "Export Error",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Hand);
+        }
     }
 
     private void usrFeesFollowUp_Load(object sender, System.EventArgs e)

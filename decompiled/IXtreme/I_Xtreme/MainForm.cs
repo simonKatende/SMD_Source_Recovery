@@ -529,6 +529,18 @@ public class MainForm : RibbonForm
 
 	private RibbonPage ribbonPageFeesFollowUp;
 
+	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesSettings;
+
+	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesPrint;
+
+	private DevExpress.XtraBars.BarButtonItem bbiFeesSettings;
+
+	private DevExpress.XtraBars.BarButtonItem bbiFeesPreview;
+
+	private DevExpress.XtraBars.BarButtonItem bbiFeesPrint;
+
+	private DevExpress.XtraBars.BarButtonItem bbiFeesExport;
+
 	private RibbonPage ribbonPageSchoolAccounts;
 
 	private BarEditItem barEditItem1;
@@ -24688,6 +24700,40 @@ public class MainForm : RibbonForm
 		this.ribbonPageFeesFollowUp.Name = "ribbonPageFeesFollowUp";
 		this.ribbonPageFeesFollowUp.Text = "Fees Follow-up";
 		this.ribbonPageFeesFollowUp.Visible = false;
+		// --- Fees Follow-up: Settings group ---
+		this.bbiFeesSettings = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiFeesSettings.Name    = "bbiFeesSettings";
+		this.bbiFeesSettings.Caption = "Settings";
+		this.bbiFeesSettings.ItemClick += (s, e) => _usrFeesFollowUp?.OpenSettings();
+		this.ribbonPageGroupFeesSettings = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
+		this.ribbonPageGroupFeesSettings.Name = "ribbonPageGroupFeesSettings";
+		this.ribbonPageGroupFeesSettings.Text = "Settings";
+		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiFeesSettings);
+		// --- Fees Follow-up: Printing & Exporting group ---
+		this.bbiFeesPreview = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiFeesPreview.Name    = "bbiFeesPreview";
+		this.bbiFeesPreview.Caption = "Preview";
+		this.bbiFeesPreview.ItemClick += (s, e) => _usrFeesFollowUp?.PrintPreviewWorklist();
+		this.bbiFeesPrint = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiFeesPrint.Name    = "bbiFeesPrint";
+		this.bbiFeesPrint.Caption = "Print";
+		this.bbiFeesPrint.ItemClick += (s, e) => _usrFeesFollowUp?.PrintWorklist();
+		this.bbiFeesExport = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiFeesExport.Name    = "bbiFeesExport";
+		this.bbiFeesExport.Caption = "Export";
+		this.bbiFeesExport.ItemClick += (s, e) => _usrFeesFollowUp?.ExportWorklistToExcel();
+		this.ribbonPageGroupFeesPrint = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
+		this.ribbonPageGroupFeesPrint.Name = "ribbonPageGroupFeesPrint";
+		this.ribbonPageGroupFeesPrint.Text = "Printing & Exporting";
+		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesPreview);
+		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesPrint);
+		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesExport);
+		// Register items with the ribbon manager so they get an ID
+		this.ribbon.Items.AddRange(new DevExpress.XtraBars.BarItem[]
+			{ bbiFeesSettings, bbiFeesPreview, bbiFeesPrint, bbiFeesExport });
+		// Attach both groups to the ribbon page
+		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesSettings);
+		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesPrint);
 		this.ribbonPageGroup35.ItemLinks.Add(this.barButtonItem43);
 		this.ribbonPageGroup35.ItemLinks.Add(this.barButtonItem350);
 		this.ribbonPageGroup35.Name = "ribbonPageGroup35";
