@@ -71,7 +71,7 @@ public class FeesFollowUpService
             lp.PromiseLoggedAt    AS LatestPromiseLoggedAt,
             ISNULL((SELECT SUM(Credit) FROM FeesPayment fp
                     WHERE fp.StudentNumber = s.StudentNumber
-                      AND fp.PaymentDate >= lp.PromiseLoggedAt), 0) AS PaymentsSinceLatestPromise
+                      AND fp.DateOfPayment >= lp.PromiseLoggedAt), 0) AS PaymentsSinceLatestPromise
         FROM tbl_Stud s
         LEFT JOIN LatestContact lc ON s.StudentNumber = lc.StudentNumber AND lc.rn = 1
         LEFT JOIN LatestPromise lp ON s.StudentNumber = lp.StudentNumber AND lp.rn = 1
@@ -184,10 +184,10 @@ public class FeesFollowUpService
         var dt = new DataTable();
         using var conn = new SqlConnection(connectionString);
         using var da = new SqlDataAdapter($@"
-        SELECT TOP ({topN}) PaymentDate, Credit, Particulars
+        SELECT TOP ({topN}) DateOfPayment AS PaymentDate, Credit, Particulars
         FROM FeesPayment
         WHERE StudentNumber = @sn AND Credit > 0
-        ORDER BY PaymentDate DESC", conn);
+        ORDER BY DateOfPayment DESC", conn);
         da.SelectCommand.Parameters.Add("@sn", SqlDbType.VarChar, 50).Value = studentNumber;
         da.Fill(dt);
         return dt;
