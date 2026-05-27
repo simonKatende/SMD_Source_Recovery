@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using DevExpress.XtraEditors;
 using I_Xtreme.ExtremeClasses;
 using I_Xtreme.Models;
+using I_Xtreme;
 
 namespace I_Xtreme.NavigationForms;
 
@@ -26,6 +27,12 @@ public class usrFeesFollowUp : UserControl
     private DevExpress.XtraGrid.Views.Grid.GridView gridViewHistory;
     private System.Windows.Forms.Panel rightPanel;
     private System.Windows.Forms.Panel headerPanel;
+
+    private System.Windows.Forms.Panel newContactPanel;
+    private RadioGroup rgChannel;
+    private ComboBoxEdit cboOutcome;
+    private MemoEdit memoNote;
+    private SimpleButton btnSave;
 
     private readonly FeesFollowUpService service = new FeesFollowUpService();
     private List<WorklistRow> currentRows = new List<WorklistRow>();
@@ -130,6 +137,43 @@ public class usrFeesFollowUp : UserControl
         this.gridViewHistory.OptionsBehavior.Editable = false;
         this.gridViewHistory.OptionsView.ShowGroupPanel = false;
 
+        this.newContactPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Bottom, Height = 200 };
+
+        this.rgChannel = new DevExpress.XtraEditors.RadioGroup();
+        this.rgChannel.Properties.Items.AddRange(new DevExpress.XtraEditors.Controls.RadioGroupItem[]
+        {
+            new DevExpress.XtraEditors.Controls.RadioGroupItem(Models.ContactChannel.SMS, "SMS"),
+            new DevExpress.XtraEditors.Controls.RadioGroupItem(Models.ContactChannel.Phone, "Phone"),
+            new DevExpress.XtraEditors.Controls.RadioGroupItem(Models.ContactChannel.InPerson, "InPerson"),
+        });
+        this.rgChannel.Properties.Columns = 3;
+        this.rgChannel.SelectedIndex = 1; // default to Phone
+        this.rgChannel.Location = new System.Drawing.Point(8, 8);
+        this.rgChannel.Size = new System.Drawing.Size(400, 36);
+
+        this.cboOutcome = new DevExpress.XtraEditors.ComboBoxEdit();
+        this.cboOutcome.Properties.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
+        foreach (Models.ContactOutcome o in System.Enum.GetValues(typeof(Models.ContactOutcome)))
+            this.cboOutcome.Properties.Items.Add(o);
+        this.cboOutcome.SelectedIndex = 1; // default Contacted
+        this.cboOutcome.Location = new System.Drawing.Point(8, 52);
+        this.cboOutcome.Width = 200;
+
+        this.memoNote = new DevExpress.XtraEditors.MemoEdit();
+        this.memoNote.Location = new System.Drawing.Point(8, 84);
+        this.memoNote.Size = new System.Drawing.Size(560, 70);
+
+        this.btnSave = new DevExpress.XtraEditors.SimpleButton { Text = "Save" };
+        this.btnSave.Location = new System.Drawing.Point(8, 162);
+        this.btnSave.Width = 100;
+        this.btnSave.Click += BtnSave_Click;
+
+        this.newContactPanel.Controls.Add(this.rgChannel);
+        this.newContactPanel.Controls.Add(this.cboOutcome);
+        this.newContactPanel.Controls.Add(this.memoNote);
+        this.newContactPanel.Controls.Add(this.btnSave);
+
+        this.rightPanel.Controls.Add(this.newContactPanel);
         this.rightPanel.Controls.Add(this.gridHistory);
         this.rightPanel.Controls.Add(this.headerPanel);
 
@@ -228,5 +272,50 @@ public class usrFeesFollowUp : UserControl
         }
 
         gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
+    }
+
+    private void BtnSave_Click(object sender, System.EventArgs e)
+    {
+        int rh = gridViewWorklist.FocusedRowHandle;
+        if (rh < 0 || rh >= currentRows.Count)
+        {
+            XtraMessageBox.Show("Select a parent on the worklist first.",
+                "School Management Dynamics", System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Information);
+            return;
+        }
+        var row = currentRows[rh];
+        var channel = (Models.ContactChannel)rgChannel.EditValue;
+        var outcome = (Models.ContactOutcome)cboOutcome.SelectedItem;
+
+        if (channel == Models.ContactChannel.SMS)
+        {
+            // Task 9 wires this up.
+            XtraMessageBox.Show("SMS save flow lands in a later task.",
+                "School Management Dynamics", System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Information);
+            return;
+        }
+
+        var entry = new Models.FeesContactLog
+        {
+            StudentNumber = row.StudentNumber,
+            ContactDate = System.DateTime.Now,
+            LoggedBy = CurrentUser.GetSystemUser(),
+            Channel = channel,
+            Outcome = outcome,
+            Note = string.IsNullOrWhiteSpace(memoNote.Text) ? null : memoNote.Text,
+        };
+        try
+        {
+            service.LogContact(entry);
+            memoNote.Text = "";
+            gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
+        }
+        catch (System.Exception ex)
+        {
+            XtraMessageBox.Show(ex.Message, "Error", System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Hand);
+        }
     }
 }
