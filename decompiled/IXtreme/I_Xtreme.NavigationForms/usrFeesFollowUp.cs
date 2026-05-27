@@ -97,6 +97,7 @@ public class usrFeesFollowUp : XtraUserControl
         this.gridViewWorklist.OptionsBehavior.Editable = false;
         this.gridViewWorklist.OptionsView.ShowGroupPanel = false;
         this.gridViewWorklist.FocusedRowChanged += GridViewWorklist_FocusedRowChanged;
+        this.gridWorklist.DoubleClick += GridWorklist_DoubleClick;
         this.gridViewWorklist.RowStyle += GridViewWorklist_RowStyle;
         this.gridViewWorklist.CustomUnboundColumnData += GridViewWorklist_UnboundData;
 
@@ -309,6 +310,21 @@ public class usrFeesFollowUp : XtraUserControl
     }
 
     private void BtnRefresh_Click(object sender, System.EventArgs e) => LoadWorklist();
+
+    private void GridWorklist_DoubleClick(object sender, System.EventArgs e)
+    {
+        int rh = gridViewWorklist.FocusedRowHandle;
+        if (rh < 0) return;
+        var row = gridViewWorklist.GetRow(rh) as WorklistRow;
+        if (row == null) return;
+
+        // Same pattern as usrStudentList.barButtonItem3_ItemClick
+        StudentOptions.SetActiveStudent(row.StudentNumber);
+        StudentOptions.SetPaymentMode("SingleStudent");
+        using var dlg = new DialogForms.StudentFeesPayment("SingleStudentPayment");
+        dlg.ShowDialog(this);
+        LoadWorklist(); // balance may have changed after a payment was made
+    }
 
     private void GridViewWorklist_FocusedRowChanged(object sender,
         DevExpress.XtraGrid.Views.Base.FocusedRowChangedEventArgs e)
