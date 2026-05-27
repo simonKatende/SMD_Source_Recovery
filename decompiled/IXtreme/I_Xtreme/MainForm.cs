@@ -171,6 +171,8 @@ public class MainForm : RibbonForm
 
 	private usrFeesPaymentAnalysis _usrFeesPaymentAnalysis;
 
+	private usrFeesFollowUp _usrFeesFollowUp;
+
 	private usrSubjectList _usrSubjectList;
 
 	private usrAllowedDiscounts _usrAllowedDiscounts;
@@ -524,6 +526,8 @@ public class MainForm : RibbonForm
 	private RibbonPageCategory ribbonSchoolAccounts;
 
 	private RibbonPage ribbonPageStudentAccounts;
+
+	private RibbonPage ribbonPageFeesFollowUp;
 
 	private RibbonPage ribbonPageSchoolAccounts;
 
@@ -4196,6 +4200,7 @@ public class MainForm : RibbonForm
 		_usrFeesReportsDashBoard = new usrFeesReportsDashBoard();
 		CurrentControl.LoadControl(_usrFeesReportsDashBoard, panelMain);
 		ribbonPageStudentAccounts.Visible = true;
+		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbonStudentAccounts.Visible = true;
 		ribbon.SelectedPage = ribbonPageStudentAccounts;
 	}
@@ -4369,6 +4374,7 @@ public class MainForm : RibbonForm
 	{
 		ribbonStudentAccounts.Visible = false;
 		ribbonPageStudentAccounts.Visible = false;
+		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbon.SelectedPage = ribbonAccounts;
 	}
 
@@ -4728,6 +4734,7 @@ public class MainForm : RibbonForm
 		lblCurrentUser.Caption = "Not Set";
 		ribbon.SelectedPage = ribbonWelcome;
 		ribbonPageStudentAccounts.Visible = false;
+		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbonPageSchoolAccounts.Visible = false;
 		ribbonPageMarkSheets.Visible = false;
 		ribbonStudentAccounts.Visible = false;
@@ -4861,6 +4868,21 @@ public class MainForm : RibbonForm
 			HidePageCategories();
 			lblAccountAction.Caption = "Attendance and Reporting";
 		}
+		else if (ribbon.SelectedPage == ribbonPageFeesFollowUp)
+		{
+			ShowFeesFollowUp();
+			HidePageCategories();
+			lblAccountAction.Caption = "Fees Follow-up";
+		}
+	}
+
+	private void ShowFeesFollowUp()
+	{
+		if (_usrFeesFollowUp == null)
+		{
+			_usrFeesFollowUp = new usrFeesFollowUp();
+		}
+		CurrentControl.LoadControl(_usrFeesFollowUp, panelMain);
 	}
 
 	private void HidePageCategories()
@@ -4870,6 +4892,7 @@ public class MainForm : RibbonForm
 		ribbonPageCatReportDesigner.Visible = false;
 		ribbonPageCatPrePriSubjects.Visible = false;
 		ribbonPageStudentAccounts.Visible = false;
+		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbonPageSchoolAccounts.Visible = false;
 		ribbonPageMarkSheets.Visible = false;
 		ribbonStudentAccounts.Visible = false;
@@ -4942,6 +4965,7 @@ public class MainForm : RibbonForm
 			lblCurrentUser.Caption = "Not Set";
 			ribbon.SelectedPage = ribbonWelcome;
 			ribbonPageStudentAccounts.Visible = false;
+			ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 			ribbonPageSchoolAccounts.Visible = false;
 			ribbonPageMarkSheets.Visible = false;
 			ribbonStudentAccounts.Visible = false;
@@ -6517,6 +6541,7 @@ public class MainForm : RibbonForm
 	private void barButtonItem215_ItemClick(object sender, ItemClickEventArgs e)
 	{
 		ribbonPageStudentAccounts.Visible = false;
+		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbonStudentAccounts.Visible = false;
 		ribbon.SelectedPage = ribbonAccounts;
 	}
@@ -6543,6 +6568,7 @@ public class MainForm : RibbonForm
 	private void barButtonItem69_ItemClick_1(object sender, ItemClickEventArgs e)
 	{
 		ribbonPageStudentAccounts.Visible = false;
+		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbonStudentAccounts.Visible = false;
 		ribbon.SelectedPage = ribbonAccounts;
 	}
@@ -12077,6 +12103,7 @@ public class MainForm : RibbonForm
 		this.ribbonPageGroup10 = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonStudentAccounts = new DevExpress.XtraBars.Ribbon.RibbonPageCategory();
 		this.ribbonPageStudentAccounts = new DevExpress.XtraBars.Ribbon.RibbonPage();
+		this.ribbonPageFeesFollowUp = new DevExpress.XtraBars.Ribbon.RibbonPage();
 		this.ribbonPageGroup49 = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroup20 = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroup43 = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
@@ -14185,7 +14212,7 @@ public class MainForm : RibbonForm
 		this.ribbon.PageHeaderItemLinks.Add(this.barButtonItem232);
 		this.ribbon.PageHeaderItemLinks.Add(this.barButtonItem170);
 		this.ribbon.PageHeaderItemLinks.Add(this.barButtonItem171);
-		this.ribbon.Pages.AddRange(new DevExpress.XtraBars.Ribbon.RibbonPage[7] { this.ribbonWelcome, this.ribbonStudents, this.ribbonEmployees, this.ribbonSuppliers, this.ribbonAcademics, this.ribbonAccounts, this.ribbonPageAttendance });
+		this.ribbon.Pages.AddRange(new DevExpress.XtraBars.Ribbon.RibbonPage[8] { this.ribbonWelcome, this.ribbonStudents, this.ribbonEmployees, this.ribbonSuppliers, this.ribbonAcademics, this.ribbonAccounts, this.ribbonPageAttendance, this.ribbonPageFeesFollowUp });
 		this.ribbon.QuickToolbarItemLinks.Add(this.barButtonItem91, true, "C");
 		this.ribbon.QuickToolbarItemLinks.Add(this.barButtonItem321);
 		this.ribbon.QuickToolbarItemLinks.Add(this.barButtonItem100, "L");
@@ -24660,6 +24687,9 @@ public class MainForm : RibbonForm
 		this.ribbonPageAttendance.Groups.AddRange(new DevExpress.XtraBars.Ribbon.RibbonPageGroup[4] { this.ribbonPageGroup35, this.ribbonPageGroup62, this.ribbonPageGroup66, this.ribbonPageGroup65 });
 		this.ribbonPageAttendance.Name = "ribbonPageAttendance";
 		this.ribbonPageAttendance.Text = "Attendance & Reporting";
+		this.ribbonPageFeesFollowUp.Name = "ribbonPageFeesFollowUp";
+		this.ribbonPageFeesFollowUp.Text = "Fees Follow-up";
+		this.ribbonPageFeesFollowUp.Visible = false;
 		this.ribbonPageGroup35.ItemLinks.Add(this.barButtonItem43);
 		this.ribbonPageGroup35.ItemLinks.Add(this.barButtonItem350);
 		this.ribbonPageGroup35.Name = "ribbonPageGroup35";

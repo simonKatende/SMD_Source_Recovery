@@ -10,7 +10,7 @@ using I_Xtreme;
 
 namespace I_Xtreme.NavigationForms;
 
-public class usrFeesFollowUp : UserControl
+public class usrFeesFollowUp : XtraUserControl
 {
     private IContainer components = null;
     private SplitContainerControl splitContainer;
