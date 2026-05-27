@@ -47,6 +47,7 @@ public class usrFeesFollowUp : XtraUserControl
     private bool _columnsConfigured = false;
     private bool _historyColumnsConfigured = false;
     private string _currentSemester;
+    private int _editContactId = -1; // -1 = new-entry mode; >= 0 = editing existing row
 
     public usrFeesFollowUp()
     {
@@ -160,6 +161,7 @@ public class usrFeesFollowUp : XtraUserControl
         this.gridViewHistory.OptionsBehavior.Editable = false;
         this.gridViewHistory.OptionsView.ShowGroupPanel = false;
         this.gridViewHistory.CustomUnboundColumnData += GridViewHistory_UnboundData;
+        this.gridViewHistory.PopupMenuShowing += GridViewHistory_PopupMenuShowing;
 
         this.newContactPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Bottom, Height = 200 };
 
@@ -329,6 +331,7 @@ public class usrFeesFollowUp : XtraUserControl
     private void GridViewWorklist_FocusedRowChanged(object sender,
         DevExpress.XtraGrid.Views.Base.FocusedRowChangedEventArgs e)
     {
+        ResetContactForm();
         if (e.FocusedRowHandle < 0)
         {
             lblParentHeader.Text = "(select a parent)";
@@ -404,6 +407,50 @@ public class usrFeesFollowUp : XtraUserControl
         var channel = (Models.ContactChannel)rgChannel.EditValue;
         var outcome = (Models.ContactOutcome)cboOutcome.SelectedItem;
 
+        // --- Edit mode: update existing row, skip SMS dialog ---
+        if (_editContactId >= 0)
+        {
+            var editEntry = new Models.FeesContactLog
+            {
+                ContactId     = _editContactId,
+                StudentNumber = row.StudentNumber,
+                ContactDate   = dteContactDate.DateTime,
+                LoggedBy      = CurrentUser.GetSystemUser(),
+                Channel       = channel,
+                Outcome       = outcome,
+                Note          = string.IsNullOrWhiteSpace(memoNote.Text) ? null : memoNote.Text,
+                PromiseDate   = outcome == Models.ContactOutcome.Promised
+                                ? dtePromiseDate.DateTime.Date
+                                : (System.DateTime?)null,
+                PromiseAmount = (outcome == Models.ContactOutcome.Promised && txtPromiseAmount.Value > 0)
+                                ? (decimal?)txtPromiseAmount.Value
+                                : null,
+            };
+            if (editEntry.Outcome == Models.ContactOutcome.Promised && !editEntry.PromiseDate.HasValue)
+            {
+                DevExpress.XtraEditors.XtraMessageBox.Show(
+                    "Please set a promise date when outcome is 'Promised'.",
+                    "Validation",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Warning);
+                return;
+            }
+            try
+            {
+                service.UpdateContact(editEntry);
+                ResetContactForm();
+                gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
+            }
+            catch (System.Exception ex)
+            {
+                DevExpress.XtraEditors.XtraMessageBox.Show(ex.Message, "Error",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Hand);
+            }
+            return;
+        }
+        // --- New contact mode continues below ---
+
         if (channel == Models.ContactChannel.SMS)
         {
             if (string.IsNullOrEmpty(row.PriorityContact) || row.PriorityContact.Length < 10)
@@ -434,10 +481,7 @@ public class usrFeesFollowUp : XtraUserControl
             try
             {
                 service.LogContact(smsEntry);
-                memoNote.Text = "";
-                dteContactDate.EditValue = System.DateTime.Today;
-                dtePromiseDate.EditValue = null;
-                txtPromiseAmount.Value = 0;
+                ResetContactForm();
                 gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
             }
             catch (System.Exception ex)
@@ -472,10 +516,7 @@ public class usrFeesFollowUp : XtraUserControl
         try
         {
             service.LogContact(entry);
-            memoNote.Text = "";
-            dteContactDate.EditValue = System.DateTime.Today;
-            dtePromiseDate.EditValue = null;
-            txtPromiseAmount.Value = 0;
+            ResetContactForm();
             gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
         }
         catch (System.Exception ex)
@@ -483,6 +524,19 @@ public class usrFeesFollowUp : XtraUserControl
             XtraMessageBox.Show(ex.Message, "Error", System.Windows.Forms.MessageBoxButtons.OK,
                 System.Windows.Forms.MessageBoxIcon.Hand);
         }
+    }
+
+    private void ResetContactForm()
+    {
+        _editContactId = -1;
+        dteContactDate.EditValue = System.DateTime.Today;
+        rgChannel.SelectedIndex = 1;    // Phone (index 1 in current channel radio)
+        cboOutcome.SelectedIndex = 1;   // Contacted at index 1 in current enum
+        memoNote.Text = "";
+        dtePromiseDate.EditValue = null;
+        txtPromiseAmount.Value = 0;
+        btnSave.Text = "Save";
+        btnSaveAndNext.Enabled = true;
     }
 
     private void ConfigureWorklistColumns()
@@ -539,6 +593,9 @@ public class usrFeesFollowUp : XtraUserControl
     {
         if (_historyColumnsConfigured) return;
         _historyColumnsConfigured = true;
+
+        var colId = gridViewHistory.Columns["ContactId"];
+        if (colId != null) colId.Visible = false;
 
         var colNumH = new DevExpress.XtraGrid.Columns.GridColumn();
         colNumH.FieldName = "#";
@@ -615,5 +672,68 @@ public class usrFeesFollowUp : XtraUserControl
                 _                           => e.DisplayText,
             };
         }
+    }
+
+    private void StartEditContact(int rowHandle)
+    {
+        var drv = gridViewHistory.GetRow(rowHandle) as System.Data.DataRowView;
+        if (drv == null) return;
+
+        _editContactId           = System.Convert.ToInt32(drv["ContactId"]);
+        dteContactDate.EditValue = drv["ContactDate"];
+        memoNote.Text            = drv["Note"]?.ToString() ?? "";
+
+        if (System.Enum.TryParse(drv["Channel"]?.ToString(), out Models.ContactChannel ch))
+            rgChannel.EditValue = ch;
+        if (System.Enum.TryParse(drv["Outcome"]?.ToString(), out Models.ContactOutcome oc))
+            cboOutcome.SelectedItem = oc;
+
+        dtePromiseDate.EditValue = drv["PromiseDate"] == System.DBNull.Value ? null : drv["PromiseDate"];
+        txtPromiseAmount.Value   = drv["PromiseAmount"] == System.DBNull.Value
+                                   ? 0 : System.Convert.ToDecimal(drv["PromiseAmount"]);
+
+        btnSave.Text           = "Update";
+        btnSaveAndNext.Enabled = false;
+    }
+
+    private void DeleteHistoryRow(int rowHandle)
+    {
+        var drv = gridViewHistory.GetRow(rowHandle) as System.Data.DataRowView;
+        if (drv == null) return;
+        int contactId = System.Convert.ToInt32(drv["ContactId"]);
+
+        var confirm = DevExpress.XtraEditors.XtraMessageBox.Show(
+            "Delete this contact log entry? This cannot be undone.",
+            "Confirm Delete",
+            System.Windows.Forms.MessageBoxButtons.YesNo,
+            System.Windows.Forms.MessageBoxIcon.Question);
+        if (confirm != System.Windows.Forms.DialogResult.Yes) return;
+
+        var wlistRow = gridViewWorklist.GetFocusedRow() as WorklistRow;
+        try
+        {
+            service.DeleteContact(contactId);
+            if (wlistRow != null)
+                gridHistory.DataSource = service.GetContactHistory(wlistRow.StudentNumber);
+        }
+        catch (System.Exception ex)
+        {
+            DevExpress.XtraEditors.XtraMessageBox.Show(ex.Message, "Error",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Hand);
+        }
+    }
+
+    private void GridViewHistory_PopupMenuShowing(object sender,
+        DevExpress.XtraGrid.Views.Grid.PopupMenuShowingEventArgs e)
+    {
+        if (e.MenuType != DevExpress.XtraGrid.Views.Grid.GridMenuType.Row) return;
+        int rh = e.HitInfo.RowHandle;
+        if (rh < 0) return;
+        gridViewHistory.FocusedRowHandle = rh; // select the right-clicked row
+        e.Menu.Items.Add(new DevExpress.Utils.Menu.DXMenuItem("Edit",
+            (s2, e2) => StartEditContact(rh)));
+        e.Menu.Items.Add(new DevExpress.Utils.Menu.DXMenuItem("Delete",
+            (s2, e2) => DeleteHistoryRow(rh)));
     }
 }

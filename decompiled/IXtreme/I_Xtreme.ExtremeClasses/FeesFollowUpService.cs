@@ -165,12 +165,45 @@ public class FeesFollowUpService
         cmd.ExecuteNonQuery();
     }
 
+    public void DeleteContact(int contactId)
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(
+            "DELETE FROM tbl_FeesContactLog WHERE ContactId = @id", conn);
+        cmd.Parameters.Add("@id", SqlDbType.Int).Value = contactId;
+        cmd.ExecuteNonQuery();
+    }
+
+    public void UpdateContact(FeesContactLog entry)
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(@"
+        UPDATE tbl_FeesContactLog
+        SET ContactDate   = @ContactDate,
+            Channel       = @Channel,
+            Outcome       = @Outcome,
+            Note          = @Note,
+            PromiseDate   = @PromiseDate,
+            PromiseAmount = @PromiseAmount
+        WHERE ContactId = @ContactId", conn);
+        cmd.Parameters.Add("@ContactDate",   SqlDbType.DateTime).Value = entry.ContactDate;
+        cmd.Parameters.Add("@Channel",       SqlDbType.VarChar,  20).Value = entry.Channel.ToString();
+        cmd.Parameters.Add("@Outcome",       SqlDbType.VarChar,  20).Value = entry.Outcome.ToString();
+        cmd.Parameters.Add("@Note",          SqlDbType.NVarChar, 500).Value = (object)entry.Note ?? DBNull.Value;
+        cmd.Parameters.Add("@PromiseDate",   SqlDbType.Date).Value = (object)entry.PromiseDate ?? DBNull.Value;
+        cmd.Parameters.Add("@PromiseAmount", SqlDbType.Money).Value = (object)entry.PromiseAmount ?? DBNull.Value;
+        cmd.Parameters.Add("@ContactId",     SqlDbType.Int).Value = entry.ContactId;
+        cmd.ExecuteNonQuery();
+    }
+
     public DataTable GetContactHistory(string studentNumber)
     {
         var dt = new DataTable();
         using var conn = new SqlConnection(connectionString);
         using var da = new SqlDataAdapter(@"
-        SELECT ContactDate, Channel, Outcome, Note, LoggedBy, PromiseDate, PromiseAmount
+        SELECT ContactId, ContactDate, Channel, Outcome, Note, LoggedBy, PromiseDate, PromiseAmount
         FROM tbl_FeesContactLog
         WHERE StudentNumber = @sn
         ORDER BY ContactDate DESC", conn);
