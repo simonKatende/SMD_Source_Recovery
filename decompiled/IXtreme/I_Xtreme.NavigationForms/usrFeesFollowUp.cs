@@ -39,6 +39,8 @@ public class usrFeesFollowUp : XtraUserControl
     private MemoEdit memoNote;
     private SimpleButton btnSave;
     private SimpleButton btnSaveAndNext;
+    private DevExpress.XtraEditors.LabelControl lblContactDate;
+    private DevExpress.XtraEditors.DateEdit dteContactDate;
 
     private readonly FeesFollowUpService service = new FeesFollowUpService();
     private List<WorklistRow> currentRows = new List<WorklistRow>();
@@ -169,7 +171,20 @@ public class usrFeesFollowUp : XtraUserControl
         this.rgChannel.Properties.Columns = 3;
         this.rgChannel.SelectedIndex = 1; // default to Phone
         this.rgChannel.Location = new System.Drawing.Point(8, 8);
-        this.rgChannel.Size = new System.Drawing.Size(400, 36);
+        this.rgChannel.Size = new System.Drawing.Size(300, 36);
+
+        this.lblContactDate = new DevExpress.XtraEditors.LabelControl
+        {
+            Text     = "Date:",
+            Location = new System.Drawing.Point(312, 14),
+        };
+
+        this.dteContactDate = new DevExpress.XtraEditors.DateEdit();
+        ((System.ComponentModel.ISupportInitialize)this.dteContactDate.Properties).BeginInit();
+        this.dteContactDate.Location  = new System.Drawing.Point(342, 8);
+        this.dteContactDate.Width     = 120;
+        this.dteContactDate.EditValue = System.DateTime.Today;
+        ((System.ComponentModel.ISupportInitialize)this.dteContactDate.Properties).EndInit();
 
         this.cboOutcome = new DevExpress.XtraEditors.ComboBoxEdit();
         this.cboOutcome.Properties.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
@@ -214,6 +229,8 @@ public class usrFeesFollowUp : XtraUserControl
         this.newContactPanel.Controls.Add(this.btnSaveAndNext);
 
         this.newContactPanel.Controls.Add(this.rgChannel);
+        this.newContactPanel.Controls.Add(this.lblContactDate);
+        this.newContactPanel.Controls.Add(this.dteContactDate);
         this.newContactPanel.Controls.Add(this.cboOutcome);
         this.newContactPanel.Controls.Add(this.lblPromiseDate);
         this.newContactPanel.Controls.Add(this.dtePromiseDate);
@@ -354,6 +371,15 @@ public class usrFeesFollowUp : XtraUserControl
                 System.Windows.Forms.MessageBoxIcon.Information);
             return;
         }
+        if (dteContactDate.DateTime.Date > System.DateTime.Today)
+        {
+            DevExpress.XtraEditors.XtraMessageBox.Show(
+                "Contact date cannot be in the future.",
+                "Validation",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Warning);
+            return;
+        }
         var channel = (Models.ContactChannel)rgChannel.EditValue;
         var outcome = (Models.ContactOutcome)cboOutcome.SelectedItem;
 
@@ -374,7 +400,7 @@ public class usrFeesFollowUp : XtraUserControl
             var smsEntry = new Models.FeesContactLog
             {
                 StudentNumber = row.StudentNumber,
-                ContactDate = System.DateTime.Now,
+                ContactDate = dteContactDate.DateTime,
                 LoggedBy = CurrentUser.GetSystemUser(),
                 Channel = Models.ContactChannel.SMS,
                 Outcome = outcome,
@@ -388,6 +414,7 @@ public class usrFeesFollowUp : XtraUserControl
             {
                 service.LogContact(smsEntry);
                 memoNote.Text = "";
+                dteContactDate.EditValue = System.DateTime.Today;
                 dtePromiseDate.EditValue = null;
                 txtPromiseAmount.Value = 0;
                 gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
@@ -411,7 +438,7 @@ public class usrFeesFollowUp : XtraUserControl
         var entry = new Models.FeesContactLog
         {
             StudentNumber = row.StudentNumber,
-            ContactDate = System.DateTime.Now,
+            ContactDate = dteContactDate.DateTime,
             LoggedBy = CurrentUser.GetSystemUser(),
             Channel = channel,
             Outcome = outcome,
@@ -425,6 +452,7 @@ public class usrFeesFollowUp : XtraUserControl
         {
             service.LogContact(entry);
             memoNote.Text = "";
+            dteContactDate.EditValue = System.DateTime.Today;
             dtePromiseDate.EditValue = null;
             txtPromiseAmount.Value = 0;
             gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
