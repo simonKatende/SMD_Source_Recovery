@@ -129,6 +129,7 @@ public class SMSGuardian : XtraForm
 				return;
 			}
 			XtraMessageBox.Show($"Message sent to {normalized}.", "School Management Dynamics", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			base.DialogResult = DialogResult.OK;
 			Dispose();
 		}
 		catch (Exception ex)
@@ -156,6 +157,7 @@ public class SMSGuardian : XtraForm
 
 	private void simpleButton2_Click(object sender, EventArgs e)
 	{
+		base.DialogResult = DialogResult.Cancel;
 		Dispose();
 	}
 
