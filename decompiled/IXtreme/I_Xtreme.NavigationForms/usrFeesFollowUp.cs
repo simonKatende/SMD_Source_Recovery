@@ -110,6 +110,16 @@ public class usrFeesFollowUp : UserControl
         filterStrip.Controls.Add(this.cboClassFilter);
         filterStrip.Controls.Add(this.txtMinBalance);
         filterStrip.Controls.Add(this.btnRefresh);
+        var btnSettings = new DevExpress.XtraEditors.SimpleButton { Text = "Settings" };
+        btnSettings.Location = new System.Drawing.Point(396, 7);
+        btnSettings.Width = 80;
+        btnSettings.Click += (s, e) =>
+        {
+            using var dlg = new FollowUpSettings();
+            if (dlg.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+                LoadWorklist();   // refresh because staleness threshold may have changed
+        };
+        filterStrip.Controls.Add(btnSettings);
 
         this.gridWorklist.Dock = DockStyle.Fill;
         this.leftPanel.Controls.Add(this.gridWorklist);
