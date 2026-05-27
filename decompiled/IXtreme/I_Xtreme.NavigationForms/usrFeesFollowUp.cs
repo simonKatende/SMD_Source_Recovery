@@ -38,6 +38,7 @@ public class usrFeesFollowUp : UserControl
     private SpinEdit txtPromiseAmount;
     private MemoEdit memoNote;
     private SimpleButton btnSave;
+    private SimpleButton btnSaveAndNext;
 
     private readonly FeesFollowUpService service = new FeesFollowUpService();
     private List<WorklistRow> currentRows = new List<WorklistRow>();
@@ -192,6 +193,12 @@ public class usrFeesFollowUp : UserControl
         this.btnSave.Width = 100;
         this.btnSave.Click += BtnSave_Click;
 
+        this.btnSaveAndNext = new DevExpress.XtraEditors.SimpleButton { Text = "Save & next →" };
+        this.btnSaveAndNext.Location = new System.Drawing.Point(116, 162);
+        this.btnSaveAndNext.Width = 130;
+        this.btnSaveAndNext.Click += BtnSaveAndNext_Click;
+        this.newContactPanel.Controls.Add(this.btnSaveAndNext);
+
         this.newContactPanel.Controls.Add(this.rgChannel);
         this.newContactPanel.Controls.Add(this.cboOutcome);
         this.newContactPanel.Controls.Add(this.lblPromiseDate);
@@ -300,6 +307,16 @@ public class usrFeesFollowUp : UserControl
         }
 
         gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
+    }
+
+    private void BtnSaveAndNext_Click(object sender, System.EventArgs e)
+    {
+        int rh = gridViewWorklist.FocusedRowHandle;
+        BtnSave_Click(sender, e);
+        if (rh >= 0 && rh < gridViewWorklist.RowCount - 1)
+        {
+            gridViewWorklist.FocusedRowHandle = rh + 1;
+        }
     }
 
     private void BtnSave_Click(object sender, System.EventArgs e)
