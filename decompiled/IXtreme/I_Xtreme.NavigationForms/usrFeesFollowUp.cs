@@ -95,6 +95,7 @@ public class usrFeesFollowUp : XtraUserControl
         this.gridViewWorklist.OptionsView.ShowGroupPanel = false;
         this.gridViewWorklist.FocusedRowChanged += GridViewWorklist_FocusedRowChanged;
         this.gridViewWorklist.RowStyle += GridViewWorklist_RowStyle;
+        this.gridViewWorklist.CustomUnboundColumnData += GridViewWorklist_UnboundData;
 
         // Layout: stack filter bar above grid in the left panel of split container
         this.leftPanel = new System.Windows.Forms.Panel();
@@ -154,6 +155,7 @@ public class usrFeesFollowUp : XtraUserControl
         this.gridHistory.ViewCollection.Add(this.gridViewHistory);
         this.gridViewHistory.OptionsBehavior.Editable = false;
         this.gridViewHistory.OptionsView.ShowGroupPanel = false;
+        this.gridViewHistory.CustomUnboundColumnData += GridViewHistory_UnboundData;
 
         this.newContactPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Bottom, Height = 200 };
 
@@ -439,6 +441,17 @@ public class usrFeesFollowUp : XtraUserControl
         if (_columnsConfigured) return;
         _columnsConfigured = true;
 
+        var colNum = new DevExpress.XtraGrid.Columns.GridColumn();
+        colNum.FieldName = "#";
+        colNum.Caption   = "#";
+        colNum.UnboundType = DevExpress.Data.UnboundColumnType.Integer;
+        colNum.OptionsColumn.AllowEdit = false;
+        colNum.OptionsColumn.ReadOnly  = true;
+        colNum.OptionsColumn.AllowSort = DevExpress.Utils.DefaultBoolean.False;
+        colNum.Width = 36;
+        gridViewWorklist.Columns.Add(colNum);
+        colNum.VisibleIndex = 0;
+
         foreach (string name in new[] { "StudentNumber", "PaymentsSinceLatestPromise", "LatestPromiseAmount", "LatestPromiseDate" })
         {
             var col = gridViewWorklist.Columns[name];
@@ -467,12 +480,27 @@ public class usrFeesFollowUp : XtraUserControl
         SetCaption("Tier", "Priority");
 
         gridViewWorklist.CustomColumnDisplayText += GridViewWorklist_CustomColumnDisplayText;
+
+        gridViewWorklist.BestFitColumns();
+        var colNumFixed = gridViewWorklist.Columns["#"];
+        if (colNumFixed != null) colNumFixed.Width = 36; // BestFit must not expand the # column
     }
 
     private void ConfigureHistoryColumns()
     {
         if (_historyColumnsConfigured) return;
         _historyColumnsConfigured = true;
+
+        var colNumH = new DevExpress.XtraGrid.Columns.GridColumn();
+        colNumH.FieldName = "#";
+        colNumH.Caption   = "#";
+        colNumH.UnboundType = DevExpress.Data.UnboundColumnType.Integer;
+        colNumH.OptionsColumn.AllowEdit = false;
+        colNumH.OptionsColumn.ReadOnly  = true;
+        colNumH.OptionsColumn.AllowSort = DevExpress.Utils.DefaultBoolean.False;
+        colNumH.Width = 36;
+        gridViewHistory.Columns.Add(colNumH);
+        colNumH.VisibleIndex = 0;
 
         var colAmt = gridViewHistory.Columns["PromiseAmount"];
         if (colAmt != null)
@@ -491,6 +519,26 @@ public class usrFeesFollowUp : XtraUserControl
 
         gridViewHistory.OptionsView.ShowGroupPanel = false;
         gridViewHistory.OptionsBehavior.Editable = false;
+
+        gridViewHistory.BestFitColumns();
+        var noteCol = gridViewHistory.Columns["Note"];
+        if (noteCol != null) noteCol.Width = System.Math.Min(noteCol.Width, 200);
+        var colNumHFixed = gridViewHistory.Columns["#"];
+        if (colNumHFixed != null) colNumHFixed.Width = 36;
+    }
+
+    private void GridViewWorklist_UnboundData(object sender,
+        DevExpress.XtraGrid.Views.Base.CustomColumnDataEventArgs e)
+    {
+        if (e.Column.FieldName == "#" && e.IsGetData)
+            e.Value = e.ListSourceRowIndex + 1;
+    }
+
+    private void GridViewHistory_UnboundData(object sender,
+        DevExpress.XtraGrid.Views.Base.CustomColumnDataEventArgs e)
+    {
+        if (e.Column.FieldName == "#" && e.IsGetData)
+            e.Value = e.ListSourceRowIndex + 1;
     }
 
     private void GridViewWorklist_CustomColumnDisplayText(object sender,
