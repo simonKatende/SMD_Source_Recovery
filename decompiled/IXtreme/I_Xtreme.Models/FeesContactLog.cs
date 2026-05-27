@@ -18,3 +18,14 @@ public class FeesContactLog
     public DateTime? PromiseDate { get; set; }
     public decimal? PromiseAmount { get; set; }
 }
+
+public class StudentDetail
+{
+    public byte[]  Photo                { get; set; }
+    public string  FullName             { get; set; }
+    public string  StudentNumber        { get; set; }
+    public string  ClassId              { get; set; }
+    public string  GuardianContact1     { get; set; }  // tbl_Stud.PriorityContact
+    public string  GuardianContact2     { get; set; }  // tbl_Stud.OtherContact
+    public string  GuardianRelationship { get; set; }  // tbl_Stud.Guardian (name/relationship)
+}

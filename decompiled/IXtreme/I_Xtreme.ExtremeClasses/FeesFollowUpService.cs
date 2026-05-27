@@ -247,4 +247,33 @@ public class FeesFollowUpService
             conn);
         return cmd.ExecuteScalar() as string;
     }
+
+    /// <summary>
+    /// Loads the student's photo and guardian contact info for the header panel.
+    /// Called per row-select (not in GetWorklist) to avoid loading binary photo
+    /// data for the entire worklist on every refresh.
+    /// </summary>
+    public StudentDetail GetStudentDetail(string studentNumber)
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(@"
+    SELECT Picture, fullName, StudentNumber, ClassId,
+           PriorityContact, OtherContact, Guardian
+    FROM tbl_Stud
+    WHERE StudentNumber = @sn", conn);
+        cmd.Parameters.Add("@sn", SqlDbType.VarChar, 50).Value = studentNumber;
+        using var rdr = cmd.ExecuteReader();
+        if (!rdr.Read()) return null;
+        return new StudentDetail
+        {
+            Photo                = rdr["Picture"] as byte[],
+            FullName             = rdr["fullName"]?.ToString(),
+            StudentNumber        = rdr["StudentNumber"]?.ToString(),
+            ClassId              = rdr["ClassId"]?.ToString(),
+            GuardianContact1     = rdr["PriorityContact"]?.ToString(),
+            GuardianContact2     = rdr["OtherContact"]?.ToString(),
+            GuardianRelationship = rdr["Guardian"]?.ToString(),
+        };
+    }
 }

@@ -22,8 +22,12 @@ public class usrFeesFollowUp : XtraUserControl
     private DevExpress.XtraGrid.Views.Grid.GridView gridViewWorklist;
     private System.Windows.Forms.Panel leftPanel;
 
-    private LabelControl lblParentHeader;
-    private LabelControl lblRecentPayments;
+    private DevExpress.XtraEditors.PictureEdit picStudentPhoto;
+    private DevExpress.XtraEditors.LabelControl lblStudentName;
+    private DevExpress.XtraEditors.LabelControl lblStudentIdClass;
+    private DevExpress.XtraEditors.LabelControl lblGuardian1;
+    private DevExpress.XtraEditors.LabelControl lblGuardian2;
+    private LabelControl lblRecentPayments;  // re-declared; same field name
     private DevExpress.XtraGrid.GridControl gridHistory;
     private DevExpress.XtraGrid.Views.Grid.GridView gridViewHistory;
     private System.Windows.Forms.Panel rightPanel;
@@ -48,6 +52,7 @@ public class usrFeesFollowUp : XtraUserControl
     private bool _historyColumnsConfigured = false;
     private string _currentSemester;
     private int _editContactId = -1; // -1 = new-entry mode; >= 0 = editing existing row
+    private System.IO.MemoryStream _photoStream;
 
     public usrFeesFollowUp()
     {
@@ -136,22 +141,51 @@ public class usrFeesFollowUp : XtraUserControl
         this.splitContainer.Panel1.Controls.Add(this.leftPanel);
 
         this.rightPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Fill };
-        this.headerPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Top, Height = 64 };
+        this.headerPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Top, Height = 110 };
 
-        this.lblParentHeader = new DevExpress.XtraEditors.LabelControl();
-        this.lblParentHeader.Appearance.Font = new System.Drawing.Font("Tahoma", 11F, System.Drawing.FontStyle.Bold);
-        this.lblParentHeader.Location = new System.Drawing.Point(8, 6);
-        this.lblParentHeader.AutoSizeMode = LabelAutoSizeMode.None;
-        this.lblParentHeader.Size = new System.Drawing.Size(560, 22);
-        this.lblParentHeader.Text = "(select a parent)";
+        this.picStudentPhoto = new DevExpress.XtraEditors.PictureEdit();
+        ((System.ComponentModel.ISupportInitialize)this.picStudentPhoto.Properties).BeginInit();
+        this.picStudentPhoto.Location = new System.Drawing.Point(4, 8);
+        this.picStudentPhoto.Size     = new System.Drawing.Size(72, 90);
+        this.picStudentPhoto.Properties.SizeMode = DevExpress.XtraEditors.Controls.PictureSizeMode.Zoom;
+        ((System.ComponentModel.ISupportInitialize)this.picStudentPhoto.Properties).EndInit();
+
+        this.lblStudentName = new DevExpress.XtraEditors.LabelControl();
+        this.lblStudentName.Appearance.Font = new System.Drawing.Font("Tahoma", 11F, System.Drawing.FontStyle.Bold);
+        this.lblStudentName.AutoSizeMode    = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblStudentName.Size            = new System.Drawing.Size(520, 22);
+        this.lblStudentName.Location        = new System.Drawing.Point(84, 8);
+        this.lblStudentName.Text            = "(select a student on the worklist)";
+
+        this.lblStudentIdClass = new DevExpress.XtraEditors.LabelControl();
+        this.lblStudentIdClass.AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblStudentIdClass.Size         = new System.Drawing.Size(520, 16);
+        this.lblStudentIdClass.Location     = new System.Drawing.Point(84, 32);
+        this.lblStudentIdClass.Text         = "";
+
+        this.lblGuardian1 = new DevExpress.XtraEditors.LabelControl();
+        this.lblGuardian1.AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblGuardian1.Size         = new System.Drawing.Size(520, 16);
+        this.lblGuardian1.Location     = new System.Drawing.Point(84, 50);
+        this.lblGuardian1.Text         = "";
+
+        this.lblGuardian2 = new DevExpress.XtraEditors.LabelControl();
+        this.lblGuardian2.AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblGuardian2.Size         = new System.Drawing.Size(520, 16);
+        this.lblGuardian2.Location     = new System.Drawing.Point(84, 68);
+        this.lblGuardian2.Text         = "";
 
         this.lblRecentPayments = new DevExpress.XtraEditors.LabelControl();
-        this.lblRecentPayments.Location = new System.Drawing.Point(8, 32);
-        this.lblRecentPayments.AutoSizeMode = LabelAutoSizeMode.None;
-        this.lblRecentPayments.Size = new System.Drawing.Size(560, 28);
-        this.lblRecentPayments.Text = "";
+        this.lblRecentPayments.AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblRecentPayments.Size         = new System.Drawing.Size(520, 16);
+        this.lblRecentPayments.Location     = new System.Drawing.Point(84, 88);
+        this.lblRecentPayments.Text         = "";
 
-        this.headerPanel.Controls.Add(this.lblParentHeader);
+        this.headerPanel.Controls.Add(this.picStudentPhoto);
+        this.headerPanel.Controls.Add(this.lblStudentName);
+        this.headerPanel.Controls.Add(this.lblStudentIdClass);
+        this.headerPanel.Controls.Add(this.lblGuardian1);
+        this.headerPanel.Controls.Add(this.lblGuardian2);
         this.headerPanel.Controls.Add(this.lblRecentPayments);
 
         this.gridHistory = new DevExpress.XtraGrid.GridControl { Dock = DockStyle.Fill };
@@ -334,14 +368,71 @@ public class usrFeesFollowUp : XtraUserControl
         ResetContactForm();
         if (e.FocusedRowHandle < 0)
         {
-            lblParentHeader.Text = "(select a parent)";
-            lblRecentPayments.Text = "";
-            gridHistory.DataSource = null;
+            var oldImg2 = picStudentPhoto.Image;
+            var oldStream2 = _photoStream;
+            picStudentPhoto.Image = null;
+            _photoStream = null;
+            oldImg2?.Dispose();
+            oldStream2?.Dispose();
+            lblStudentName.Text     = "(select a student on the worklist)";
+            lblStudentIdClass.Text  = "";
+            lblGuardian1.Text       = "";
+            lblGuardian2.Text       = "";
+            lblRecentPayments.Text  = "";
+            gridHistory.DataSource  = null;
             return;
         }
         var row = gridViewWorklist.GetRow(e.FocusedRowHandle) as WorklistRow;
         if (row == null) return;
-        lblParentHeader.Text = $"{row.FullName}  •  {row.ClassId}  •  Balance UGX {row.Balance:N0}";
+
+        // Quick header from the already-loaded WorklistRow
+        var prevImg = picStudentPhoto.Image;
+        var prevStream = _photoStream;
+        picStudentPhoto.Image = null;
+        _photoStream = null;
+        prevImg?.Dispose();
+        prevStream?.Dispose();
+        lblStudentName.Text     = $"{row.FullName}  —  Balance UGX {row.Balance:N0}";
+        lblStudentIdClass.Text  = "";
+        lblGuardian1.Text       = "";
+        lblGuardian2.Text       = "";
+
+        try
+        {
+            var detail = service.GetStudentDetail(row.StudentNumber);
+            if (detail != null)
+            {
+                lblStudentIdClass.Text = $"ID: {detail.StudentNumber}  •  Class: {detail.ClassId}";
+
+                string g1    = detail.GuardianContact1 ?? "";
+                string rel   = detail.GuardianRelationship ?? "";
+                lblGuardian1.Text = string.IsNullOrEmpty(rel)
+                    ? $"Contact 1: {g1}"
+                    : $"Guardian ({rel}): {g1}";
+
+                if (!string.IsNullOrEmpty(detail.GuardianContact2))
+                    lblGuardian2.Text = $"Contact 2: {detail.GuardianContact2}";
+
+                if (detail.Photo != null && detail.Photo.Length > 0)
+                {
+                    try
+                    {
+                        var ms = new System.IO.MemoryStream(detail.Photo);
+                        var oldImage = picStudentPhoto.Image;
+                        var oldStream = _photoStream;
+                        picStudentPhoto.Image = System.Drawing.Image.FromStream(ms);
+                        _photoStream = ms;
+                        oldImage?.Dispose();
+                        oldStream?.Dispose();
+                    }
+                    catch { /* corrupt or unsupported photo format -- leave blank */ }
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            lblStudentIdClass.Text = $"(error loading student details: {ex.Message})";
+        }
 
         try
         {
