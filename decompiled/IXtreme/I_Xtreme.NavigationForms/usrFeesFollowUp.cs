@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using DevExpress.XtraEditors;
+using I_Xtreme.DialogForms;
 using I_Xtreme.ExtremeClasses;
 using I_Xtreme.Models;
 using I_Xtreme;
@@ -317,10 +318,44 @@ public class usrFeesFollowUp : UserControl
 
         if (channel == Models.ContactChannel.SMS)
         {
-            // Task 9 wires this up.
-            XtraMessageBox.Show("SMS save flow lands in a later task.",
-                "School Management Dynamics", System.Windows.Forms.MessageBoxButtons.OK,
-                System.Windows.Forms.MessageBoxIcon.Information);
+            if (string.IsNullOrEmpty(row.PriorityContact) || row.PriorityContact.Length < 10)
+            {
+                XtraMessageBox.Show("No valid contact number on file for this parent.",
+                    "School Management Dynamics", System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Hand);
+                return;
+            }
+            using var dlg = new SMSGuardian();
+            dlg.txtReceipient.Text = row.PriorityContact;
+            if (dlg.ShowDialog(this) != System.Windows.Forms.DialogResult.OK)
+                return; // user cancelled or send failed; do not log
+            // SMSGuardian closed via successful send; write the contact log entry
+            var smsEntry = new Models.FeesContactLog
+            {
+                StudentNumber = row.StudentNumber,
+                ContactDate = System.DateTime.Now,
+                LoggedBy = CurrentUser.GetSystemUser(),
+                Channel = Models.ContactChannel.SMS,
+                Outcome = outcome,
+                Note = $"SMS: {memoNote.Text}".Trim(),
+                PromiseDate = outcome == Models.ContactOutcome.Promised ? dtePromiseDate.DateTime.Date : (System.DateTime?)null,
+                PromiseAmount = (outcome == Models.ContactOutcome.Promised && txtPromiseAmount.Value > 0)
+                    ? (decimal?)txtPromiseAmount.Value
+                    : null,
+            };
+            try
+            {
+                service.LogContact(smsEntry);
+                memoNote.Text = "";
+                dtePromiseDate.EditValue = null;
+                txtPromiseAmount.Value = 0;
+                gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
+            }
+            catch (System.Exception ex)
+            {
+                XtraMessageBox.Show(ex.Message, "Error", System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Hand);
+            }
             return;
         }
 
