@@ -4374,7 +4374,6 @@ public class MainForm : RibbonForm
 	{
 		ribbonStudentAccounts.Visible = false;
 		ribbonPageStudentAccounts.Visible = false;
-		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbon.SelectedPage = ribbonAccounts;
 	}
 
@@ -4892,7 +4891,6 @@ public class MainForm : RibbonForm
 		ribbonPageCatReportDesigner.Visible = false;
 		ribbonPageCatPrePriSubjects.Visible = false;
 		ribbonPageStudentAccounts.Visible = false;
-		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbonPageSchoolAccounts.Visible = false;
 		ribbonPageMarkSheets.Visible = false;
 		ribbonStudentAccounts.Visible = false;
@@ -6541,7 +6539,6 @@ public class MainForm : RibbonForm
 	private void barButtonItem215_ItemClick(object sender, ItemClickEventArgs e)
 	{
 		ribbonPageStudentAccounts.Visible = false;
-		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbonStudentAccounts.Visible = false;
 		ribbon.SelectedPage = ribbonAccounts;
 	}
@@ -6568,7 +6565,6 @@ public class MainForm : RibbonForm
 	private void barButtonItem69_ItemClick_1(object sender, ItemClickEventArgs e)
 	{
 		ribbonPageStudentAccounts.Visible = false;
-		ribbonPageFeesFollowUp.Visible = ribbonPageStudentAccounts.Visible;
 		ribbonStudentAccounts.Visible = false;
 		ribbon.SelectedPage = ribbonAccounts;
 	}
@@ -7990,6 +7986,7 @@ public class MainForm : RibbonForm
 			EnableClearancePrinting();
 			EnableMealCards();
 			ribbonAccounts.Visible = true;
+			ribbonPageFeesFollowUp.Visible = true;
 			ribbonStudents.Visible = true;
 			ribbonEmployees.Visible = true;
 			ribbonSuppliers.Visible = true;
@@ -8030,6 +8027,7 @@ public class MainForm : RibbonForm
 			barButtonItem49.Enabled = true;
 			barButtonAGS.Enabled = true;
 			ribbonAccounts.Visible = true;
+			ribbonPageFeesFollowUp.Visible = true;
 			ribbonStudents.Visible = true;
 			ribbonEmployees.Visible = true;
 			ribbonSuppliers.Visible = true;
