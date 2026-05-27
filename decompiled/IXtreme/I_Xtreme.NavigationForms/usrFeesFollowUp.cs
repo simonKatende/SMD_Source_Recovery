@@ -46,6 +46,7 @@ public class usrFeesFollowUp : XtraUserControl
     private List<WorklistRow> currentRows = new List<WorklistRow>();
     private bool _columnsConfigured = false;
     private bool _historyColumnsConfigured = false;
+    private string _currentSemester;
 
     public usrFeesFollowUp()
     {
@@ -283,6 +284,7 @@ public class usrFeesFollowUp : XtraUserControl
         string classFilter = cboClassFilter.Text == "All Classes" ? "" : cboClassFilter.Text;
         decimal minBalance = (decimal)txtMinBalance.Value;
         currentRows = service.GetWorklist(classFilter, minBalance);
+        _currentSemester = service.GetCurrentSemester();
         gridWorklist.DataSource = currentRows;
         ConfigureWorklistColumns();
     }
@@ -324,10 +326,13 @@ public class usrFeesFollowUp : XtraUserControl
 
         try
         {
-            var payments = service.GetRecentPayments(row.StudentNumber, 3);
+            var payments = service.GetRecentPayments(row.StudentNumber, topN: 2, semester: _currentSemester);
+            string payLabel = _currentSemester != null
+                ? $"Last 2 payments ({_currentSemester}):"
+                : "Last 2 payments:";
             if (payments.Rows.Count == 0)
             {
-                lblRecentPayments.Text = "Last 3 payments: (none)";
+                lblRecentPayments.Text = $"{payLabel} (none)";
             }
             else
             {
@@ -338,7 +343,7 @@ public class usrFeesFollowUp : XtraUserControl
                     var dt = p["PaymentDate"] is System.DateTime pd ? pd : System.DateTime.MinValue;
                     parts.Add($"{amt:N0} ({dt:yyyy-MM-dd})");
                 }
-                lblRecentPayments.Text = "Last 3 payments: " + string.Join(", ", parts);
+                lblRecentPayments.Text = payLabel + " " + string.Join(", ", parts);
             }
 
             gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);

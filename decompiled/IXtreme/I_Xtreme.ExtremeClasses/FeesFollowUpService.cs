@@ -179,17 +179,39 @@ public class FeesFollowUpService
         return dt;
     }
 
-    public DataTable GetRecentPayments(string studentNumber, int topN = 3)
+    public DataTable GetRecentPayments(string studentNumber, int topN = 2, string semester = null)
     {
         var dt = new DataTable();
         using var conn = new SqlConnection(connectionString);
+        string semesterClause = string.IsNullOrEmpty(semester)
+            ? ""
+            : "AND SemesterId = @semester";
         using var da = new SqlDataAdapter($@"
-        SELECT TOP ({topN}) DateOfPayment AS PaymentDate, Credit, Particulars
+        SELECT TOP (@topN) DateOfPayment AS PaymentDate, Credit, Particulars
         FROM FeesPayment
         WHERE StudentNumber = @sn AND Credit > 0
+        {semesterClause}
         ORDER BY DateOfPayment DESC", conn);
+        da.SelectCommand.Parameters.Add("@topN", SqlDbType.Int).Value = topN;
         da.SelectCommand.Parameters.Add("@sn", SqlDbType.VarChar, 50).Value = studentNumber;
+        if (!string.IsNullOrEmpty(semester))
+            da.SelectCommand.Parameters.Add("@semester", SqlDbType.VarChar, 50).Value = semester;
         da.Fill(dt);
         return dt;
+    }
+
+    /// <summary>
+    /// Returns the SemesterId of the most recent payment in FeesPayment —
+    /// a reliable proxy for the current active term. Returns null if the
+    /// table is empty or all SemesterId values are NULL.
+    /// </summary>
+    public string GetCurrentSemester()
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(
+            "SELECT TOP 1 SemesterId FROM FeesPayment WHERE SemesterId IS NOT NULL ORDER BY DateOfPayment DESC",
+            conn);
+        return cmd.ExecuteScalar() as string;
     }
 }
