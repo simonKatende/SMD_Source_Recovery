@@ -31,6 +31,10 @@ public class usrFeesFollowUp : UserControl
     private System.Windows.Forms.Panel newContactPanel;
     private RadioGroup rgChannel;
     private ComboBoxEdit cboOutcome;
+    private LabelControl lblPromiseDate;
+    private DevExpress.XtraEditors.DateEdit dtePromiseDate;
+    private LabelControl lblPromiseAmount;
+    private SpinEdit txtPromiseAmount;
     private MemoEdit memoNote;
     private SimpleButton btnSave;
 
@@ -159,6 +163,25 @@ public class usrFeesFollowUp : UserControl
         this.cboOutcome.Location = new System.Drawing.Point(8, 52);
         this.cboOutcome.Width = 200;
 
+        this.cboOutcome.SelectedIndexChanged += (s, ev) =>
+        {
+            bool promised = (Models.ContactOutcome)cboOutcome.SelectedItem == Models.ContactOutcome.Promised;
+            lblPromiseDate.Visible = dtePromiseDate.Visible = promised;
+            lblPromiseAmount.Visible = txtPromiseAmount.Visible = promised;
+        };
+
+        this.lblPromiseDate = new DevExpress.XtraEditors.LabelControl
+        { Text = "Promise date:", Location = new System.Drawing.Point(220, 56), Visible = false };
+        this.dtePromiseDate = new DevExpress.XtraEditors.DateEdit
+        { Location = new System.Drawing.Point(300, 52), Width = 120, Visible = false };
+
+        this.lblPromiseAmount = new DevExpress.XtraEditors.LabelControl
+        { Text = "Promise amount:", Location = new System.Drawing.Point(430, 56), Visible = false };
+        this.txtPromiseAmount = new DevExpress.XtraEditors.SpinEdit
+        { Location = new System.Drawing.Point(530, 52), Width = 110, Visible = false };
+        this.txtPromiseAmount.Properties.IsFloatValue = true;
+        this.txtPromiseAmount.Properties.MaskSettings.Set("mask", "N0");
+
         this.memoNote = new DevExpress.XtraEditors.MemoEdit();
         this.memoNote.Location = new System.Drawing.Point(8, 84);
         this.memoNote.Size = new System.Drawing.Size(560, 70);
@@ -170,6 +193,10 @@ public class usrFeesFollowUp : UserControl
 
         this.newContactPanel.Controls.Add(this.rgChannel);
         this.newContactPanel.Controls.Add(this.cboOutcome);
+        this.newContactPanel.Controls.Add(this.lblPromiseDate);
+        this.newContactPanel.Controls.Add(this.dtePromiseDate);
+        this.newContactPanel.Controls.Add(this.lblPromiseAmount);
+        this.newContactPanel.Controls.Add(this.txtPromiseAmount);
         this.newContactPanel.Controls.Add(this.memoNote);
         this.newContactPanel.Controls.Add(this.btnSave);
 
@@ -297,6 +324,14 @@ public class usrFeesFollowUp : UserControl
             return;
         }
 
+        if (outcome == Models.ContactOutcome.Promised && dtePromiseDate.DateTime == System.DateTime.MinValue)
+        {
+            XtraMessageBox.Show("Promise date is required when outcome is 'Promised'.",
+                "School Management Dynamics", System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Hand);
+            return;
+        }
+
         var entry = new Models.FeesContactLog
         {
             StudentNumber = row.StudentNumber,
@@ -305,11 +340,17 @@ public class usrFeesFollowUp : UserControl
             Channel = channel,
             Outcome = outcome,
             Note = string.IsNullOrWhiteSpace(memoNote.Text) ? null : memoNote.Text,
+            PromiseDate = outcome == Models.ContactOutcome.Promised ? dtePromiseDate.DateTime.Date : (System.DateTime?)null,
+            PromiseAmount = (outcome == Models.ContactOutcome.Promised && txtPromiseAmount.Value > 0)
+                ? (decimal?)txtPromiseAmount.Value
+                : null,
         };
         try
         {
             service.LogContact(entry);
             memoNote.Text = "";
+            dtePromiseDate.EditValue = null;
+            txtPromiseAmount.Value = 0;
             gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
         }
         catch (System.Exception ex)
