@@ -20,6 +20,13 @@ public class usrFeesFollowUp : UserControl
     private DevExpress.XtraGrid.Views.Grid.GridView gridViewWorklist;
     private System.Windows.Forms.Panel leftPanel;
 
+    private LabelControl lblParentHeader;
+    private LabelControl lblRecentPayments;
+    private DevExpress.XtraGrid.GridControl gridHistory;
+    private DevExpress.XtraGrid.Views.Grid.GridView gridViewHistory;
+    private System.Windows.Forms.Panel rightPanel;
+    private System.Windows.Forms.Panel headerPanel;
+
     private readonly FeesFollowUpService service = new FeesFollowUpService();
     private List<WorklistRow> currentRows = new List<WorklistRow>();
 
@@ -97,6 +104,37 @@ public class usrFeesFollowUp : UserControl
 
         this.splitContainer.Panel1.Controls.Add(this.leftPanel);
 
+        this.rightPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Fill };
+        this.headerPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Top, Height = 64 };
+
+        this.lblParentHeader = new DevExpress.XtraEditors.LabelControl();
+        this.lblParentHeader.Appearance.Font = new System.Drawing.Font("Tahoma", 11F, System.Drawing.FontStyle.Bold);
+        this.lblParentHeader.Location = new System.Drawing.Point(8, 6);
+        this.lblParentHeader.AutoSizeMode = LabelAutoSizeMode.None;
+        this.lblParentHeader.Size = new System.Drawing.Size(560, 22);
+        this.lblParentHeader.Text = "(select a parent)";
+
+        this.lblRecentPayments = new DevExpress.XtraEditors.LabelControl();
+        this.lblRecentPayments.Location = new System.Drawing.Point(8, 32);
+        this.lblRecentPayments.AutoSizeMode = LabelAutoSizeMode.None;
+        this.lblRecentPayments.Size = new System.Drawing.Size(560, 28);
+        this.lblRecentPayments.Text = "";
+
+        this.headerPanel.Controls.Add(this.lblParentHeader);
+        this.headerPanel.Controls.Add(this.lblRecentPayments);
+
+        this.gridHistory = new DevExpress.XtraGrid.GridControl { Dock = DockStyle.Fill };
+        this.gridViewHistory = new DevExpress.XtraGrid.Views.Grid.GridView();
+        this.gridHistory.MainView = this.gridViewHistory;
+        this.gridHistory.ViewCollection.Add(this.gridViewHistory);
+        this.gridViewHistory.OptionsBehavior.Editable = false;
+        this.gridViewHistory.OptionsView.ShowGroupPanel = false;
+
+        this.rightPanel.Controls.Add(this.gridHistory);
+        this.rightPanel.Controls.Add(this.headerPanel);
+
+        this.splitContainer.Panel2.Controls.Add(this.rightPanel);
+
         this.Controls.Add(this.splitContainer);
         this.Name = "usrFeesFollowUp";
         this.Size = new System.Drawing.Size(1280, 720);
@@ -162,6 +200,33 @@ public class usrFeesFollowUp : UserControl
     private void GridViewWorklist_FocusedRowChanged(object sender,
         DevExpress.XtraGrid.Views.Base.FocusedRowChangedEventArgs e)
     {
-        // Hook for Task 6 (parent detail panel).
+        if (e.FocusedRowHandle < 0 || e.FocusedRowHandle >= currentRows.Count)
+        {
+            lblParentHeader.Text = "(select a parent)";
+            lblRecentPayments.Text = "";
+            gridHistory.DataSource = null;
+            return;
+        }
+        var row = currentRows[e.FocusedRowHandle];
+        lblParentHeader.Text = $"{row.FullName}  •  {row.ClassId}  •  Balance UGX {row.Balance:N0}";
+
+        var payments = service.GetRecentPayments(row.StudentNumber, 3);
+        if (payments.Rows.Count == 0)
+        {
+            lblRecentPayments.Text = "Last 3 payments: (none)";
+        }
+        else
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            foreach (System.Data.DataRow p in payments.Rows)
+            {
+                decimal amt = p["Credit"] is decimal d ? d : 0m;
+                var dt = p["PaymentDate"] is System.DateTime pd ? pd : System.DateTime.MinValue;
+                parts.Add($"{amt:N0} ({dt:yyyy-MM-dd})");
+            }
+            lblRecentPayments.Text = "Last 3 payments: " + string.Join(", ", parts);
+        }
+
+        gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
     }
 }
