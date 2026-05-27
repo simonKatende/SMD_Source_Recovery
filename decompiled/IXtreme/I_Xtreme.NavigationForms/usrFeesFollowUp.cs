@@ -63,8 +63,8 @@ public class usrFeesFollowUp : XtraUserControl
         this.SuspendLayout();
 
         this.splitContainer.Dock = DockStyle.Fill;
-        this.splitContainer.Horizontal = false;       // vertical split
-        this.splitContainer.SplitterPosition = 700;   // tuned later
+        this.splitContainer.Horizontal = true;        // left panel | right panel
+        this.splitContainer.SplitterPosition = 680;   // worklist width
         this.splitContainer.Name = "splitContainer";
 
         // Class filter combo
