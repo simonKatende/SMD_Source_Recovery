@@ -43,6 +43,7 @@ public class usrFeesFollowUp : XtraUserControl
     private readonly FeesFollowUpService service = new FeesFollowUpService();
     private List<WorklistRow> currentRows = new List<WorklistRow>();
     private bool _columnsConfigured = false;
+    private bool _historyColumnsConfigured = false;
 
     public usrFeesFollowUp()
     {
@@ -322,6 +323,7 @@ public class usrFeesFollowUp : XtraUserControl
             }
 
             gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
+            ConfigureHistoryColumns();
         }
         catch (System.Exception ex)
         {
@@ -465,6 +467,30 @@ public class usrFeesFollowUp : XtraUserControl
         SetCaption("Tier", "Priority");
 
         gridViewWorklist.CustomColumnDisplayText += GridViewWorklist_CustomColumnDisplayText;
+    }
+
+    private void ConfigureHistoryColumns()
+    {
+        if (_historyColumnsConfigured) return;
+        _historyColumnsConfigured = true;
+
+        var colAmt = gridViewHistory.Columns["PromiseAmount"];
+        if (colAmt != null)
+        {
+            colAmt.Caption = "Promise Amount";
+            colAmt.DisplayFormat.FormatType = DevExpress.Utils.FormatType.Numeric;
+            colAmt.DisplayFormat.FormatString = "N0";
+            colAmt.Width = 110;
+        }
+
+        var colDate = gridViewHistory.Columns["ContactDate"];
+        if (colDate != null) { colDate.Caption = "Contact Date"; colDate.Width = 90; }
+
+        var colPD = gridViewHistory.Columns["PromiseDate"];
+        if (colPD != null) { colPD.Caption = "Promise Date"; colPD.Width = 90; }
+
+        gridViewHistory.OptionsView.ShowGroupPanel = false;
+        gridViewHistory.OptionsBehavior.Editable = false;
     }
 
     private void GridViewWorklist_CustomColumnDisplayText(object sender,
