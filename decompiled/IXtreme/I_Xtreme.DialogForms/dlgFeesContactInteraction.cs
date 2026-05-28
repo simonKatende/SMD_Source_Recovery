@@ -312,7 +312,7 @@ public class dlgFeesContactInteraction : XtraForm
 
         int contactId = Convert.ToInt32(dataRow["ContactId"]);
 
-        var menu = new System.Windows.Forms.ContextMenuStrip();
+        using var menu = new System.Windows.Forms.ContextMenuStrip();
         menu.Items.Add("Edit",   null, (s2, e2) => BeginEditContact(dataRow, contactId));
         menu.Items.Add("Delete", null, (s2, e2) => DeleteHistoryContact(contactId));
         menu.Show(Control.MousePosition);
@@ -392,6 +392,13 @@ public class dlgFeesContactInteraction : XtraForm
         var channel = (ContactChannel)rgChannel.EditValue;
         var outcome = (ContactOutcome)cboOutcome.SelectedItem;
 
+        if (outcome == ContactOutcome.Promised && dtePromiseDate.EditValue == null)
+        {
+            XtraMessageBox.Show("Please set a promise date when outcome is 'Promised'.", "Validation",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
         var entry = new FeesContactLog
         {
             StudentNumber = Current.Students.Count > 0 ? Current.Students[0].StudentNumber : "",
@@ -405,13 +412,6 @@ public class dlgFeesContactInteraction : XtraForm
             PromiseAmount = outcome == ContactOutcome.Promised && txtPromiseAmount.Value > 0
                             ? (decimal?)txtPromiseAmount.Value : null,
         };
-
-        if (outcome == ContactOutcome.Promised && !entry.PromiseDate.HasValue)
-        {
-            XtraMessageBox.Show("Please set a promise date when outcome is 'Promised'.", "Validation",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
-        }
 
         try
         {
