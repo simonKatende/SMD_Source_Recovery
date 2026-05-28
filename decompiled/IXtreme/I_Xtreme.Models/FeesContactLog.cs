@@ -18,6 +18,7 @@ public class FeesContactLog
 {
     public int ContactId { get; set; }
     public string StudentNumber { get; set; }
+    public string GuardianKey { get; set; }   // non-null for guardian-level contacts
     public DateTime ContactDate { get; set; }
     public string LoggedBy { get; set; }
     public ContactChannel Channel { get; set; }
