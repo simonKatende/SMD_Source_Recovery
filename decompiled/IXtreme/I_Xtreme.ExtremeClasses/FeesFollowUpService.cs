@@ -41,6 +41,255 @@ public class FeesFollowUpService
         cmd.ExecuteNonQuery();
     }
 
+    public FeesFollowUpSettings GetSettings()
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(
+            "SELECT SettingKey, SettingValue FROM tbl_FollowUpSettings", conn);
+        var dict = new Dictionary<string, string>();
+        using var rdr = cmd.ExecuteReader();
+        while (rdr.Read())
+            dict[rdr.GetString(0)] = rdr.GetString(1) ?? "";
+
+        return new FeesFollowUpSettings
+        {
+            StaleThresholdDays =
+                dict.TryGetValue("StalenessThresholdDays", out var sd) && int.TryParse(sd, out int d) ? d : 7,
+            TermStartDate =
+                dict.TryGetValue("TermStartDate", out var ts) && DateTime.TryParse(ts, out DateTime tsd) ? tsd : (DateTime?)null,
+            TermEndDate =
+                dict.TryGetValue("TermEndDate", out var te) && DateTime.TryParse(te, out DateTime ted) ? ted : (DateTime?)null,
+            CriticalPacingGapThreshold =
+                dict.TryGetValue("CriticalPacingGapThreshold", out var ct) && double.TryParse(ct, out double ctd) ? ctd : 0.50,
+        };
+    }
+
+    public void SaveSettings(FeesFollowUpSettings s)
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        Upsert(conn, "StalenessThresholdDays",        s.StaleThresholdDays.ToString());
+        Upsert(conn, "TermStartDate",                 s.TermStartDate?.ToString("yyyy-MM-dd") ?? "");
+        Upsert(conn, "TermEndDate",                   s.TermEndDate?.ToString("yyyy-MM-dd") ?? "");
+        Upsert(conn, "CriticalPacingGapThreshold",    s.CriticalPacingGapThreshold.ToString("R"));
+    }
+
+    private static void Upsert(SqlConnection conn, string key, string value)
+    {
+        using var cmd = new SqlCommand(@"
+            IF EXISTS (SELECT 1 FROM tbl_FollowUpSettings WHERE SettingKey = @k)
+                UPDATE tbl_FollowUpSettings SET SettingValue = @v WHERE SettingKey = @k
+            ELSE
+                INSERT INTO tbl_FollowUpSettings (SettingKey, SettingValue) VALUES (@k, @v)", conn);
+        cmd.Parameters.Add("@k", SqlDbType.NVarChar, 200).Value = key;
+        cmd.Parameters.Add("@v", SqlDbType.NVarChar, 200).Value = value;
+        cmd.ExecuteNonQuery();
+    }
+
+    public List<GuardianWorklistRow> GetGuardianWorklist(string classFilter, decimal minBalance)
+    {
+        var settings    = GetSettings();
+        DateTime? tStart = settings.TermStartDate;
+        DateTime? tEnd   = settings.TermEndDate;
+        bool hasTermDates = tStart.HasValue && tEnd.HasValue;
+
+        const string sql = @"
+    ;WITH TermPayments AS (
+        SELECT StudentNumber, ISNULL(SUM(Credit), 0) AS TotalPaid
+        FROM FeesPayment
+        WHERE (@termStart IS NULL OR DateOfPayment >= @termStart)
+          AND (@termEnd   IS NULL OR DateOfPayment <= @termEnd)
+        GROUP BY StudentNumber
+    ),
+    StudentsWithBalance AS (
+        SELECT
+            s.StudentNumber,
+            s.fullName      AS FullName,
+            s.ClassId,
+            ISNULL(s.Guardian, '') AS GuardianRel,
+            s.cashOnAccount AS TotalBilled,
+            ISNULL(tp.TotalPaid, 0) AS TotalPaid,
+            s.cashOnAccount - ISNULL(tp.TotalPaid, 0) AS Balance,
+            CASE
+                WHEN NULLIF(RTRIM(LTRIM(ISNULL(s.PriorityContact,''))), '') IS NOT NULL
+                    THEN RTRIM(LTRIM(s.PriorityContact))
+                WHEN NULLIF(RTRIM(LTRIM(ISNULL(s.OtherContact,''))),   '') IS NOT NULL
+                    THEN RTRIM(LTRIM(s.OtherContact))
+                ELSE 'NOCONTACT-' + s.StudentNumber
+            END AS GuardianKey
+        FROM tbl_Stud s
+        LEFT JOIN TermPayments tp ON tp.StudentNumber = s.StudentNumber
+        WHERE s.cashOnAccount - ISNULL(tp.TotalPaid, 0) > @minBalance
+          AND (@classFilter = '' OR s.ClassId = @classFilter)
+    ),
+    AllRelevantContacts AS (
+        SELECT cl.GuardianKey AS ContactKey,
+               cl.ContactDate, cl.Outcome, cl.PromiseDate, cl.PromiseAmount, cl.ContactId
+        FROM tbl_FeesContactLog cl
+        WHERE cl.GuardianKey IS NOT NULL
+          AND EXISTS (SELECT 1 FROM StudentsWithBalance sw WHERE sw.GuardianKey = cl.GuardianKey)
+        UNION ALL
+        SELECT sw.GuardianKey AS ContactKey,
+               cl.ContactDate, cl.Outcome, cl.PromiseDate, cl.PromiseAmount, cl.ContactId
+        FROM tbl_FeesContactLog cl
+        JOIN StudentsWithBalance sw ON sw.StudentNumber = cl.StudentNumber
+        WHERE cl.GuardianKey IS NULL
+    ),
+    LatestContact AS (
+        SELECT ContactKey, MAX(ContactDate) AS LastContactDate, MAX(ContactId) AS LastContactId
+        FROM AllRelevantContacts
+        GROUP BY ContactKey
+    ),
+    LatestContactDetail AS (
+        SELECT lc.ContactKey, lc.LastContactDate, arc.Outcome AS LastOutcome
+        FROM LatestContact lc
+        JOIN AllRelevantContacts arc ON arc.ContactId = lc.LastContactId
+    ),
+    LatestPromise AS (
+        SELECT ContactKey, MAX(ContactDate) AS PromiseLoggedAt, MAX(ContactId) AS PromiseContactId
+        FROM AllRelevantContacts
+        WHERE Outcome = 'Promised'
+        GROUP BY ContactKey
+    ),
+    LatestPromiseDetail AS (
+        SELECT lp.ContactKey, lp.PromiseLoggedAt, arc.PromiseDate, arc.PromiseAmount
+        FROM LatestPromise lp
+        JOIN AllRelevantContacts arc ON arc.ContactId = lp.PromiseContactId
+    ),
+    PaymentsSincePromise AS (
+        SELECT lpd.ContactKey,
+               ISNULL((
+                   SELECT SUM(fp.Credit)
+                   FROM FeesPayment fp
+                   JOIN StudentsWithBalance sw2 ON sw2.StudentNumber = fp.StudentNumber
+                   WHERE sw2.GuardianKey = lpd.ContactKey
+                     AND fp.DateOfPayment >= lpd.PromiseLoggedAt
+               ), 0) AS PaymentsSinceLatestPromise
+        FROM LatestPromiseDetail lpd
+    )
+    SELECT
+        sw.StudentNumber, sw.FullName, sw.ClassId,
+        sw.GuardianKey,   sw.GuardianRel,
+        sw.TotalBilled,   sw.TotalPaid, sw.Balance,
+        lcd.LastContactDate, lcd.LastOutcome,
+        lpd.PromiseDate      AS LatestPromiseDate,
+        lpd.PromiseAmount    AS LatestPromiseAmount,
+        ISNULL(psp.PaymentsSinceLatestPromise, 0) AS PaymentsSinceLatestPromise
+    FROM StudentsWithBalance sw
+    LEFT JOIN LatestContactDetail lcd ON lcd.ContactKey = sw.GuardianKey
+    LEFT JOIN LatestPromiseDetail  lpd ON lpd.ContactKey = sw.GuardianKey
+    LEFT JOIN PaymentsSincePromise psp ON psp.ContactKey = sw.GuardianKey
+    ORDER BY sw.GuardianKey, sw.FullName";
+
+        var grouped = new Dictionary<string, GuardianWorklistRow>();
+
+        using (var conn = new SqlConnection(connectionString))
+        {
+            conn.Open();
+            using var cmd = new SqlCommand(sql, conn);
+            cmd.Parameters.Add("@minBalance",  SqlDbType.Money).Value  = minBalance;
+            cmd.Parameters.Add("@classFilter", SqlDbType.VarChar, 50).Value = classFilter ?? "";
+            cmd.Parameters.Add("@termStart",   SqlDbType.Date).Value   = (object)tStart ?? DBNull.Value;
+            cmd.Parameters.Add("@termEnd",     SqlDbType.Date).Value   = (object)tEnd   ?? DBNull.Value;
+
+            using var rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                string gKey = rdr["GuardianKey"].ToString();
+                string gRel = rdr["GuardianRel"]?.ToString() ?? "";
+
+                if (!grouped.TryGetValue(gKey, out var g))
+                {
+                    bool noContact = gKey.StartsWith("NOCONTACT-", StringComparison.Ordinal);
+                    string label = noContact
+                        ? $"(no contact) {rdr["FullName"]}"
+                        : string.IsNullOrEmpty(gRel) ? gKey : $"{gKey} ({gRel})";
+
+                    g = new GuardianWorklistRow
+                    {
+                        GuardianContact            = gKey,
+                        GuardianLabel              = label,
+                        LastContactDate            = rdr["LastContactDate"] as DateTime?,
+                        LastOutcome                = ParseOutcome(rdr["LastOutcome"]?.ToString()),
+                        LatestPromiseDate          = rdr["LatestPromiseDate"] as DateTime?,
+                        LatestPromiseAmount        = rdr["LatestPromiseAmount"] as decimal?,
+                        PaymentsSinceLatestPromise = (decimal)rdr["PaymentsSinceLatestPromise"],
+                    };
+                    grouped[gKey] = g;
+                }
+
+                decimal billed = (decimal)rdr["TotalBilled"];
+                decimal paid   = (decimal)rdr["TotalPaid"];
+                decimal bal    = (decimal)rdr["Balance"];
+
+                g.Students.Add(new StudentSummary
+                {
+                    StudentNumber  = rdr["StudentNumber"].ToString(),
+                    FullName       = rdr["FullName"]?.ToString() ?? "",
+                    ClassId        = rdr["ClassId"]?.ToString()  ?? "",
+                    TotalBilled    = billed,
+                    TotalPaid      = paid,
+                    Balance        = bal,
+                    PaymentPercent = billed > 0 ? Math.Round(paid / billed * 100m, 1) : 0m,
+                });
+                g.TotalBilled  += billed;
+                g.TotalPaid    += paid;
+                g.TotalBalance += bal;
+            }
+        }
+
+        // Compute pacing gap and tier
+        double termProgress = 0.0;
+        if (hasTermDates)
+        {
+            double totalDays   = (tEnd.Value - tStart.Value).TotalDays;
+            double elapsedDays = (DateTime.Today - tStart.Value).TotalDays;
+            termProgress = totalDays > 0 ? Math.Max(0.0, Math.Min(1.0, elapsedDays / totalDays)) : 0.0;
+        }
+
+        var rows = new List<GuardianWorklistRow>(grouped.Values);
+        foreach (var g in rows)
+        {
+            g.PaymentPercent = g.TotalBilled > 0
+                ? Math.Round(g.TotalPaid / g.TotalBilled * 100m, 1) : 0m;
+            double payProgress = g.TotalBilled > 0 ? (double)(g.TotalPaid / g.TotalBilled) : 0.0;
+            g.PacingGap = hasTermDates ? termProgress - payProgress : 0.0;
+            g.Tier = ComputeGuardianTier(g, settings.StaleThresholdDays,
+                                         settings.CriticalPacingGapThreshold, hasTermDates);
+        }
+
+        rows.Sort((a, b) =>
+        {
+            int t = a.Tier.CompareTo(b.Tier);
+            if (t != 0) return t;
+            int p = b.PacingGap.CompareTo(a.PacingGap);   // higher gap = more urgent
+            return p != 0 ? p : b.TotalBalance.CompareTo(a.TotalBalance);
+        });
+        return rows;
+    }
+
+    private static PriorityTier ComputeGuardianTier(
+        GuardianWorklistRow g, int stalenessDays, double criticalThreshold, bool hasTermDates)
+    {
+        if (hasTermDates && g.PacingGap >= criticalThreshold)
+            return PriorityTier.Critical;
+
+        if (g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date < DateTime.Today)
+        {
+            decimal promised = g.LatestPromiseAmount ?? (g.TotalBalance + g.PaymentsSinceLatestPromise);
+            if (g.PaymentsSinceLatestPromise < promised)
+                return PriorityTier.BrokenPromise;
+        }
+
+        if (!g.LastContactDate.HasValue
+            || (DateTime.Today - g.LastContactDate.Value.Date).TotalDays > stalenessDays
+            || (g.LastOutcome.HasValue && FailedOutcomes.Contains(g.LastOutcome.Value)))
+            return PriorityTier.Stale;
+
+        return PriorityTier.Current;
+    }
+
     public List<WorklistRow> GetWorklist(string classFilter, decimal minBalance)
     {
         int staleness = GetStalenessThresholdDays();
