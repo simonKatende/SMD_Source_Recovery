@@ -212,24 +212,24 @@ public class usrFeesFollowUp : XtraUserControl
             Location = new System.Drawing.Point(312, 14),
         };
 
-        this.dteContactDate = new DevExpress.XtraEditors.DateEdit();
-        ((System.ComponentModel.ISupportInitialize)this.dteContactDate.Properties).BeginInit();
-        this.dteContactDate.Location  = new System.Drawing.Point(342, 8);
-        this.dteContactDate.Width     = 120;
-        this.dteContactDate.EditValue = System.DateTime.Today;
-        ((System.ComponentModel.ISupportInitialize)this.dteContactDate.Properties).EndInit();
+        this.dteContactDate = new DevExpress.XtraEditors.DateEdit
+        {
+            Location  = new System.Drawing.Point(342, 8),
+            Width     = 120,
+            EditValue = System.DateTime.Today,
+        };
 
         this.cboOutcome = new DevExpress.XtraEditors.ComboBoxEdit();
         this.cboOutcome.Properties.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
         foreach (Models.ContactOutcome o in System.Enum.GetValues(typeof(Models.ContactOutcome)))
             this.cboOutcome.Properties.Items.Add(o);
-        this.cboOutcome.SelectedIndex = 0; // Contacted is index 0 in updated enum
+        this.cboOutcome.SelectedIndex = -1; // blank by default; user must pick
         this.cboOutcome.Location = new System.Drawing.Point(8, 52);
         this.cboOutcome.Width = 200;
 
         this.cboOutcome.SelectedIndexChanged += (s, ev) =>
         {
-            bool promised = (Models.ContactOutcome)cboOutcome.SelectedItem == Models.ContactOutcome.Promised;
+            bool promised = cboOutcome.SelectedItem is Models.ContactOutcome o && o == Models.ContactOutcome.Promised;
             lblPromiseDate.Visible = dtePromiseDate.Visible = promised;
             lblPromiseAmount.Visible = txtPromiseAmount.Visible = promised;
         };
@@ -522,6 +522,15 @@ public class usrFeesFollowUp : XtraUserControl
                 System.Windows.Forms.MessageBoxIcon.Warning);
             return;
         }
+        if (cboOutcome.SelectedItem == null)
+        {
+            DevExpress.XtraEditors.XtraMessageBox.Show(
+                "Please select a contact outcome before saving.",
+                "Validation",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Warning);
+            return;
+        }
         var channel = (Models.ContactChannel)rgChannel.EditValue;
         var outcome = (Models.ContactOutcome)cboOutcome.SelectedItem;
 
@@ -649,7 +658,7 @@ public class usrFeesFollowUp : XtraUserControl
         _editContactId = -1;
         dteContactDate.EditValue = System.DateTime.Today;
         rgChannel.SelectedIndex = 1;    // Phone (index 1 in current channel radio)
-        cboOutcome.SelectedIndex = 0;   // Contacted is index 0 in updated enum
+        cboOutcome.SelectedIndex = -1;  // blank; user must pick each time
         memoNote.Text = "";
         dtePromiseDate.EditValue = null;
         txtPromiseAmount.Value = 0;
@@ -703,8 +712,9 @@ public class usrFeesFollowUp : XtraUserControl
         gridViewWorklist.CustomColumnDisplayText += GridViewWorklist_CustomColumnDisplayText;
 
         gridViewWorklist.BestFitColumns();
-        var colNumFixed = gridViewWorklist.Columns["#"];
-        if (colNumFixed != null) colNumFixed.Width = 36; // BestFit must not expand the # column
+        colNum.Width    = 36;
+        colNum.MinWidth = 36;
+        colNum.MaxWidth = 36;
     }
 
     private void ConfigureHistoryColumns()
@@ -745,10 +755,11 @@ public class usrFeesFollowUp : XtraUserControl
         gridViewHistory.OptionsBehavior.Editable = false;
 
         gridViewHistory.BestFitColumns();
+        colNumH.Width    = 36;
+        colNumH.MinWidth = 36;
+        colNumH.MaxWidth = 36;
         var noteCol = gridViewHistory.Columns["Note"];
         if (noteCol != null) noteCol.Width = System.Math.Min(noteCol.Width, 200);
-        var colNumHFixed = gridViewHistory.Columns["#"];
-        if (colNumHFixed != null) colNumHFixed.Width = 36;
     }
 
     private void GridViewWorklist_UnboundData(object sender,
