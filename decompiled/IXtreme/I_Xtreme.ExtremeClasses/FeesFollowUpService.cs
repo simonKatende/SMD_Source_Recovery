@@ -126,18 +126,28 @@ public class FeesFollowUpService
         return Enum.TryParse(raw, out ContactOutcome o) ? o : (ContactOutcome?)null;
     }
 
+    private static readonly System.Collections.Generic.HashSet<ContactOutcome> FailedOutcomes =
+        new System.Collections.Generic.HashSet<ContactOutcome>
+        {
+            ContactOutcome.NoAnswer,
+            ContactOutcome.ContactUnavailable,
+            ContactOutcome.ContactOff,
+            ContactOutcome.Refused,
+        };
+
     private static PriorityTier ComputeTier(WorklistRow r, int stalenessDays)
     {
-        // Broken promise
+        // Broken promise: promise date has passed and insufficient payments received
         if (r.LatestPromiseDate.HasValue && r.LatestPromiseDate.Value.Date < DateTime.Today)
         {
             decimal promised = r.LatestPromiseAmount ?? (r.Balance + r.PaymentsSinceLatestPromise);
             if (r.PaymentsSinceLatestPromise < promised)
                 return PriorityTier.BrokenPromise;
         }
-        // Stale
+        // Stale: no contact within threshold, OR last contact was a failed outcome
         if (!r.LastContactDate.HasValue
-            || (DateTime.Today - r.LastContactDate.Value.Date).TotalDays > stalenessDays)
+            || (DateTime.Today - r.LastContactDate.Value.Date).TotalDays > stalenessDays
+            || (r.LastOutcome.HasValue && FailedOutcomes.Contains(r.LastOutcome.Value)))
         {
             return PriorityTier.Stale;
         }

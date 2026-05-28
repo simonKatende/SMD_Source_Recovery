@@ -218,7 +218,7 @@ public class usrFeesFollowUp : XtraUserControl
         this.cboOutcome.Properties.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
         foreach (Models.ContactOutcome o in System.Enum.GetValues(typeof(Models.ContactOutcome)))
             this.cboOutcome.Properties.Items.Add(o);
-        this.cboOutcome.SelectedIndex = 1; // default Contacted
+        this.cboOutcome.SelectedIndex = 0; // Contacted is index 0 in updated enum
         this.cboOutcome.Location = new System.Drawing.Point(8, 52);
         this.cboOutcome.Width = 200;
 
@@ -644,7 +644,7 @@ public class usrFeesFollowUp : XtraUserControl
         _editContactId = -1;
         dteContactDate.EditValue = System.DateTime.Today;
         rgChannel.SelectedIndex = 1;    // Phone (index 1 in current channel radio)
-        cboOutcome.SelectedIndex = 1;   // Contacted at index 1 in current enum
+        cboOutcome.SelectedIndex = 0;   // Contacted is index 0 in updated enum
         memoNote.Text = "";
         dtePromiseDate.EditValue = null;
         txtPromiseAmount.Value = 0;
@@ -777,12 +777,13 @@ public class usrFeesFollowUp : XtraUserControl
         {
             e.DisplayText = outcome switch
             {
-                ContactOutcome.NoAnswer     => "No Answer",
-                ContactOutcome.Contacted    => "Contacted",
-                ContactOutcome.Promised     => "Promised Payment",
-                ContactOutcome.Refused      => "Refused",
-                ContactOutcome.WrongContact => "Wrong Contact",
-                _                           => e.DisplayText,
+                ContactOutcome.Contacted          => "Contacted",
+                ContactOutcome.NoAnswer           => "No Answer",
+                ContactOutcome.ContactUnavailable => "Unavailable",
+                ContactOutcome.ContactOff         => "Phone Off",
+                ContactOutcome.Promised           => "Promised Payment",
+                ContactOutcome.Refused            => "Refused",
+                _                                 => e.DisplayText,
             };
         }
     }
