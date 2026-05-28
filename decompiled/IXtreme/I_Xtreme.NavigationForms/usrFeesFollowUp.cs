@@ -27,7 +27,7 @@ public class usrFeesFollowUp : XtraUserControl
     private DevExpress.XtraEditors.LabelControl lblStudentIdClass;
     private DevExpress.XtraEditors.LabelControl lblGuardian1;
     private DevExpress.XtraEditors.LabelControl lblGuardian2;
-    private LabelControl lblRecentPayments;  // re-declared; same field name
+    private LabelControl lblRecentPayments;
     private DevExpress.XtraGrid.GridControl gridHistory;
     private DevExpress.XtraGrid.Views.Grid.GridView gridViewHistory;
     private System.Windows.Forms.Panel rightPanel;
@@ -61,7 +61,12 @@ public class usrFeesFollowUp : XtraUserControl
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && components != null) components.Dispose();
+        if (disposing)
+        {
+            components?.Dispose();
+            picStudentPhoto?.Image?.Dispose();
+            _photoStream?.Dispose();
+        }
         base.Dispose(disposing);
     }
 
