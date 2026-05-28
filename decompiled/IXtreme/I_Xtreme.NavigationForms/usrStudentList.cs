@@ -696,7 +696,31 @@ public class usrStudentList : XtraUserControl
 	{
 		using SMSGuardian sMSGuardian = new SMSGuardian();
 		sMSGuardian.txtReceipient.Text = lblGuardianPhone.Text;
-		sMSGuardian.ShowDialog();
+		if (sMSGuardian.ShowDialog() == System.Windows.Forms.DialogResult.OK
+			&& !string.IsNullOrEmpty(lblStudentNo.Text))
+		{
+			try
+			{
+				new I_Xtreme.ExtremeClasses.FeesFollowUpService().LogContact(
+					new I_Xtreme.Models.FeesContactLog
+					{
+						StudentNumber = lblStudentNo.Text,
+						ContactDate   = System.DateTime.Now,
+						LoggedBy      = CurrentUser.GetSystemUser(),
+						Channel       = I_Xtreme.Models.ContactChannel.SMS,
+						Outcome       = I_Xtreme.Models.ContactOutcome.Contacted,
+						Note          = string.IsNullOrWhiteSpace(sMSGuardian.SentMessage)
+										? "SMS sent from Students tab"
+										: sMSGuardian.SentMessage,
+					});
+			}
+			catch (System.Exception logEx)
+			{
+				// Non-critical: auto-log failure must never interrupt the user's SMS flow
+				System.Diagnostics.Debug.WriteLine(
+					$"FeesFollowUp auto-log failed for {lblStudentNo.Text}: {logEx.Message}");
+			}
+		}
 	}
 
 	private void navBarItem15_LinkClicked(object sender, NavBarLinkEventArgs e)

@@ -16,6 +16,8 @@ namespace I_Xtreme.DialogForms;
 
 public class SMSGuardian : XtraForm
 {
+	public string SentMessage { get; private set; } = string.Empty;
+
 	private string connectionString = DataConnection.ConnectToDatabase();
 
 	private IContainer components = null;
@@ -129,6 +131,7 @@ public class SMSGuardian : XtraForm
 				return;
 			}
 			XtraMessageBox.Show($"Message sent to {normalized}.", "School Management Dynamics", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			SentMessage = txtMessage.Text;
 			base.DialogResult = DialogResult.OK;
 			Dispose();
 		}
