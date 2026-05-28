@@ -22,7 +22,11 @@ public class usrFeesFollowUp : XtraUserControl
     private DevExpress.XtraGrid.Views.Grid.GridView gridViewWorklist;
     private System.Windows.Forms.Panel leftPanel;
 
-    private LabelControl lblParentHeader;
+    private DevExpress.XtraEditors.PictureEdit picStudentPhoto;
+    private DevExpress.XtraEditors.LabelControl lblStudentName;
+    private DevExpress.XtraEditors.LabelControl lblStudentIdClass;
+    private DevExpress.XtraEditors.LabelControl lblGuardian1;
+    private DevExpress.XtraEditors.LabelControl lblGuardian2;
     private LabelControl lblRecentPayments;
     private DevExpress.XtraGrid.GridControl gridHistory;
     private DevExpress.XtraGrid.Views.Grid.GridView gridViewHistory;
@@ -39,11 +43,16 @@ public class usrFeesFollowUp : XtraUserControl
     private MemoEdit memoNote;
     private SimpleButton btnSave;
     private SimpleButton btnSaveAndNext;
+    private DevExpress.XtraEditors.LabelControl lblContactDate;
+    private DevExpress.XtraEditors.DateEdit dteContactDate;
 
     private readonly FeesFollowUpService service = new FeesFollowUpService();
     private List<WorklistRow> currentRows = new List<WorklistRow>();
     private bool _columnsConfigured = false;
     private bool _historyColumnsConfigured = false;
+    private string _currentSemester;
+    private int _editContactId = -1; // -1 = new-entry mode; >= 0 = editing existing row
+    private System.IO.MemoryStream _photoStream;
 
     public usrFeesFollowUp()
     {
@@ -52,7 +61,12 @@ public class usrFeesFollowUp : XtraUserControl
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && components != null) components.Dispose();
+        if (disposing)
+        {
+            components?.Dispose();
+            picStudentPhoto?.Image?.Dispose();
+            _photoStream?.Dispose();
+        }
         base.Dispose(disposing);
     }
 
@@ -94,7 +108,9 @@ public class usrFeesFollowUp : XtraUserControl
         this.gridViewWorklist.OptionsBehavior.Editable = false;
         this.gridViewWorklist.OptionsView.ShowGroupPanel = false;
         this.gridViewWorklist.FocusedRowChanged += GridViewWorklist_FocusedRowChanged;
+        this.gridWorklist.DoubleClick += GridWorklist_DoubleClick;
         this.gridViewWorklist.RowStyle += GridViewWorklist_RowStyle;
+        this.gridViewWorklist.CustomUnboundColumnData += GridViewWorklist_UnboundData;
 
         // Layout: stack filter bar above grid in the left panel of split container
         this.leftPanel = new System.Windows.Forms.Panel();
@@ -112,16 +128,6 @@ public class usrFeesFollowUp : XtraUserControl
         filterStrip.Controls.Add(this.cboClassFilter);
         filterStrip.Controls.Add(this.txtMinBalance);
         filterStrip.Controls.Add(this.btnRefresh);
-        var btnSettings = new DevExpress.XtraEditors.SimpleButton { Text = "Settings" };
-        btnSettings.Location = new System.Drawing.Point(396, 7);
-        btnSettings.Width = 80;
-        btnSettings.Click += (s, e) =>
-        {
-            using var dlg = new FollowUpSettings();
-            if (dlg.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
-                LoadWorklist();   // refresh because staleness threshold may have changed
-        };
-        filterStrip.Controls.Add(btnSettings);
 
         this.gridWorklist.Dock = DockStyle.Fill;
         this.leftPanel.Controls.Add(this.gridWorklist);
@@ -130,22 +136,51 @@ public class usrFeesFollowUp : XtraUserControl
         this.splitContainer.Panel1.Controls.Add(this.leftPanel);
 
         this.rightPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Fill };
-        this.headerPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Top, Height = 64 };
+        this.headerPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Top, Height = 110 };
 
-        this.lblParentHeader = new DevExpress.XtraEditors.LabelControl();
-        this.lblParentHeader.Appearance.Font = new System.Drawing.Font("Tahoma", 11F, System.Drawing.FontStyle.Bold);
-        this.lblParentHeader.Location = new System.Drawing.Point(8, 6);
-        this.lblParentHeader.AutoSizeMode = LabelAutoSizeMode.None;
-        this.lblParentHeader.Size = new System.Drawing.Size(560, 22);
-        this.lblParentHeader.Text = "(select a parent)";
+        this.picStudentPhoto = new DevExpress.XtraEditors.PictureEdit();
+        ((System.ComponentModel.ISupportInitialize)this.picStudentPhoto.Properties).BeginInit();
+        this.picStudentPhoto.Location = new System.Drawing.Point(4, 8);
+        this.picStudentPhoto.Size     = new System.Drawing.Size(72, 90);
+        this.picStudentPhoto.Properties.SizeMode = DevExpress.XtraEditors.Controls.PictureSizeMode.Zoom;
+        ((System.ComponentModel.ISupportInitialize)this.picStudentPhoto.Properties).EndInit();
+
+        this.lblStudentName = new DevExpress.XtraEditors.LabelControl();
+        this.lblStudentName.Appearance.Font = new System.Drawing.Font("Tahoma", 11F, System.Drawing.FontStyle.Bold);
+        this.lblStudentName.AutoSizeMode    = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblStudentName.Size            = new System.Drawing.Size(520, 22);
+        this.lblStudentName.Location        = new System.Drawing.Point(84, 8);
+        this.lblStudentName.Text            = "(select a student on the worklist)";
+
+        this.lblStudentIdClass = new DevExpress.XtraEditors.LabelControl();
+        this.lblStudentIdClass.AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblStudentIdClass.Size         = new System.Drawing.Size(520, 16);
+        this.lblStudentIdClass.Location     = new System.Drawing.Point(84, 32);
+        this.lblStudentIdClass.Text         = "";
+
+        this.lblGuardian1 = new DevExpress.XtraEditors.LabelControl();
+        this.lblGuardian1.AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblGuardian1.Size         = new System.Drawing.Size(520, 16);
+        this.lblGuardian1.Location     = new System.Drawing.Point(84, 50);
+        this.lblGuardian1.Text         = "";
+
+        this.lblGuardian2 = new DevExpress.XtraEditors.LabelControl();
+        this.lblGuardian2.AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblGuardian2.Size         = new System.Drawing.Size(520, 16);
+        this.lblGuardian2.Location     = new System.Drawing.Point(84, 68);
+        this.lblGuardian2.Text         = "";
 
         this.lblRecentPayments = new DevExpress.XtraEditors.LabelControl();
-        this.lblRecentPayments.Location = new System.Drawing.Point(8, 32);
-        this.lblRecentPayments.AutoSizeMode = LabelAutoSizeMode.None;
-        this.lblRecentPayments.Size = new System.Drawing.Size(560, 28);
-        this.lblRecentPayments.Text = "";
+        this.lblRecentPayments.AutoSizeMode = DevExpress.XtraEditors.LabelAutoSizeMode.None;
+        this.lblRecentPayments.Size         = new System.Drawing.Size(520, 16);
+        this.lblRecentPayments.Location     = new System.Drawing.Point(84, 88);
+        this.lblRecentPayments.Text         = "";
 
-        this.headerPanel.Controls.Add(this.lblParentHeader);
+        this.headerPanel.Controls.Add(this.picStudentPhoto);
+        this.headerPanel.Controls.Add(this.lblStudentName);
+        this.headerPanel.Controls.Add(this.lblStudentIdClass);
+        this.headerPanel.Controls.Add(this.lblGuardian1);
+        this.headerPanel.Controls.Add(this.lblGuardian2);
         this.headerPanel.Controls.Add(this.lblRecentPayments);
 
         this.gridHistory = new DevExpress.XtraGrid.GridControl { Dock = DockStyle.Fill };
@@ -154,6 +189,8 @@ public class usrFeesFollowUp : XtraUserControl
         this.gridHistory.ViewCollection.Add(this.gridViewHistory);
         this.gridViewHistory.OptionsBehavior.Editable = false;
         this.gridViewHistory.OptionsView.ShowGroupPanel = false;
+        this.gridViewHistory.CustomUnboundColumnData += GridViewHistory_UnboundData;
+        this.gridViewHistory.PopupMenuShowing += GridViewHistory_PopupMenuShowing;
 
         this.newContactPanel = new System.Windows.Forms.Panel { Dock = DockStyle.Bottom, Height = 200 };
 
@@ -167,13 +204,26 @@ public class usrFeesFollowUp : XtraUserControl
         this.rgChannel.Properties.Columns = 3;
         this.rgChannel.SelectedIndex = 1; // default to Phone
         this.rgChannel.Location = new System.Drawing.Point(8, 8);
-        this.rgChannel.Size = new System.Drawing.Size(400, 36);
+        this.rgChannel.Size = new System.Drawing.Size(300, 36);
+
+        this.lblContactDate = new DevExpress.XtraEditors.LabelControl
+        {
+            Text     = "Date:",
+            Location = new System.Drawing.Point(312, 14),
+        };
+
+        this.dteContactDate = new DevExpress.XtraEditors.DateEdit();
+        ((System.ComponentModel.ISupportInitialize)this.dteContactDate.Properties).BeginInit();
+        this.dteContactDate.Location  = new System.Drawing.Point(342, 8);
+        this.dteContactDate.Width     = 120;
+        this.dteContactDate.EditValue = System.DateTime.Today;
+        ((System.ComponentModel.ISupportInitialize)this.dteContactDate.Properties).EndInit();
 
         this.cboOutcome = new DevExpress.XtraEditors.ComboBoxEdit();
         this.cboOutcome.Properties.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
         foreach (Models.ContactOutcome o in System.Enum.GetValues(typeof(Models.ContactOutcome)))
             this.cboOutcome.Properties.Items.Add(o);
-        this.cboOutcome.SelectedIndex = 1; // default Contacted
+        this.cboOutcome.SelectedIndex = 0; // Contacted is index 0 in updated enum
         this.cboOutcome.Location = new System.Drawing.Point(8, 52);
         this.cboOutcome.Width = 200;
 
@@ -212,6 +262,8 @@ public class usrFeesFollowUp : XtraUserControl
         this.newContactPanel.Controls.Add(this.btnSaveAndNext);
 
         this.newContactPanel.Controls.Add(this.rgChannel);
+        this.newContactPanel.Controls.Add(this.lblContactDate);
+        this.newContactPanel.Controls.Add(this.dteContactDate);
         this.newContactPanel.Controls.Add(this.cboOutcome);
         this.newContactPanel.Controls.Add(this.lblPromiseDate);
         this.newContactPanel.Controls.Add(this.dtePromiseDate);
@@ -235,6 +287,38 @@ public class usrFeesFollowUp : XtraUserControl
         ((System.ComponentModel.ISupportInitialize)this.splitContainer).EndInit();
         this.splitContainer.ResumeLayout(false);
         this.ResumeLayout(false);
+    }
+
+    public void OpenSettings()
+    {
+        using var dlg = new FollowUpSettings();
+        if (dlg.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+            LoadWorklist();
+    }
+
+    public void PrintPreviewWorklist() => gridWorklist.ShowPrintPreview();
+
+    public void PrintWorklist() => gridWorklist.Print();
+
+    public void ExportWorklistToExcel()
+    {
+        using var dlg = new System.Windows.Forms.SaveFileDialog();
+        dlg.Filter   = "Excel files (*.xlsx)|*.xlsx";
+        dlg.FileName = $"FeesCRM_Worklist_{System.DateTime.Today:yyyy-MM-dd}.xlsx";
+        if (dlg.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        try
+        {
+            gridWorklist.ExportToXlsx(dlg.FileName);
+            DevExpress.XtraEditors.XtraMessageBox.Show($"Exported to {dlg.FileName}", "School Management Dynamics",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Information);
+        }
+        catch (System.Exception ex)
+        {
+            DevExpress.XtraEditors.XtraMessageBox.Show(ex.Message, "Export Error",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Hand);
+        }
     }
 
     private void usrFeesFollowUp_Load(object sender, System.EventArgs e)
@@ -264,6 +348,7 @@ public class usrFeesFollowUp : XtraUserControl
         string classFilter = cboClassFilter.Text == "All Classes" ? "" : cboClassFilter.Text;
         decimal minBalance = (decimal)txtMinBalance.Value;
         currentRows = service.GetWorklist(classFilter, minBalance);
+        _currentSemester = service.GetCurrentSemester();
         gridWorklist.DataSource = currentRows;
         ConfigureWorklistColumns();
     }
@@ -289,26 +374,102 @@ public class usrFeesFollowUp : XtraUserControl
 
     private void BtnRefresh_Click(object sender, System.EventArgs e) => LoadWorklist();
 
+    private void GridWorklist_DoubleClick(object sender, System.EventArgs e)
+    {
+        int rh = gridViewWorklist.FocusedRowHandle;
+        if (rh < 0) return;
+        var row = gridViewWorklist.GetRow(rh) as WorklistRow;
+        if (row == null) return;
+
+        // Same pattern as usrStudentList.barButtonItem3_ItemClick
+        StudentOptions.SetActiveStudent(row.StudentNumber);
+        StudentOptions.SetPaymentMode("SingleStudent");
+        using var dlg = new DialogForms.StudentFeesPayment("SingleStudentPayment");
+        dlg.ShowDialog(this);
+        LoadWorklist(); // balance may have changed after a payment was made
+    }
+
     private void GridViewWorklist_FocusedRowChanged(object sender,
         DevExpress.XtraGrid.Views.Base.FocusedRowChangedEventArgs e)
     {
+        ResetContactForm();
         if (e.FocusedRowHandle < 0)
         {
-            lblParentHeader.Text = "(select a parent)";
-            lblRecentPayments.Text = "";
-            gridHistory.DataSource = null;
+            var oldImg2 = picStudentPhoto.Image;
+            var oldStream2 = _photoStream;
+            picStudentPhoto.Image = null;
+            _photoStream = null;
+            oldImg2?.Dispose();
+            oldStream2?.Dispose();
+            lblStudentName.Text     = "(select a student on the worklist)";
+            lblStudentIdClass.Text  = "";
+            lblGuardian1.Text       = "";
+            lblGuardian2.Text       = "";
+            lblRecentPayments.Text  = "";
+            gridHistory.DataSource  = null;
             return;
         }
         var row = gridViewWorklist.GetRow(e.FocusedRowHandle) as WorklistRow;
         if (row == null) return;
-        lblParentHeader.Text = $"{row.FullName}  •  {row.ClassId}  •  Balance UGX {row.Balance:N0}";
+
+        // Quick header from the already-loaded WorklistRow
+        var prevImg = picStudentPhoto.Image;
+        var prevStream = _photoStream;
+        picStudentPhoto.Image = null;
+        _photoStream = null;
+        prevImg?.Dispose();
+        prevStream?.Dispose();
+        lblStudentName.Text     = $"{row.FullName}  —  Balance UGX {row.Balance:N0}";
+        lblStudentIdClass.Text  = "";
+        lblGuardian1.Text       = "";
+        lblGuardian2.Text       = "";
 
         try
         {
-            var payments = service.GetRecentPayments(row.StudentNumber, 3);
+            var detail = service.GetStudentDetail(row.StudentNumber);
+            if (detail != null)
+            {
+                lblStudentIdClass.Text = $"ID: {detail.StudentNumber}  •  Class: {detail.ClassId}";
+
+                string g1    = detail.GuardianContact1 ?? "";
+                string rel   = detail.GuardianRelationship ?? "";
+                lblGuardian1.Text = string.IsNullOrEmpty(rel)
+                    ? $"Contact 1: {g1}"
+                    : $"Guardian ({rel}): {g1}";
+
+                if (!string.IsNullOrEmpty(detail.GuardianContact2))
+                    lblGuardian2.Text = $"Contact 2: {detail.GuardianContact2}";
+
+                if (detail.Photo != null && detail.Photo.Length > 0)
+                {
+                    try
+                    {
+                        var ms = new System.IO.MemoryStream(detail.Photo);
+                        var oldImage = picStudentPhoto.Image;
+                        var oldStream = _photoStream;
+                        picStudentPhoto.Image = System.Drawing.Image.FromStream(ms);
+                        _photoStream = ms;
+                        oldImage?.Dispose();
+                        oldStream?.Dispose();
+                    }
+                    catch { /* corrupt or unsupported photo format -- leave blank */ }
+                }
+            }
+        }
+        catch (System.Exception ex)
+        {
+            lblStudentIdClass.Text = $"(error loading student details: {ex.Message})";
+        }
+
+        try
+        {
+            var payments = service.GetRecentPayments(row.StudentNumber, topN: 2, semester: _currentSemester);
+            string payLabel = _currentSemester != null
+                ? $"Last 2 payments ({_currentSemester}):"
+                : "Last 2 payments:";
             if (payments.Rows.Count == 0)
             {
-                lblRecentPayments.Text = "Last 3 payments: (none)";
+                lblRecentPayments.Text = $"{payLabel} (none)";
             }
             else
             {
@@ -319,7 +480,7 @@ public class usrFeesFollowUp : XtraUserControl
                     var dt = p["PaymentDate"] is System.DateTime pd ? pd : System.DateTime.MinValue;
                     parts.Add($"{amt:N0} ({dt:yyyy-MM-dd})");
                 }
-                lblRecentPayments.Text = "Last 3 payments: " + string.Join(", ", parts);
+                lblRecentPayments.Text = payLabel + " " + string.Join(", ", parts);
             }
 
             gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
@@ -352,8 +513,61 @@ public class usrFeesFollowUp : XtraUserControl
                 System.Windows.Forms.MessageBoxIcon.Information);
             return;
         }
+        if (dteContactDate.DateTime.Date > System.DateTime.Today)
+        {
+            DevExpress.XtraEditors.XtraMessageBox.Show(
+                "Contact date cannot be in the future.",
+                "Validation",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Warning);
+            return;
+        }
         var channel = (Models.ContactChannel)rgChannel.EditValue;
         var outcome = (Models.ContactOutcome)cboOutcome.SelectedItem;
+
+        // --- Edit mode: update existing row, skip SMS dialog ---
+        if (_editContactId >= 0)
+        {
+            var editEntry = new Models.FeesContactLog
+            {
+                ContactId     = _editContactId,
+                StudentNumber = row.StudentNumber,
+                ContactDate   = dteContactDate.DateTime,
+                LoggedBy      = CurrentUser.GetSystemUser(),
+                Channel       = channel,
+                Outcome       = outcome,
+                Note          = string.IsNullOrWhiteSpace(memoNote.Text) ? null : memoNote.Text,
+                PromiseDate   = outcome == Models.ContactOutcome.Promised
+                                ? dtePromiseDate.DateTime.Date
+                                : (System.DateTime?)null,
+                PromiseAmount = (outcome == Models.ContactOutcome.Promised && txtPromiseAmount.Value > 0)
+                                ? (decimal?)txtPromiseAmount.Value
+                                : null,
+            };
+            if (editEntry.Outcome == Models.ContactOutcome.Promised && !editEntry.PromiseDate.HasValue)
+            {
+                DevExpress.XtraEditors.XtraMessageBox.Show(
+                    "Please set a promise date when outcome is 'Promised'.",
+                    "Validation",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Warning);
+                return;
+            }
+            try
+            {
+                service.UpdateContact(editEntry);
+                ResetContactForm();
+                gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
+            }
+            catch (System.Exception ex)
+            {
+                DevExpress.XtraEditors.XtraMessageBox.Show(ex.Message, "Error",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Hand);
+            }
+            return;
+        }
+        // --- New contact mode continues below ---
 
         if (channel == Models.ContactChannel.SMS)
         {
@@ -372,7 +586,7 @@ public class usrFeesFollowUp : XtraUserControl
             var smsEntry = new Models.FeesContactLog
             {
                 StudentNumber = row.StudentNumber,
-                ContactDate = System.DateTime.Now,
+                ContactDate = dteContactDate.DateTime,
                 LoggedBy = CurrentUser.GetSystemUser(),
                 Channel = Models.ContactChannel.SMS,
                 Outcome = outcome,
@@ -385,9 +599,7 @@ public class usrFeesFollowUp : XtraUserControl
             try
             {
                 service.LogContact(smsEntry);
-                memoNote.Text = "";
-                dtePromiseDate.EditValue = null;
-                txtPromiseAmount.Value = 0;
+                ResetContactForm();
                 gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
             }
             catch (System.Exception ex)
@@ -409,7 +621,7 @@ public class usrFeesFollowUp : XtraUserControl
         var entry = new Models.FeesContactLog
         {
             StudentNumber = row.StudentNumber,
-            ContactDate = System.DateTime.Now,
+            ContactDate = dteContactDate.DateTime,
             LoggedBy = CurrentUser.GetSystemUser(),
             Channel = channel,
             Outcome = outcome,
@@ -422,9 +634,7 @@ public class usrFeesFollowUp : XtraUserControl
         try
         {
             service.LogContact(entry);
-            memoNote.Text = "";
-            dtePromiseDate.EditValue = null;
-            txtPromiseAmount.Value = 0;
+            ResetContactForm();
             gridHistory.DataSource = service.GetContactHistory(row.StudentNumber);
         }
         catch (System.Exception ex)
@@ -434,10 +644,34 @@ public class usrFeesFollowUp : XtraUserControl
         }
     }
 
+    private void ResetContactForm()
+    {
+        _editContactId = -1;
+        dteContactDate.EditValue = System.DateTime.Today;
+        rgChannel.SelectedIndex = 1;    // Phone (index 1 in current channel radio)
+        cboOutcome.SelectedIndex = 0;   // Contacted is index 0 in updated enum
+        memoNote.Text = "";
+        dtePromiseDate.EditValue = null;
+        txtPromiseAmount.Value = 0;
+        btnSave.Text = "Save";
+        btnSaveAndNext.Enabled = true;
+    }
+
     private void ConfigureWorklistColumns()
     {
         if (_columnsConfigured) return;
         _columnsConfigured = true;
+
+        var colNum = new DevExpress.XtraGrid.Columns.GridColumn();
+        colNum.FieldName = "#";
+        colNum.Caption   = "#";
+        colNum.UnboundType = DevExpress.Data.UnboundColumnType.Integer;
+        colNum.OptionsColumn.AllowEdit = false;
+        colNum.OptionsColumn.ReadOnly  = true;
+        colNum.OptionsColumn.AllowSort = DevExpress.Utils.DefaultBoolean.False;
+        colNum.Width = 36;
+        gridViewWorklist.Columns.Add(colNum);
+        colNum.VisibleIndex = 0;
 
         foreach (string name in new[] { "StudentNumber", "PaymentsSinceLatestPromise", "LatestPromiseAmount", "LatestPromiseDate" })
         {
@@ -467,12 +701,30 @@ public class usrFeesFollowUp : XtraUserControl
         SetCaption("Tier", "Priority");
 
         gridViewWorklist.CustomColumnDisplayText += GridViewWorklist_CustomColumnDisplayText;
+
+        gridViewWorklist.BestFitColumns();
+        var colNumFixed = gridViewWorklist.Columns["#"];
+        if (colNumFixed != null) colNumFixed.Width = 36; // BestFit must not expand the # column
     }
 
     private void ConfigureHistoryColumns()
     {
         if (_historyColumnsConfigured) return;
         _historyColumnsConfigured = true;
+
+        var colId = gridViewHistory.Columns["ContactId"];
+        if (colId != null) colId.Visible = false;
+
+        var colNumH = new DevExpress.XtraGrid.Columns.GridColumn();
+        colNumH.FieldName = "#";
+        colNumH.Caption   = "#";
+        colNumH.UnboundType = DevExpress.Data.UnboundColumnType.Integer;
+        colNumH.OptionsColumn.AllowEdit = false;
+        colNumH.OptionsColumn.ReadOnly  = true;
+        colNumH.OptionsColumn.AllowSort = DevExpress.Utils.DefaultBoolean.False;
+        colNumH.Width = 36;
+        gridViewHistory.Columns.Add(colNumH);
+        colNumH.VisibleIndex = 0;
 
         var colAmt = gridViewHistory.Columns["PromiseAmount"];
         if (colAmt != null)
@@ -491,6 +743,26 @@ public class usrFeesFollowUp : XtraUserControl
 
         gridViewHistory.OptionsView.ShowGroupPanel = false;
         gridViewHistory.OptionsBehavior.Editable = false;
+
+        gridViewHistory.BestFitColumns();
+        var noteCol = gridViewHistory.Columns["Note"];
+        if (noteCol != null) noteCol.Width = System.Math.Min(noteCol.Width, 200);
+        var colNumHFixed = gridViewHistory.Columns["#"];
+        if (colNumHFixed != null) colNumHFixed.Width = 36;
+    }
+
+    private void GridViewWorklist_UnboundData(object sender,
+        DevExpress.XtraGrid.Views.Base.CustomColumnDataEventArgs e)
+    {
+        if (e.Column.FieldName == "#" && e.IsGetData)
+            e.Value = e.ListSourceRowIndex + 1;
+    }
+
+    private void GridViewHistory_UnboundData(object sender,
+        DevExpress.XtraGrid.Views.Base.CustomColumnDataEventArgs e)
+    {
+        if (e.Column.FieldName == "#" && e.IsGetData)
+            e.Value = e.ListSourceRowIndex + 1;
     }
 
     private void GridViewWorklist_CustomColumnDisplayText(object sender,
@@ -510,13 +782,77 @@ public class usrFeesFollowUp : XtraUserControl
         {
             e.DisplayText = outcome switch
             {
-                ContactOutcome.NoAnswer     => "No Answer",
-                ContactOutcome.Contacted    => "Contacted",
-                ContactOutcome.Promised     => "Promised Payment",
-                ContactOutcome.Refused      => "Refused",
-                ContactOutcome.WrongContact => "Wrong Contact",
-                _                           => e.DisplayText,
+                ContactOutcome.Contacted          => "Contacted",
+                ContactOutcome.NoAnswer           => "No Answer",
+                ContactOutcome.ContactUnavailable => "Unavailable",
+                ContactOutcome.ContactOff         => "Phone Off",
+                ContactOutcome.Promised           => "Promised Payment",
+                ContactOutcome.Refused            => "Refused",
+                _                                 => e.DisplayText,
             };
         }
+    }
+
+    private void StartEditContact(int rowHandle)
+    {
+        var drv = gridViewHistory.GetRow(rowHandle) as System.Data.DataRowView;
+        if (drv == null) return;
+
+        _editContactId           = System.Convert.ToInt32(drv["ContactId"]);
+        dteContactDate.EditValue = drv["ContactDate"];
+        memoNote.Text            = drv["Note"]?.ToString() ?? "";
+
+        if (System.Enum.TryParse(drv["Channel"]?.ToString(), out Models.ContactChannel ch))
+            rgChannel.EditValue = ch;
+        if (System.Enum.TryParse(drv["Outcome"]?.ToString(), out Models.ContactOutcome oc))
+            cboOutcome.SelectedItem = oc;
+
+        dtePromiseDate.EditValue = drv["PromiseDate"] == System.DBNull.Value ? null : drv["PromiseDate"];
+        txtPromiseAmount.Value   = drv["PromiseAmount"] == System.DBNull.Value
+                                   ? 0 : System.Convert.ToDecimal(drv["PromiseAmount"]);
+
+        btnSave.Text           = "Update";
+        btnSaveAndNext.Enabled = false;
+    }
+
+    private void DeleteHistoryRow(int rowHandle)
+    {
+        var drv = gridViewHistory.GetRow(rowHandle) as System.Data.DataRowView;
+        if (drv == null) return;
+        int contactId = System.Convert.ToInt32(drv["ContactId"]);
+
+        var confirm = DevExpress.XtraEditors.XtraMessageBox.Show(
+            "Delete this contact log entry? This cannot be undone.",
+            "Confirm Delete",
+            System.Windows.Forms.MessageBoxButtons.YesNo,
+            System.Windows.Forms.MessageBoxIcon.Question);
+        if (confirm != System.Windows.Forms.DialogResult.Yes) return;
+
+        var wlistRow = gridViewWorklist.GetFocusedRow() as WorklistRow;
+        try
+        {
+            service.DeleteContact(contactId);
+            if (wlistRow != null)
+                gridHistory.DataSource = service.GetContactHistory(wlistRow.StudentNumber);
+        }
+        catch (System.Exception ex)
+        {
+            DevExpress.XtraEditors.XtraMessageBox.Show(ex.Message, "Error",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Hand);
+        }
+    }
+
+    private void GridViewHistory_PopupMenuShowing(object sender,
+        DevExpress.XtraGrid.Views.Grid.PopupMenuShowingEventArgs e)
+    {
+        if (e.MenuType != DevExpress.XtraGrid.Views.Grid.GridMenuType.Row) return;
+        int rh = e.HitInfo.RowHandle;
+        if (rh < 0) return;
+        gridViewHistory.FocusedRowHandle = rh; // select the right-clicked row
+        e.Menu.Items.Add(new DevExpress.Utils.Menu.DXMenuItem("Edit",
+            (s2, e2) => StartEditContact(rh)));
+        e.Menu.Items.Add(new DevExpress.Utils.Menu.DXMenuItem("Delete",
+            (s2, e2) => DeleteHistoryRow(rh)));
     }
 }
