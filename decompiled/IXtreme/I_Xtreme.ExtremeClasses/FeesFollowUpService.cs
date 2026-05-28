@@ -50,7 +50,7 @@ public class FeesFollowUpService
         var dict = new Dictionary<string, string>();
         using var rdr = cmd.ExecuteReader();
         while (rdr.Read())
-            dict[rdr.GetString(0)] = rdr.GetString(1) ?? "";
+            dict[rdr.GetString(0)] = rdr.IsDBNull(1) ? "" : rdr.GetString(1);
 
         return new FeesFollowUpSettings
         {
@@ -61,7 +61,7 @@ public class FeesFollowUpService
             TermEndDate =
                 dict.TryGetValue("TermEndDate", out var te) && DateTime.TryParse(te, out DateTime ted) ? ted : (DateTime?)null,
             CriticalPacingGapThreshold =
-                dict.TryGetValue("CriticalPacingGapThreshold", out var ct) && double.TryParse(ct, out double ctd) ? ctd : 0.50,
+                dict.TryGetValue("CriticalPacingGapThreshold", out var ct) && double.TryParse(ct, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double ctd) ? ctd : 0.50,
         };
     }
 
@@ -136,26 +136,26 @@ public class FeesFollowUpService
         JOIN StudentsWithBalance sw ON sw.StudentNumber = cl.StudentNumber
         WHERE cl.GuardianKey IS NULL
     ),
-    LatestContact AS (
-        SELECT ContactKey, MAX(ContactDate) AS LastContactDate, MAX(ContactId) AS LastContactId
+    LatestContactRanked AS (
+        SELECT ContactKey, ContactDate AS LastContactDate, Outcome AS LastOutcome,
+               ROW_NUMBER() OVER (PARTITION BY ContactKey ORDER BY ContactDate DESC, ContactId DESC) AS rn
         FROM AllRelevantContacts
-        GROUP BY ContactKey
     ),
     LatestContactDetail AS (
-        SELECT lc.ContactKey, lc.LastContactDate, arc.Outcome AS LastOutcome
-        FROM LatestContact lc
-        JOIN AllRelevantContacts arc ON arc.ContactId = lc.LastContactId
+        SELECT ContactKey, LastContactDate, LastOutcome
+        FROM LatestContactRanked
+        WHERE rn = 1
     ),
-    LatestPromise AS (
-        SELECT ContactKey, MAX(ContactDate) AS PromiseLoggedAt, MAX(ContactId) AS PromiseContactId
+    LatestPromiseRanked AS (
+        SELECT ContactKey, ContactDate AS PromiseLoggedAt, PromiseDate, PromiseAmount,
+               ROW_NUMBER() OVER (PARTITION BY ContactKey ORDER BY ContactDate DESC, ContactId DESC) AS rn
         FROM AllRelevantContacts
         WHERE Outcome = 'Promised'
-        GROUP BY ContactKey
     ),
     LatestPromiseDetail AS (
-        SELECT lp.ContactKey, lp.PromiseLoggedAt, arc.PromiseDate, arc.PromiseAmount
-        FROM LatestPromise lp
-        JOIN AllRelevantContacts arc ON arc.ContactId = lp.PromiseContactId
+        SELECT ContactKey, PromiseLoggedAt, PromiseDate, PromiseAmount
+        FROM LatestPromiseRanked
+        WHERE rn = 1
     ),
     PaymentsSincePromise AS (
         SELECT lpd.ContactKey,
