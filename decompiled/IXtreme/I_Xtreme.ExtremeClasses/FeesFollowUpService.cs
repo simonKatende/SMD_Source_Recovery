@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using AlienAge.Connectivity;
 using I_Xtreme.Models;
 
@@ -424,6 +425,28 @@ public class FeesFollowUpService
         cmd.ExecuteNonQuery();
     }
 
+    public void LogGuardianContact(string guardianKey, FeesContactLog entry)
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(@"
+        INSERT INTO tbl_FeesContactLog
+          (StudentNumber, GuardianKey, ContactDate, LoggedBy, Channel, Outcome, Note, PromiseDate, PromiseAmount)
+        VALUES
+          (@StudentNumber, @GuardianKey, @ContactDate, @LoggedBy, @Channel, @Outcome, @Note, @PromiseDate, @PromiseAmount)",
+            conn);
+        cmd.Parameters.Add("@StudentNumber", SqlDbType.VarChar,   50).Value = entry.StudentNumber ?? "";
+        cmd.Parameters.Add("@GuardianKey",   SqlDbType.VarChar,   20).Value = (object)guardianKey ?? DBNull.Value;
+        cmd.Parameters.Add("@ContactDate",   SqlDbType.DateTime      ).Value = entry.ContactDate;
+        cmd.Parameters.Add("@LoggedBy",      SqlDbType.VarChar,   50).Value = entry.LoggedBy ?? "";
+        cmd.Parameters.Add("@Channel",       SqlDbType.VarChar,   20).Value = entry.Channel.ToString();
+        cmd.Parameters.Add("@Outcome",       SqlDbType.VarChar,   20).Value = entry.Outcome.ToString();
+        cmd.Parameters.Add("@Note",          SqlDbType.NVarChar, 500).Value = (object)entry.Note ?? DBNull.Value;
+        cmd.Parameters.Add("@PromiseDate",   SqlDbType.Date          ).Value = (object)entry.PromiseDate ?? DBNull.Value;
+        cmd.Parameters.Add("@PromiseAmount", SqlDbType.Money          ).Value = (object)entry.PromiseAmount ?? DBNull.Value;
+        cmd.ExecuteNonQuery();
+    }
+
     public void DeleteContact(int contactId)
     {
         using var conn = new SqlConnection(connectionString);
@@ -467,6 +490,31 @@ public class FeesFollowUpService
         WHERE StudentNumber = @sn
         ORDER BY ContactDate DESC", conn);
         da.SelectCommand.Parameters.Add("@sn", SqlDbType.VarChar, 50).Value = studentNumber;
+        da.Fill(dt);
+        return dt;
+    }
+
+    public DataTable GetGuardianContactHistory(string guardianKey, IEnumerable<string> studentNumbers)
+    {
+        var nums = studentNumbers.ToList();
+        // Build parameterized IN list (@sn0, @sn1, ...)
+        string inList = nums.Count > 0
+            ? string.Join(",", Enumerable.Range(0, nums.Count).Select(i => $"@sn{i}"))
+            : "'__EMPTY__'";   // fallback that matches nothing
+
+        var dt = new DataTable();
+        using var conn = new SqlConnection(connectionString);
+        using var da = new SqlDataAdapter($@"
+        SELECT ContactId, ContactDate, Channel, Outcome, Note, LoggedBy, PromiseDate, PromiseAmount, GuardianKey
+        FROM tbl_FeesContactLog
+        WHERE GuardianKey = @guardianKey
+           OR (GuardianKey IS NULL AND StudentNumber IN ({inList}))
+        ORDER BY ContactDate DESC", conn);
+
+        da.SelectCommand.Parameters.Add("@guardianKey", SqlDbType.VarChar, 20).Value = guardianKey;
+        for (int i = 0; i < nums.Count; i++)
+            da.SelectCommand.Parameters.Add($"@sn{i}", SqlDbType.VarChar, 50).Value = nums[i];
+
         da.Fill(dt);
         return dt;
     }
