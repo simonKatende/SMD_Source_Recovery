@@ -254,7 +254,9 @@ public class dlgFeesContactInteraction : XtraForm
         _lblContacts.Text     = noPhone
             ? "(no phone on file)"
             : $"Contact: {g.GuardianContact}     Alt: {(!string.IsNullOrEmpty(g.Contact2) ? g.Contact2 : "—")}";
-        _lblBalance.Text = $"{g.StudentCount} student(s)   ·   {g.PaymentPercent:F1}% paid";
+        decimal hdrPayable = g.Students.Sum(s => s.TotalBilled);
+        decimal hdrPaid    = g.Students.Sum(s => s.TotalPaid);
+        _lblBalance.Text = $"{g.StudentCount} student(s)   ·   UGX {hdrPayable:N0} payable   ·   UGX {hdrPaid:N0} paid   ·   {g.PaymentPercent:F1}% paid";
 
         // Right-side balance badge
         if (g.TotalBalance <= 0)
@@ -297,7 +299,7 @@ public class dlgFeesContactInteraction : XtraForm
         var keep = new HashSet<string>
         {
             "StudentNumber", "StudentId", "FullName", "ClassId",
-            "DayBoarder", "TotalBilled", "Balance", "PaymentPercent",
+            "DayBoarder", "TotalBilled", "TotalPaid", "Balance", "PaymentPercent",
         };
         foreach (DevExpress.XtraGrid.Columns.GridColumn col in gridViewStudents.Columns)
         {
@@ -319,8 +321,16 @@ public class dlgFeesContactInteraction : XtraForm
         SetStud("ClassId",        "Class",          60);
         SetStud("DayBoarder",     "D/B",            45);
         SetStud("TotalBilled",    "Total Payable", 110);
+        SetStud("TotalPaid",      "Total Paid",    110);
         SetStud("Balance",        "Balance (UGX)", 110);
         SetStud("PaymentPercent", "% Paid",         70);
+
+        var colPaid = gridViewStudents.Columns["TotalPaid"];
+        if (colPaid != null)
+        {
+            colPaid.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
+            colPaid.DisplayFormat.FormatString = "N0";
+        }
 
         var colBilled = gridViewStudents.Columns["TotalBilled"];
         if (colBilled != null)

@@ -16,9 +16,12 @@ public class FollowUpSettings : XtraForm
     private SpinEdit  spnCriticalThreshold;
     private MemoEdit  memo2Day;
     private MemoEdit  memoDayOf;
-    private SimpleButton btnOK, btnCancel;
+    private SimpleButton btnOK, btnCancel, btnResetTemplates;
 
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
+
+    private const string Default2Day  = "Dear Parent, you promised to pay UGX {promised_amount} for {names} by {date}. Your overall balance is UGX {balance}. Please pay as promised. - {school}";
+    private const string DefaultDayOf = "Dear Parent, today is your promised payment date of UGX {promised_amount} for {names}. Your overall balance is UGX {balance}. Please make your payment today. - {school}";
 
     public FollowUpSettings()
     {
@@ -28,11 +31,8 @@ public class FollowUpSettings : XtraForm
         dteTermStart.EditValue     = (object)s.TermStartDate ?? DBNull.Value;
         dteTermEnd.EditValue       = (object)s.TermEndDate   ?? DBNull.Value;
         spnCriticalThreshold.Value = (decimal)(s.CriticalPacingGapThreshold * 100);
-
-        const string default2Day  = "Dear Parent, you promised to pay UGX {promised_amount} for {names} by {date}. Your overall balance is UGX {balance}. Please pay as promised. - {school}";
-        const string defaultDayOf = "Dear Parent, today is your promised payment date of UGX {promised_amount} for {names}. Your overall balance is UGX {balance}. Please make your payment today. - {school}";
-        memo2Day.Text   = !string.IsNullOrWhiteSpace(s.SmsTemplate2Day)  ? s.SmsTemplate2Day  : default2Day;
-        memoDayOf.Text  = !string.IsNullOrWhiteSpace(s.SmsTemplateDayOf) ? s.SmsTemplateDayOf : defaultDayOf;
+        memo2Day.Text   = !string.IsNullOrWhiteSpace(s.SmsTemplate2Day)  ? s.SmsTemplate2Day  : Default2Day;
+        memoDayOf.Text  = !string.IsNullOrWhiteSpace(s.SmsTemplateDayOf) ? s.SmsTemplateDayOf : DefaultDayOf;
     }
 
     private void InitializeComponent()
@@ -76,6 +76,8 @@ public class FollowUpSettings : XtraForm
         this.memoDayOf.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Buttons
+        this.btnResetTemplates = new SimpleButton
+            { Text = "Reset Templates", Location = new System.Drawing.Point(12, 338), Width = 120 };
         this.btnOK = new SimpleButton
             { Text = "OK", Location = new System.Drawing.Point(430, 338), Width = 75 };
         this.btnCancel = new SimpleButton
@@ -108,6 +110,11 @@ public class FollowUpSettings : XtraForm
             Dispose();
         };
         this.btnCancel.Click += (s, e) => { base.DialogResult = DialogResult.Cancel; Dispose(); };
+        this.btnResetTemplates.Click += (s, e) =>
+        {
+            memo2Day.Text  = Default2Day;
+            memoDayOf.Text = DefaultDayOf;
+        };
 
         this.ClientSize = new System.Drawing.Size(608, 370);
         this.Controls.AddRange(new Control[]
@@ -118,7 +125,7 @@ public class FollowUpSettings : XtraForm
             lblCritical,  spnCriticalThreshold,
             lbl2Day,      memo2Day,
             lblDayOf,     memoDayOf,
-            btnOK, btnCancel,
+            btnResetTemplates, btnOK, btnCancel,
         });
         this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
         this.StartPosition   = FormStartPosition.CenterParent;
