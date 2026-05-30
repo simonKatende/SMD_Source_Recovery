@@ -247,7 +247,6 @@ public class usrFeesFollowUp : XtraUserControl
     {
         try
         {
-            _service.CheckAndSendSmsReminders();
             var data = _service.GetDashboardData();
             UpdateKpiStrip(data);
             UpdatePriorityBreakdown(data);
