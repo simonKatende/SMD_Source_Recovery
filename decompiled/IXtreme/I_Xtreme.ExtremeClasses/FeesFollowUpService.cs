@@ -141,11 +141,11 @@ public class FeesFollowUpService
         COUNT(*)                                                              AS TotalEnrolled,
         ISNULL(SUM(ctp.TotalBilled + ISNULL(ptb.BFAmount, 0)), 0)           AS TotalPayable,
         ISNULL(SUM(ctp.TotalPaid), 0)                                        AS TotalPaid,
-        SUM(CASE WHEN ctp.TotalBilled + ISNULL(ptb.BFAmount, 0)
-                      - ctp.TotalPaid <= 0 THEN 1 ELSE 0 END)               AS NilBalance,
-        SUM(CASE WHEN ctp.TotalPaid = 0
-                  AND ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) > 0
-                 THEN 1 ELSE 0 END)                                          AS ZeroPaid
+        ISNULL(SUM(CASE WHEN ctp.TotalBilled + ISNULL(ptb.BFAmount, 0)
+                             - ctp.TotalPaid <= 0 THEN 1 ELSE 0 END), 0)    AS NilBalance,
+        ISNULL(SUM(CASE WHEN ctp.TotalPaid = 0
+                         AND ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) > 0
+                        THEN 1 ELSE 0 END), 0)                               AS ZeroPaid
     FROM tbl_Stud s
     INNER JOIN CurrentTermPayments ctp ON ctp.StudentNumber = s.StudentNumber
     LEFT  JOIN PrevTermLastBalance  ptb ON ptb.StudentNumber = s.StudentNumber";
@@ -159,11 +159,11 @@ public class FeesFollowUpService
         if (!rdr.Read()) return new DashboardTotals();
         return new DashboardTotals
         {
-            TotalEnrolled = (int)rdr["TotalEnrolled"],
-            TotalPayable  = (decimal)rdr["TotalPayable"],
-            TotalPaid     = (decimal)rdr["TotalPaid"],
-            NilBalance    = (int)(long)rdr["NilBalance"],
-            ZeroPaid      = (int)(long)rdr["ZeroPaid"],
+            TotalEnrolled = Convert.ToInt32(rdr["TotalEnrolled"]),
+            TotalPayable  = Convert.ToDecimal(rdr["TotalPayable"]),
+            TotalPaid     = Convert.ToDecimal(rdr["TotalPaid"]),
+            NilBalance    = Convert.ToInt32(rdr["NilBalance"]),
+            ZeroPaid      = Convert.ToInt32(rdr["ZeroPaid"]),
         };
     }
 
