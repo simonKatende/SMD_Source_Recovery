@@ -245,11 +245,22 @@ public class usrFeesFollowUp : XtraUserControl
 
     private void LoadDashboard()
     {
-        _service.CheckAndSendSmsReminders();
-        var data = _service.GetDashboardData();
-        UpdateKpiStrip(data);
-        UpdatePriorityBreakdown(data);
-        UpdateTopByBalance(data);
+        try
+        {
+            _service.CheckAndSendSmsReminders();
+            var data = _service.GetDashboardData();
+            UpdateKpiStrip(data);
+            UpdatePriorityBreakdown(data);
+            UpdateTopByBalance(data);
+        }
+        catch (Exception ex)
+        {
+            XtraMessageBox.Show(
+                $"Could not load dashboard data.\n\n{ex.Message}",
+                "Fees Follow-up",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Warning);
+        }
     }
 
     private void UpdateKpiStrip(DashboardData data)
