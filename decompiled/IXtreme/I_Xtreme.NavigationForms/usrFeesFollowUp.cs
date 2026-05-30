@@ -26,6 +26,7 @@ public class usrFeesFollowUp : XtraUserControl
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
     private bool _columnsConfigured = false;
     private string _currentSemester;
+    private List<string> _allClasses = new List<string>();
 
     public usrFeesFollowUp()
     {
@@ -128,7 +129,6 @@ public class usrFeesFollowUp : XtraUserControl
 
     private void LoadWorklist()
     {
-        _columnsConfigured = false;   // reconfigure on each load (class list may change)
         string classFilter = cboClass.SelectedIndex <= 0 ? "" : cboClass.SelectedItem?.ToString() ?? "";
         decimal minBal     = (decimal)spnMinBalance.Value;
 
@@ -136,15 +136,20 @@ public class usrFeesFollowUp : XtraUserControl
         gridWorklist.DataSource = rows;
         ConfigureWorklistColumns();
 
-        // Rebuild class combo from distinct classes in returned data
-        var classes = rows.SelectMany(r => r.Students).Select(s => s.ClassId)
-                          .Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList();
-        string selected = cboClass.SelectedIndex > 0 ? cboClass.SelectedItem?.ToString() : null;
-        cboClass.Properties.Items.Clear();
-        cboClass.Properties.Items.Add("All classes");
-        cboClass.Properties.Items.AddRange(classes.Cast<object>().ToArray());
-        cboClass.SelectedIndex = selected != null ? cboClass.Properties.Items.IndexOf(selected) : 0;
-        if (cboClass.SelectedIndex < 0) cboClass.SelectedIndex = 0;
+        // Only rebuild the full class list when no filter is active (all data is present)
+        if (string.IsNullOrEmpty(classFilter))
+        {
+            _allClasses = rows.SelectMany(r => r.Students)
+                             .Select(s => s.ClassId)
+                             .Where(c => !string.IsNullOrEmpty(c))
+                             .Distinct().OrderBy(c => c).ToList();
+            string selected = cboClass.SelectedIndex > 0 ? cboClass.SelectedItem?.ToString() : null;
+            cboClass.Properties.Items.Clear();
+            cboClass.Properties.Items.Add("All classes");
+            cboClass.Properties.Items.AddRange(_allClasses.Cast<object>().ToArray());
+            int idx = selected != null ? cboClass.Properties.Items.IndexOf(selected) : 0;
+            cboClass.SelectedIndex = idx >= 0 ? idx : 0;
+        }
     }
 
     // ── Grid configuration ────────────────────────────────────────────────────
@@ -153,6 +158,7 @@ public class usrFeesFollowUp : XtraUserControl
     {
         if (_columnsConfigured) return;
         _columnsConfigured = true;
+        gridViewWorklist.Columns.Clear();   // clear before re-adding to prevent accumulation
 
         // # — unbound row counter
         var colNum = new DevExpress.XtraGrid.Columns.GridColumn
