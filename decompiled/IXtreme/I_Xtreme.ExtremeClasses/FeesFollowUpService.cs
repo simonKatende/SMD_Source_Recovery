@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using AlienAge.Connectivity;
+using AlienAge.ExtremeMessenger;
 using I_Xtreme.Models;
 
 namespace I_Xtreme.ExtremeClasses;
@@ -407,7 +408,128 @@ public class FeesFollowUpService
 
     public void CheckAndSendSmsReminders()
     {
-        // Full implementation in Task 12 — requires tbl_SmsReminderLog migration to be run first
+        var today  = DateTime.Today;
+        var gw     = new SMSGateWay(connectionString);
+        string school = GetSchoolName();
+
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+
+        // 2-day-before and day-of reminders — guardians with active promises and outstanding balance
+        var all = GetGuardianWorklist("", 0);
+        foreach (var g in all)
+        {
+            if (g.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal)) continue;
+            if (!g.LatestPromiseDate.HasValue) continue;
+
+            DateTime pd   = g.LatestPromiseDate.Value.Date;
+            string phone  = g.GuardianContact;
+            string names  = g.StudentNames;
+            decimal bal   = g.TotalBalance;
+
+            if (pd == today.AddDays(2) && bal > 0
+                && !AlreadySentReminder(conn, phone, pd, "2DayBefore"))
+            {
+                string msg = $"Dear Parent, a reminder that fees of UGX {bal:#,#} for {names} is due on {pd:dd-MMM-yyyy}. Please pay as promised. - {school}";
+                if (gw.TrySendSMSViaPOST(phone, msg, out _))
+                    LogReminderSent(conn, phone, pd, "2DayBefore");
+            }
+
+            if (pd == today && bal > 0
+                && !AlreadySentReminder(conn, phone, pd, "DayOf"))
+            {
+                string msg = $"Dear Parent, today is your promised payment date for fees of UGX {bal:#,#} for {names}. Please make your payment today. - {school}";
+                if (gw.TrySendSMSViaPOST(phone, msg, out _))
+                    LogReminderSent(conn, phone, pd, "DayOf");
+            }
+        }
+
+        // ThankYou reminders — guardians who made a promise in the last 30 days and have now fully paid
+        const string tySql = @"
+            ;WITH LatestPromises AS (
+                SELECT GuardianKey, MAX(PromiseDate) AS PromiseDate
+                FROM tbl_FeesContactLog
+                WHERE Outcome      = 'Promised'
+                  AND PromiseDate  IS NOT NULL
+                  AND GuardianKey  IS NOT NULL
+                  AND GuardianKey  NOT LIKE 'NOCONTACT-%'
+                  AND PromiseDate  <= @today
+                  AND PromiseDate  >= DATEADD(day, -30, @today)
+                GROUP BY GuardianKey
+            )
+            SELECT
+                lp.GuardianKey,
+                lp.PromiseDate,
+                ISNULL((
+                    SELECT SUM(s.cashOnAccount - ISNULL(fp.TotalPaid, 0))
+                    FROM tbl_Stud s
+                    LEFT JOIN (
+                        SELECT StudentNumber, SUM(Credit) AS TotalPaid
+                        FROM FeesPayment GROUP BY StudentNumber
+                    ) fp ON fp.StudentNumber = s.StudentNumber
+                    WHERE RTRIM(LTRIM(ISNULL(s.PriorityContact, ''))) = lp.GuardianKey
+                       OR RTRIM(LTRIM(ISNULL(s.OtherContact, '')))   = lp.GuardianKey
+                ), 0) AS TotalBalance,
+                ISNULL((
+                    SELECT TOP 1 s2.fullName
+                    FROM tbl_Stud s2
+                    WHERE RTRIM(LTRIM(ISNULL(s2.PriorityContact, ''))) = lp.GuardianKey
+                       OR RTRIM(LTRIM(ISNULL(s2.OtherContact, '')))   = lp.GuardianKey
+                    ORDER BY s2.fullName
+                ), '') AS SampleName
+            FROM LatestPromises lp
+            WHERE NOT EXISTS (
+                SELECT 1 FROM tbl_SmsReminderLog r
+                WHERE r.GuardianKey  = lp.GuardianKey
+                  AND r.PromiseDate  = lp.PromiseDate
+                  AND r.ReminderType = 'ThankYou'
+            )";
+
+        var tyRows = new List<(string Key, DateTime Pd, decimal Bal, string Name)>();
+        using (var tyCmd = new SqlCommand(tySql, conn))
+        {
+            tyCmd.Parameters.Add("@today", SqlDbType.Date).Value = today;
+            using var rdr = tyCmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                tyRows.Add((
+                    rdr["GuardianKey"].ToString(),
+                    ((DateTime)rdr["PromiseDate"]).Date,
+                    (decimal)rdr["TotalBalance"],
+                    rdr["SampleName"].ToString()
+                ));
+            }
+        }
+
+        foreach (var (gk, pd, bal, name) in tyRows)
+        {
+            if (bal > 0) continue;
+            string msg = $"Dear Parent, thank you for clearing fees for {name}. Your account is now up to date. - {school}";
+            if (gw.TrySendSMSViaPOST(gk, msg, out _))
+                LogReminderSent(conn, gk, pd, "ThankYou");
+        }
+    }
+
+    private bool AlreadySentReminder(SqlConnection conn, string guardianKey, DateTime promiseDate, string type)
+    {
+        using var cmd = new SqlCommand(
+            "SELECT COUNT(1) FROM tbl_SmsReminderLog WHERE GuardianKey = @gk AND PromiseDate = @pd AND ReminderType = @type",
+            conn);
+        cmd.Parameters.Add("@gk",   SqlDbType.VarChar, 20).Value = guardianKey;
+        cmd.Parameters.Add("@pd",   SqlDbType.Date).Value         = promiseDate.Date;
+        cmd.Parameters.Add("@type", SqlDbType.VarChar, 20).Value  = type;
+        return (int)cmd.ExecuteScalar() > 0;
+    }
+
+    private void LogReminderSent(SqlConnection conn, string guardianKey, DateTime promiseDate, string type)
+    {
+        using var cmd = new SqlCommand(
+            "INSERT INTO tbl_SmsReminderLog (GuardianKey, PromiseDate, ReminderType) VALUES (@gk, @pd, @type)",
+            conn);
+        cmd.Parameters.Add("@gk",   SqlDbType.VarChar, 20).Value = guardianKey;
+        cmd.Parameters.Add("@pd",   SqlDbType.Date).Value         = promiseDate.Date;
+        cmd.Parameters.Add("@type", SqlDbType.VarChar, 20).Value  = type;
+        cmd.ExecuteNonQuery();
     }
 
     private static PriorityTier ComputeGuardianTier(
