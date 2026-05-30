@@ -21,6 +21,7 @@ public class dlgDailyWorklist : XtraForm
     private GridControl _grid;
     private GridView _view;
     private TextEdit _txtSearch;
+    private bool _columnsConfigured;
 
     public dlgDailyWorklist()
     {
@@ -118,6 +119,9 @@ public class dlgDailyWorklist : XtraForm
 
     private void ConfigureColumns()
     {
+        if (_columnsConfigured) return;
+        _columnsConfigured = true;
+
         _view.Columns.Clear();
 
         // # (row number - unbound int)
@@ -292,6 +296,11 @@ public class dlgDailyWorklist : XtraForm
             FileName = $"DailyWorklist_{DateTime.Today:yyyyMMdd}.xlsx",
         };
         if (save.ShowDialog() == DialogResult.OK)
-            _view.ExportToXlsx(save.FileName);
+        {
+            var btnExport = ((Control)sender);
+            btnExport.Enabled = false;
+            try { _view.ExportToXlsx(save.FileName); }
+            finally { btnExport.Enabled = true; }
+        }
     }
 }
