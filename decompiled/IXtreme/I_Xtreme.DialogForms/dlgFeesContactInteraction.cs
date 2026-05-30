@@ -409,9 +409,10 @@ public class dlgFeesContactInteraction : XtraForm
 
         int contactId = Convert.ToInt32(dataRow["ContactId"]);
 
-        using var menu = new System.Windows.Forms.ContextMenuStrip();
+        var menu = new System.Windows.Forms.ContextMenuStrip();
         menu.Items.Add("Edit",   null, (s2, e2) => BeginEditContact(dataRow, contactId));
         menu.Items.Add("Delete", null, (s2, e2) => DeleteHistoryContact(contactId));
+        menu.Closed += (s2, e2) => menu.Dispose();
         menu.Show(Control.MousePosition);
     }
 

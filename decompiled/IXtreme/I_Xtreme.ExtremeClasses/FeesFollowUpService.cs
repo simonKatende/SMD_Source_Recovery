@@ -477,10 +477,15 @@ public class FeesFollowUpService
         int termWeek = 0, totalTermWeeks = 0;
         if (settings.TermStartDate.HasValue && settings.TermEndDate.HasValue)
         {
-            int totalDays  = (int)(settings.TermEndDate.Value - settings.TermStartDate.Value).TotalDays;
+            // School week runs Sun–Sat; anchor both dates to their containing Sunday
+            DateTime tStart = settings.TermStartDate.Value;
+            DateTime tEnd   = settings.TermEndDate.Value;
+            DateTime termSunday  = tStart.AddDays(-(int)tStart.DayOfWeek);  // Sunday on/before term start
+            DateTime todaySunday = today.AddDays(-(int)today.DayOfWeek);     // Sunday on/before today
+            int totalDays  = (int)(tEnd - termSunday).TotalDays;
             totalTermWeeks = Math.Max(1, (totalDays + 6) / 7);
-            int elapsed    = Math.Max(0, (int)(today - settings.TermStartDate.Value).TotalDays);
-            termWeek       = Math.Min(totalTermWeeks, elapsed / 7 + 1);
+            int elapsedWeeks = Math.Max(0, (int)(todaySunday - termSunday).TotalDays / 7);
+            termWeek = Math.Min(totalTermWeeks, elapsedWeeks + 1);
         }
 
         return new DashboardData

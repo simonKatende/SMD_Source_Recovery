@@ -530,6 +530,8 @@ public class MainForm : RibbonForm
 
 	private RibbonPage ribbonPageFeesFollowUp;
 
+	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesHome;
+
 	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesWorklists;
 
 	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesSettings;
@@ -4903,7 +4905,25 @@ public class MainForm : RibbonForm
 	private void ShowFeesFollowUp()
 	{
 		if (_usrFeesFollowUp == null)
+		{
 			_usrFeesFollowUp = new usrFeesFollowUp();
+			_usrFeesFollowUp.NavigationRequested += target =>
+			{
+				switch (target)
+				{
+					case "guardian_worklist":
+						ShowFeesWorklist(new I_Xtreme.NavigationForms.usrGuardianWorklist());
+						break;
+					case "daily_worklist":
+						ShowFeesWorklist(new I_Xtreme.NavigationForms.usrDailyWorklist());
+						break;
+					case "student_zeropaid":
+						ShowFeesWorklist(new I_Xtreme.NavigationForms.usrStudentWorklist(
+							r => r.TotalPaid == 0 && r.TotalBilled > 0));
+						break;
+				}
+			};
+		}
 		_currentWorklistCtl = null;
 		CurrentControl.LoadControl(_usrFeesFollowUp, panelMain);
 		ribbon.SelectedPage = ribbonPageFeesFollowUp;
@@ -24772,32 +24792,37 @@ public class MainForm : RibbonForm
 		this.bbiSendReminders.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesTracking;
 		this.bbiSendReminders.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesTracking;
 		this.bbiSendReminders.ItemClick += (s, e) => _usrFeesFollowUp?.SendReminders();
-		this.ribbonPageGroupFeesSettings = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
-		this.ribbonPageGroupFeesSettings.Name = "ribbonPageGroupFeesSettings";
-		this.ribbonPageGroupFeesSettings.Text = "Settings";
+		// --- Fees Follow-up: Home group ---
 		this.bbiFeesHome = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiFeesHome.Name    = "bbiFeesHome";
 		this.bbiFeesHome.Caption = "Home";
-		this.bbiFeesHome.ImageOptions.Image      = (System.Drawing.Image)resources.GetObject("barButtonItem43.ImageOptions.Image");
-		this.bbiFeesHome.ImageOptions.LargeImage = (System.Drawing.Image)resources.GetObject("barButtonItem43.ImageOptions.LargeImage");
+		this.bbiFeesHome.ImageOptions.Image      = (System.Drawing.Image)resources.GetObject("barButtonItem215.ImageOptions.Image");
+		this.bbiFeesHome.ImageOptions.LargeImage = (System.Drawing.Image)resources.GetObject("barButtonItem215.ImageOptions.LargeImage");
 		this.bbiFeesHome.ItemClick += (s, e) => ShowFeesFollowUp();
 		this.ribbon.Items.Add(this.bbiFeesHome);
-		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiFeesHome);
+		this.ribbonPageGroupFeesHome = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
+		this.ribbonPageGroupFeesHome.Name = "ribbonPageGroupFeesHome";
+		this.ribbonPageGroupFeesHome.Text = "Home";
+		this.ribbonPageGroupFeesHome.ItemLinks.Add(this.bbiFeesHome);
+		// --- Fees Follow-up: Settings group ---
+		this.ribbonPageGroupFeesSettings = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
+		this.ribbonPageGroupFeesSettings.Name = "ribbonPageGroupFeesSettings";
+		this.ribbonPageGroupFeesSettings.Text = "Settings";
 		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiFeesSettings);
 		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiSendReminders);
-		// --- Fees Follow-up: Printing & Exporting group ---
-		this.bbiFeesPreview = new DevExpress.XtraBars.BarButtonItem();
-		this.bbiFeesPreview.Name    = "bbiFeesPreview";
-		this.bbiFeesPreview.Caption = "Preview";
-		this.bbiFeesPreview.ImageOptions.Image      = (System.Drawing.Image)resources.GetObject("barButtonItem76.ImageOptions.Image");
-		this.bbiFeesPreview.ImageOptions.LargeImage = (System.Drawing.Image)resources.GetObject("barButtonItem76.ImageOptions.LargeImage");
-		this.bbiFeesPreview.ItemClick += (s, e) => DispatchFeesPrint(preview: true);
+		// --- Fees Follow-up: Printing & Exporting group (Print → Preview → Export) ---
 		this.bbiFeesPrint = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiFeesPrint.Name    = "bbiFeesPrint";
 		this.bbiFeesPrint.Caption = "Print";
 		this.bbiFeesPrint.ImageOptions.Image      = (System.Drawing.Image)resources.GetObject("barButtonItem75.ImageOptions.Image");
 		this.bbiFeesPrint.ImageOptions.LargeImage = (System.Drawing.Image)resources.GetObject("barButtonItem75.ImageOptions.LargeImage");
 		this.bbiFeesPrint.ItemClick += (s, e) => DispatchFeesPrint(preview: false);
+		this.bbiFeesPreview = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiFeesPreview.Name    = "bbiFeesPreview";
+		this.bbiFeesPreview.Caption = "Preview";
+		this.bbiFeesPreview.ImageOptions.Image      = (System.Drawing.Image)resources.GetObject("barButtonItem76.ImageOptions.Image");
+		this.bbiFeesPreview.ImageOptions.LargeImage = (System.Drawing.Image)resources.GetObject("barButtonItem76.ImageOptions.LargeImage");
+		this.bbiFeesPreview.ItemClick += (s, e) => DispatchFeesPrint(preview: true);
 		this.bbiFeesExport = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiFeesExport.Name    = "bbiFeesExport";
 		this.bbiFeesExport.Caption = "Export";
@@ -24807,15 +24832,16 @@ public class MainForm : RibbonForm
 		this.ribbonPageGroupFeesPrint = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroupFeesPrint.Name = "ribbonPageGroupFeesPrint";
 		this.ribbonPageGroupFeesPrint.Text = "Printing & Exporting";
-		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesPreview);
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesPrint);
+		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesPreview);
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesExport);
-		// Register items with the ribbon manager so they get an ID
+		// Register items with the ribbon manager
 		this.ribbon.Items.AddRange(new DevExpress.XtraBars.BarItem[]
-			{ bbiFeesSettings, bbiSendReminders, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPreview, bbiFeesPrint, bbiFeesExport });
-		// Attach both groups to the ribbon page
-		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesSettings);
+			{ bbiFeesSettings, bbiSendReminders, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPrint, bbiFeesPreview, bbiFeesExport });
+		// Attach groups in order: Home | Worklists | Settings | Printing & Exporting
+		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesHome);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesWorklists);
+		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesSettings);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesPrint);
 		this.ribbonPageGroup35.ItemLinks.Add(this.barButtonItem43);
 		this.ribbonPageGroup35.ItemLinks.Add(this.barButtonItem350);

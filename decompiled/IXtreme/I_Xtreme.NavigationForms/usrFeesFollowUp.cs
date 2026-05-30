@@ -14,7 +14,8 @@ namespace I_Xtreme.NavigationForms;
 public class usrFeesFollowUp : XtraUserControl
 {
     // ── KPI strip ─────────────────────────────────────────────────────────────
-    private readonly Label[] _kpiValues = new Label[10];
+    private readonly Label[] _kpiValues = new Label[11];
+    public event Action<string> NavigationRequested;
     private FlowLayoutPanel  _kpiPanel;
 
     // ── Priority breakdown grid ───────────────────────────────────────────────
@@ -134,18 +135,22 @@ public class usrFeesFollowUp : XtraUserControl
             WrapContents  = true,
             AutoScroll    = false,
         };
-        // Row 1: financial overview
-        _kpiPanel.Controls.Add(BuildKpiCard(0, "Total Outstanding (UGX)", Color.DarkRed));
-        _kpiPanel.Controls.Add(BuildKpiCard(1, "Total Payable (UGX)",     Color.DarkSlateGray));
-        _kpiPanel.Controls.Add(BuildKpiCard(2, "Collection Rate (%)",     Color.DarkGreen));
-        _kpiPanel.Controls.Add(BuildKpiCard(3, "Total Enrolled",          Color.DimGray));
-        _kpiPanel.Controls.Add(BuildKpiCard(4, "Cleared (Nil Balance)",   Color.ForestGreen));
-        // Row 2: follow-up activity
-        _kpiPanel.Controls.Add(BuildKpiCard(5, "Guardians with Balance",  Color.DarkBlue));
-        _kpiPanel.Controls.Add(BuildKpiCard(6, "Today's Remaining",       Color.DarkOrange));
-        _kpiPanel.Controls.Add(BuildKpiCard(7, "Broken Promises",         Color.Crimson));
-        _kpiPanel.Controls.Add(BuildKpiCard(8, "Zero Paid",               Color.OrangeRed));
-        _kpiPanel.Controls.Add(BuildKpiCard(9, "Term Week",               Color.SlateBlue));
+        // Row 1: financial totals
+        _kpiPanel.Controls.Add(BuildKpiCard(0, "Total Payable (UGX)",     Color.DarkSlateGray));
+        _kpiPanel.Controls.Add(BuildKpiCard(1, "Total Collected (UGX)",   Color.DarkGreen));
+        _kpiPanel.Controls.Add(BuildKpiCard(2, "Total Outstanding (UGX)", Color.DarkRed));
+        _kpiPanel.Controls.Add(BuildKpiCard(3, "Collection Rate (%)",     Color.SeaGreen));
+        _kpiPanel.Controls.Add(BuildKpiCard(4, "Total Enrolled",          Color.DimGray));
+        // Row 2: follow-up activity (some tiles are clickable)
+        _kpiPanel.Controls.Add(BuildKpiCard(5,  "Cleared (Nil Balance)",  Color.ForestGreen));
+        _kpiPanel.Controls.Add(BuildKpiCard(6,  "Guardians w/ Balance",   Color.DarkBlue,
+            () => NavigationRequested?.Invoke("guardian_worklist")));
+        _kpiPanel.Controls.Add(BuildKpiCard(7,  "Today's Remaining",      Color.DarkOrange,
+            () => NavigationRequested?.Invoke("daily_worklist")));
+        _kpiPanel.Controls.Add(BuildKpiCard(8,  "Broken Promises",        Color.Crimson));
+        _kpiPanel.Controls.Add(BuildKpiCard(9,  "Zero Paid",              Color.OrangeRed,
+            () => NavigationRequested?.Invoke("student_zeropaid")));
+        _kpiPanel.Controls.Add(BuildKpiCard(10, "Term Week",              Color.SlateBlue));
 
         // Add controls — bottom-docked first, then top-docked in reverse visual order
         this.Controls.Add(lblTop5);
@@ -160,9 +165,9 @@ public class usrFeesFollowUp : XtraUserControl
 
     // ── KPI card builder ──────────────────────────────────────────────────────
 
-    private GroupControl BuildKpiCard(int idx, string caption, Color valueColor)
+    private GroupControl BuildKpiCard(int idx, string caption, Color valueColor, Action onClick = null)
     {
-        var grp = new GroupControl { Width = 190, Height = 90, Text = caption };
+        var grp = new GroupControl { Width = 185, Height = 90, Text = caption };
         var lbl = new Label
         {
             Text      = "—",
@@ -173,6 +178,13 @@ public class usrFeesFollowUp : XtraUserControl
         };
         grp.Controls.Add(lbl);
         _kpiValues[idx] = lbl;
+        if (onClick != null)
+        {
+            grp.Cursor = Cursors.Hand;
+            lbl.Cursor = Cursors.Hand;
+            grp.Click += (s, e) => onClick();
+            lbl.Click += (s, e) => onClick();
+        }
         return grp;
     }
 
@@ -184,6 +196,10 @@ public class usrFeesFollowUp : XtraUserControl
 
     public void LoadDashboard()
     {
+        DevExpress.XtraSplashScreen.SplashScreenManager.ShowForm(typeof(I_Xtreme.DialogForms.WaitForm1));
+        DevExpress.XtraSplashScreen.SplashScreenManager.Default.SetWaitFormDescription("Loading Fees Follow-up Dashboard...");
+        DevExpress.XtraSplashScreen.SplashScreenManager.Default.SendCommand(I_Xtreme.DialogForms.WaitForm1.WaitFormCommand.LoadFeesFollowUp, 0);
+        System.Threading.Thread.Sleep(25);
         try
         {
             var data = _service.GetDashboardData();
@@ -199,22 +215,27 @@ public class usrFeesFollowUp : XtraUserControl
                 System.Windows.Forms.MessageBoxButtons.OK,
                 System.Windows.Forms.MessageBoxIcon.Warning);
         }
+        finally
+        {
+            DevExpress.XtraSplashScreen.SplashScreenManager.CloseForm(throwExceptionIfAlreadyClosed: false);
+        }
     }
 
     private void UpdateKpiStrip(DashboardData data)
     {
-        // Row 1: financial overview
-        _kpiValues[0].Text = $"{data.TotalOutstanding:N0}";
-        _kpiValues[1].Text = $"{data.TotalPayable:N0}";
-        _kpiValues[2].Text = $"{data.CollectionRate:F1}%";
-        _kpiValues[3].Text = $"{data.TotalEnrolled}";
-        _kpiValues[4].Text = $"{data.NilBalanceStudents}";
+        // Row 1: financial totals
+        _kpiValues[0].Text  = $"{data.TotalPayable:N0}";
+        _kpiValues[1].Text  = $"{data.TotalCollected:N0}";
+        _kpiValues[2].Text  = $"{data.TotalOutstanding:N0}";
+        _kpiValues[3].Text  = $"{data.CollectionRate:F1}%";
+        _kpiValues[4].Text  = $"{data.TotalEnrolled}";
         // Row 2: follow-up activity
-        _kpiValues[5].Text = $"{data.TotalGuardiansWithBalance}";
-        _kpiValues[6].Text = $"{data.DailyListRemaining} / {data.DailyListTotal}";
-        _kpiValues[7].Text = $"{data.BrokenPromiseCount}";
-        _kpiValues[8].Text = $"{data.ZeroPaidStudents}";
-        _kpiValues[9].Text = data.TermWeekDisplay;
+        _kpiValues[5].Text  = $"{data.NilBalanceStudents}";
+        _kpiValues[6].Text  = $"{data.TotalGuardiansWithBalance}";
+        _kpiValues[7].Text  = $"{data.DailyListRemaining} / {data.DailyListTotal}";
+        _kpiValues[8].Text  = $"{data.BrokenPromiseCount}";
+        _kpiValues[9].Text  = $"{data.ZeroPaidStudents}";
+        _kpiValues[10].Text = data.TermWeekDisplay;
     }
 
     private void UpdatePriorityBreakdown(DashboardData data)

@@ -33,7 +33,8 @@ public class WaitForm1 : WaitForm
 		LoadAppendableClassList,
 		StudentsOnBursary,
 		PrePrimaryReportHeaderInitializer,
-		StandardCashBook
+		StandardCashBook,
+		LoadFeesFollowUp
 	}
 
 	private IContainer components = null;

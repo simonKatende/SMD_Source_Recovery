@@ -7,9 +7,7 @@ using DevExpress.XtraEditors;
 using DevExpress.XtraGrid;
 using DevExpress.XtraGrid.Columns;
 using DevExpress.XtraGrid.Views.Grid;
-using DevExpress.XtraReports.UI;
 using I_Xtreme.ExtremeClasses;
-using I_Xtreme.GeneralReports;
 using I_Xtreme.Models;
 using I_Xtreme.DialogForms;
 
@@ -18,6 +16,7 @@ namespace I_Xtreme.NavigationForms;
 public class usrStudentWorklist : XtraUserControl
 {
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
+    private readonly Predicate<StudentWorklistRow> _filter;
     private List<StudentWorklistRow> _allRows = new List<StudentWorklistRow>();
     private GridControl  _grid;
     private GridView     _view;
@@ -27,10 +26,16 @@ public class usrStudentWorklist : XtraUserControl
     private bool         _columnsConfigured;
     private bool         _classesLoaded;
 
-    public usrStudentWorklist()
+    public usrStudentWorklist(Predicate<StudentWorklistRow> filter = null)
     {
+        _filter = filter;
+        DevExpress.XtraSplashScreen.SplashScreenManager.ShowForm(typeof(I_Xtreme.DialogForms.WaitForm1));
+        DevExpress.XtraSplashScreen.SplashScreenManager.Default.SetWaitFormDescription("Loading Student Worklist...");
+        DevExpress.XtraSplashScreen.SplashScreenManager.Default.SendCommand(I_Xtreme.DialogForms.WaitForm1.WaitFormCommand.LoadFeesFollowUp, 0);
+        System.Threading.Thread.Sleep(25);
         BuildLayout();
         LoadData();
+        DevExpress.XtraSplashScreen.SplashScreenManager.CloseForm(throwExceptionIfAlreadyClosed: false);
     }
 
     private void BuildLayout()
@@ -91,6 +96,8 @@ public class usrStudentWorklist : XtraUserControl
             decimal mb = _spnMinBalance.Value;
 
             _allRows = _service.GetStudentWorklist(cf, mb);
+            if (_filter != null)
+                _allRows = _allRows.Where(r => _filter(r)).ToList();
             _grid.DataSource = _allRows;
             ConfigureColumns();
 
@@ -268,10 +275,8 @@ public class usrStudentWorklist : XtraUserControl
 
     public void Print(bool preview = false)
     {
-        var rpt  = new rptStudentWorklist(_allRows);
-        var tool = new ReportPrintTool(rpt);
-        if (preview) tool.ShowRibbonPreview();
-        else         tool.Print();
+        if (preview) _grid.ShowRibbonPrintPreview();
+        else         _grid.Print();
     }
 
     public void Export()

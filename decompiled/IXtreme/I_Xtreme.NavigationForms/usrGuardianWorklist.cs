@@ -7,9 +7,7 @@ using DevExpress.XtraEditors;
 using DevExpress.XtraGrid;
 using DevExpress.XtraGrid.Columns;
 using DevExpress.XtraGrid.Views.Grid;
-using DevExpress.XtraReports.UI;
 using I_Xtreme.ExtremeClasses;
-using I_Xtreme.GeneralReports;
 using I_Xtreme.Models;
 using I_Xtreme.DialogForms;
 
@@ -29,8 +27,13 @@ public class usrGuardianWorklist : XtraUserControl
 
     public usrGuardianWorklist()
     {
+        DevExpress.XtraSplashScreen.SplashScreenManager.ShowForm(typeof(I_Xtreme.DialogForms.WaitForm1));
+        DevExpress.XtraSplashScreen.SplashScreenManager.Default.SetWaitFormDescription("Loading Guardian Worklist...");
+        DevExpress.XtraSplashScreen.SplashScreenManager.Default.SendCommand(I_Xtreme.DialogForms.WaitForm1.WaitFormCommand.LoadFeesFollowUp, 0);
+        System.Threading.Thread.Sleep(25);
         BuildLayout();
         LoadData();
+        DevExpress.XtraSplashScreen.SplashScreenManager.CloseForm(throwExceptionIfAlreadyClosed: false);
     }
 
     private void BuildLayout()
@@ -254,10 +257,8 @@ public class usrGuardianWorklist : XtraUserControl
 
     public void Print(bool preview = false)
     {
-        var rpt  = new rptGuardianWorklist(_allRows);
-        var tool = new ReportPrintTool(rpt);
-        if (preview) tool.ShowRibbonPreview();
-        else         tool.Print();
+        if (preview) _grid.ShowRibbonPrintPreview();
+        else         _grid.Print();
     }
 
     public void Export()
