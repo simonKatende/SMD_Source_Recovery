@@ -25,6 +25,7 @@ public class dlgGuardianWorklist : XtraForm
     private ComboBoxEdit _cboClass;
     private SpinEdit _spnMinBalance;
     private bool _columnsConfigured;
+    private bool _classesLoaded;
 
     public dlgGuardianWorklist()
     {
@@ -148,8 +149,8 @@ public class dlgGuardianWorklist : XtraForm
             _grid.DataSource = _allRows;
             ConfigureColumns();
 
-            // Only rebuild class list when loading all classes (avoid losing classes on filter)
-            if (string.IsNullOrEmpty(classFilter))
+            // Only rebuild class list when loading all classes with no balance filter
+            if (string.IsNullOrEmpty(classFilter) && _spnMinBalance.Value == 0)
             {
                 _allClasses = _allRows
                     .SelectMany(r => r.Students)
@@ -163,6 +164,24 @@ public class dlgGuardianWorklist : XtraForm
                 _cboClass.Properties.Items.AddRange(_allClasses.Cast<object>().ToArray());
                 int idx = selected != null ? _cboClass.Properties.Items.IndexOf(selected) : 0;
                 _cboClass.SelectedIndex = idx >= 0 ? idx : 0;
+                _classesLoaded = true;
+            }
+            else if (!_classesLoaded)
+            {
+                // First load with a non-zero balance — load class list from an unfiltered query
+                var allUnfiltered = _service.GetGuardianWorklist("", 0);
+                _allClasses = allUnfiltered
+                    .SelectMany(r => r.Students)
+                    .Select(s => s.ClassId)
+                    .Where(c => !string.IsNullOrEmpty(c))
+                    .Distinct().OrderBy(c => c).ToList();
+                string selected = _cboClass.SelectedIndex > 0 ? _cboClass.SelectedItem?.ToString() : null;
+                _cboClass.Properties.Items.Clear();
+                _cboClass.Properties.Items.Add("All classes");
+                _cboClass.Properties.Items.AddRange(_allClasses.Cast<object>().ToArray());
+                int idx = selected != null ? _cboClass.Properties.Items.IndexOf(selected) : 0;
+                _cboClass.SelectedIndex = idx >= 0 ? idx : 0;
+                _classesLoaded = true;
             }
         }
         catch (Exception ex)
