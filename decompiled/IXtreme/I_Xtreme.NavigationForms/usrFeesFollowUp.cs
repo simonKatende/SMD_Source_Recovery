@@ -14,7 +14,7 @@ namespace I_Xtreme.NavigationForms;
 public class usrFeesFollowUp : XtraUserControl
 {
     // ── KPI strip ─────────────────────────────────────────────────────────────
-    private readonly Label[] _kpiValues = new Label[5];
+    private readonly Label[] _kpiValues = new Label[9];
     private FlowLayoutPanel  _kpiPanel;
 
     // ── Priority breakdown grid ───────────────────────────────────────────────
@@ -24,9 +24,6 @@ public class usrFeesFollowUp : XtraUserControl
     // ── Top 5 by balance grid ─────────────────────────────────────────────────
     private GridControl _gridTop5;
     private GridView    _viewTop5;
-
-    // ── Quick actions panel ───────────────────────────────────────────────────
-    private Panel _actionPanel;
 
     // ── State ─────────────────────────────────────────────────────────────────
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
@@ -41,49 +38,6 @@ public class usrFeesFollowUp : XtraUserControl
     private void InitializeComponent()
     {
         this.SuspendLayout();
-
-        // Section 4 — Quick actions (added first so Fill grids stack above it)
-        _actionPanel = new Panel { Dock = DockStyle.Bottom, Height = 60 };
-        var btnRefresh = new SimpleButton
-        {
-            Text   = "Refresh",
-            Width  = 100,
-            Height = 30,
-            Location = new Point(8, 14),
-        };
-        btnRefresh.Click += (s, e) => LoadDashboard();
-
-        var btnDaily = new SimpleButton
-        {
-            Text   = "Open Daily Worklist",
-            Width  = 150,
-            Height = 30,
-            Location = new Point(116, 14),
-        };
-        btnDaily.Click += (s, e) => OpenDailyWorklist();
-
-        var btnGuardian = new SimpleButton
-        {
-            Text   = "Guardian Worklist",
-            Width  = 150,
-            Height = 30,
-            Location = new Point(274, 14),
-        };
-        btnGuardian.Click += (s, e) => OpenGuardianWorklist();
-
-        var btnStudent = new SimpleButton
-        {
-            Text   = "Student Worklist",
-            Width  = 150,
-            Height = 30,
-            Location = new Point(432, 14),
-        };
-        btnStudent.Click += (s, e) => OpenStudentWorklist();
-
-        _actionPanel.Controls.AddRange(new Control[]
-        {
-            btnRefresh, btnDaily, btnGuardian, btnStudent,
-        });
 
         // Section 3 — Top 5 by balance
         var lblTop5 = new LabelControl
@@ -100,31 +54,20 @@ public class usrFeesFollowUp : XtraUserControl
         _gridTop5.ViewCollection.Add(_viewTop5);
         _viewTop5.OptionsView.ShowGroupPanel   = false;
         _viewTop5.OptionsBehavior.Editable     = false;
+        _viewTop5.OptionsDetail.SmartDetailExpand = false;
 
         var colGuardian = new DevExpress.XtraGrid.Columns.GridColumn
-        {
-            FieldName = "GuardianLabel",
-            Caption   = "Guardian",
-            Width     = 200,
-        };
+            { FieldName = "GuardianLabel", Caption = "Guardian", Width = 200, VisibleIndex = 0 };
         colGuardian.OptionsColumn.AllowEdit = false;
 
         var colBalance = new DevExpress.XtraGrid.Columns.GridColumn
-        {
-            FieldName = "TotalBalance",
-            Caption   = "Balance (UGX)",
-            Width     = 140,
-        };
+            { FieldName = "TotalBalance", Caption = "Balance (UGX)", Width = 140, VisibleIndex = 1 };
         colBalance.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
         colBalance.DisplayFormat.FormatString = "N0";
         colBalance.OptionsColumn.AllowEdit    = false;
 
         var colStudents = new DevExpress.XtraGrid.Columns.GridColumn
-        {
-            FieldName = "StudentCount",
-            Caption   = "Students",
-            Width     = 70,
-        };
+            { FieldName = "StudentCount", Caption = "Students", Width = 70, VisibleIndex = 2 };
         colStudents.OptionsColumn.AllowEdit = false;
 
         var colTier = new DevExpress.XtraGrid.Columns.GridColumn
@@ -133,13 +76,11 @@ public class usrFeesFollowUp : XtraUserControl
             Caption     = "Priority",
             UnboundType = DevExpress.Data.UnboundColumnType.String,
             Width       = 120,
+            VisibleIndex = 3,
         };
         colTier.OptionsColumn.AllowEdit = false;
 
-        _viewTop5.Columns.AddRange(new[]
-        {
-            colGuardian, colBalance, colStudents, colTier,
-        });
+        _viewTop5.Columns.AddRange(new[] { colGuardian, colBalance, colStudents, colTier });
         _viewTop5.CustomUnboundColumnData += ViewTop5_UnboundData;
         _viewTop5.RowStyle += ViewTop5_RowStyle;
 
@@ -158,42 +99,33 @@ public class usrFeesFollowUp : XtraUserControl
         _gridPriority.ViewCollection.Add(_viewPriority);
         _viewPriority.OptionsView.ShowGroupPanel = false;
         _viewPriority.OptionsBehavior.Editable   = false;
+        _viewPriority.OptionsDetail.SmartDetailExpand = false;
 
         var colPrio = new DevExpress.XtraGrid.Columns.GridColumn
         {
-            FieldName   = "TierDisplay",
-            Caption     = "Priority",
-            UnboundType = DevExpress.Data.UnboundColumnType.String,
-            Width       = 160,
+            FieldName    = "TierDisplay",
+            Caption      = "Priority",
+            UnboundType  = DevExpress.Data.UnboundColumnType.String,
+            Width        = 160,
+            VisibleIndex = 0,
         };
         colPrio.OptionsColumn.AllowEdit = false;
 
         var colGuardianCount = new DevExpress.XtraGrid.Columns.GridColumn
-        {
-            FieldName = "GuardianCount",
-            Caption   = "Guardians",
-            Width     = 90,
-        };
+            { FieldName = "GuardianCount", Caption = "Guardians", Width = 90, VisibleIndex = 1 };
         colGuardianCount.OptionsColumn.AllowEdit = false;
 
         var colPrioBalance = new DevExpress.XtraGrid.Columns.GridColumn
-        {
-            FieldName = "TotalBalance",
-            Caption   = "Total Balance (UGX)",
-            Width     = 160,
-        };
+            { FieldName = "TotalBalance", Caption = "Total Balance (UGX)", Width = 160, VisibleIndex = 2 };
         colPrioBalance.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
         colPrioBalance.DisplayFormat.FormatString = "N0";
         colPrioBalance.OptionsColumn.AllowEdit    = false;
 
-        _viewPriority.Columns.AddRange(new[]
-        {
-            colPrio, colGuardianCount, colPrioBalance,
-        });
+        _viewPriority.Columns.AddRange(new[] { colPrio, colGuardianCount, colPrioBalance });
         _viewPriority.CustomUnboundColumnData += ViewPriority_UnboundData;
         _viewPriority.RowStyle += ViewPriority_RowStyle;
 
-        // Section 1 — KPI strip
+        // Section 1 — KPI strip (9 cards)
         _kpiPanel = new FlowLayoutPanel
         {
             Dock          = DockStyle.Top,
@@ -206,9 +138,12 @@ public class usrFeesFollowUp : XtraUserControl
         _kpiPanel.Controls.Add(BuildKpiCard(2, "Guardians with Balance",  Color.DarkBlue));
         _kpiPanel.Controls.Add(BuildKpiCard(3, "Today's Remaining",       Color.DarkOrange));
         _kpiPanel.Controls.Add(BuildKpiCard(4, "Broken Promises",         Color.Crimson));
+        _kpiPanel.Controls.Add(BuildKpiCard(5, "Total Enrolled",          Color.DimGray));
+        _kpiPanel.Controls.Add(BuildKpiCard(6, "Cleared (Nil Balance)",   Color.ForestGreen));
+        _kpiPanel.Controls.Add(BuildKpiCard(7, "Zero Paid",               Color.OrangeRed));
+        _kpiPanel.Controls.Add(BuildKpiCard(8, "Term Week",               Color.SlateBlue));
 
         // Add controls — bottom-docked first, then top-docked in reverse visual order
-        this.Controls.Add(_actionPanel);
         this.Controls.Add(lblTop5);
         this.Controls.Add(_gridTop5);
         this.Controls.Add(lblPriority);
@@ -227,7 +162,7 @@ public class usrFeesFollowUp : XtraUserControl
         var lbl = new Label
         {
             Text      = "—",
-            Font      = new Font("Tahoma", 18, FontStyle.Bold),
+            Font      = new Font("Tahoma", 16, FontStyle.Bold),
             ForeColor = valueColor,
             Dock      = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -243,7 +178,7 @@ public class usrFeesFollowUp : XtraUserControl
 
     // ── Dashboard data ────────────────────────────────────────────────────────
 
-    private void LoadDashboard()
+    public void LoadDashboard()
     {
         try
         {
@@ -269,6 +204,10 @@ public class usrFeesFollowUp : XtraUserControl
         _kpiValues[2].Text = $"{data.TotalGuardiansWithBalance}";
         _kpiValues[3].Text = $"{data.DailyListRemaining} / {data.DailyListTotal}";
         _kpiValues[4].Text = $"{data.BrokenPromiseCount}";
+        _kpiValues[5].Text = $"{data.TotalEnrolled}";
+        _kpiValues[6].Text = $"{data.NilBalanceStudents}";
+        _kpiValues[7].Text = $"{data.ZeroPaidStudents}";
+        _kpiValues[8].Text = data.TermWeekDisplay;
     }
 
     private void UpdatePriorityBreakdown(DashboardData data)
@@ -352,27 +291,6 @@ public class usrFeesFollowUp : XtraUserControl
 
     // ── Public ribbon API ─────────────────────────────────────────────────────
 
-    public void OpenDailyWorklist()
-    {
-        using var dlg = new dlgDailyWorklist();
-        dlg.ShowDialog(this);
-        LoadDashboard();
-    }
-
-    public void OpenGuardianWorklist()
-    {
-        using var dlg = new dlgGuardianWorklist();
-        dlg.ShowDialog(this);
-        LoadDashboard();
-    }
-
-    public void OpenStudentWorklist()
-    {
-        using var dlg = new dlgStudentWorklist();
-        dlg.ShowDialog(this);
-        LoadDashboard();
-    }
-
     public void OpenSettings()
     {
         using var dlg = new FollowUpSettings();
@@ -384,12 +302,37 @@ public class usrFeesFollowUp : XtraUserControl
     {
         try
         {
-            _service.CheckAndSendSmsReminders();
+            var result = _service.CheckAndSendSmsReminders();
+
+            if (result.AlreadyRanToday)
+            {
+                XtraMessageBox.Show(
+                    "Reminders have already been sent today. To resend, you may force a re-run tomorrow or if today's batch had failures.",
+                    "Fees Follow-up — Already Sent",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Information);
+                return;
+            }
+
+            if (result.TotalSent == 0 && !result.HasFailures)
+            {
+                XtraMessageBox.Show(
+                    "No reminders were due today (no guardians have a promise dated today or in 2 days).",
+                    "Fees Follow-up — Nothing to Send",
+                    System.Windows.Forms.MessageBoxButtons.OK,
+                    System.Windows.Forms.MessageBoxIcon.Information);
+                return;
+            }
+
+            string summary = $"Reminders sent:\n  2-day reminders: {result.TwoDayCount}\n  Day-of reminders: {result.DayOfCount}";
+            if (result.HasFailures)
+                summary += $"\n\nFailed ({result.Failures.Count}):\n" + string.Join("\n", result.Failures);
+
             XtraMessageBox.Show(
-                "SMS reminders sent successfully.",
-                "Fees Follow-up",
+                summary,
+                "Fees Follow-up — Reminders Complete",
                 System.Windows.Forms.MessageBoxButtons.OK,
-                System.Windows.Forms.MessageBoxIcon.Information);
+                result.HasFailures ? System.Windows.Forms.MessageBoxIcon.Warning : System.Windows.Forms.MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
@@ -401,15 +344,9 @@ public class usrFeesFollowUp : XtraUserControl
         }
     }
 
-    // ── Legacy ribbon stubs — kept until Task 11 restructures the ribbon ──────
-    // These were on the old worklist-grid design. They are no-ops here;
-    // Task 11 will remove or replace the ribbon buttons that call them.
-
-    public void OpenContactView() { }
-
+    // Stubs kept for legacy ribbon items that reference these
     public void PrintPreviewWorklist() { }
-
-    public void PrintWorklist() { }
-
+    public void PrintWorklist()        { }
     public void ExportWorklistToExcel() { }
+    public void OpenContactView()       { }
 }

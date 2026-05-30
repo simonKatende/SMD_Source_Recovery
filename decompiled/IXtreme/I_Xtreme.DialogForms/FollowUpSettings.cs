@@ -14,6 +14,8 @@ public class FollowUpSettings : XtraForm
     private DateEdit  dteTermStart;
     private DateEdit  dteTermEnd;
     private SpinEdit  spnCriticalThreshold;
+    private MemoEdit  memo2Day;
+    private MemoEdit  memoDayOf;
     private SimpleButton btnOK, btnCancel;
 
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
@@ -22,10 +24,15 @@ public class FollowUpSettings : XtraForm
     {
         InitializeComponent();
         var s = _service.GetSettings();
-        spnStaleness.Value          = s.StaleThresholdDays;
-        dteTermStart.EditValue      = (object)s.TermStartDate ?? DBNull.Value;
-        dteTermEnd.EditValue        = (object)s.TermEndDate   ?? DBNull.Value;
-        spnCriticalThreshold.Value  = (decimal)(s.CriticalPacingGapThreshold * 100); // stored as 0..1, shown as 0..100%
+        spnStaleness.Value         = s.StaleThresholdDays;
+        dteTermStart.EditValue     = (object)s.TermStartDate ?? DBNull.Value;
+        dteTermEnd.EditValue       = (object)s.TermEndDate   ?? DBNull.Value;
+        spnCriticalThreshold.Value = (decimal)(s.CriticalPacingGapThreshold * 100);
+
+        const string default2Day  = "Dear Parent, a reminder that fees of UGX {balance} for {names} is due on {date}. Please pay as promised. - {school}";
+        const string defaultDayOf = "Dear Parent, today is your promised payment date for fees of UGX {balance} for {names}. Please make your payment today. - {school}";
+        memo2Day.Text   = !string.IsNullOrWhiteSpace(s.SmsTemplate2Day)  ? s.SmsTemplate2Day  : default2Day;
+        memoDayOf.Text  = !string.IsNullOrWhiteSpace(s.SmsTemplateDayOf) ? s.SmsTemplateDayOf : defaultDayOf;
     }
 
     private void InitializeComponent()
@@ -56,11 +63,23 @@ public class FollowUpSettings : XtraForm
         this.spnCriticalThreshold.Properties.MinValue     = 0;
         this.spnCriticalThreshold.Properties.MaxValue     = 100;
 
+        // Row 5: 2-day reminder template
+        var lbl2Day = new LabelControl
+            { Text = "2-day reminder template ({balance},{names},{date},{school}):", Location = new System.Drawing.Point(12, 162), AutoSize = true };
+        this.memo2Day = new MemoEdit { Location = new System.Drawing.Point(12, 180), Size = new System.Drawing.Size(580, 60) };
+        this.memo2Day.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+
+        // Row 6: Day-of reminder template
+        var lblDayOf = new LabelControl
+            { Text = "Day-of reminder template:", Location = new System.Drawing.Point(12, 248), AutoSize = true };
+        this.memoDayOf = new MemoEdit { Location = new System.Drawing.Point(12, 264), Size = new System.Drawing.Size(580, 60) };
+        this.memoDayOf.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+
         // Buttons
         this.btnOK = new SimpleButton
-            { Text = "OK", Location = new System.Drawing.Point(130, 158), Width = 75 };
+            { Text = "OK", Location = new System.Drawing.Point(430, 338), Width = 75 };
         this.btnCancel = new SimpleButton
-            { Text = "Cancel", Location = new System.Drawing.Point(214, 158), Width = 75 };
+            { Text = "Cancel", Location = new System.Drawing.Point(514, 338), Width = 75 };
 
         this.btnOK.Click += (s, e) =>
         {
@@ -78,23 +97,27 @@ public class FollowUpSettings : XtraForm
 
             _service.SaveSettings(new FeesFollowUpSettings
             {
-                StaleThresholdDays          = (int)spnStaleness.Value,
-                TermStartDate               = termStart,
-                TermEndDate                 = termEnd,
-                CriticalPacingGapThreshold  = (double)(spnCriticalThreshold.Value / 100m),
+                StaleThresholdDays         = (int)spnStaleness.Value,
+                TermStartDate              = termStart,
+                TermEndDate                = termEnd,
+                CriticalPacingGapThreshold = (double)(spnCriticalThreshold.Value / 100m),
+                SmsTemplate2Day            = memo2Day.Text.Trim(),
+                SmsTemplateDayOf           = memoDayOf.Text.Trim(),
             });
             base.DialogResult = DialogResult.OK;
             Dispose();
         };
         this.btnCancel.Click += (s, e) => { base.DialogResult = DialogResult.Cancel; Dispose(); };
 
-        this.ClientSize = new System.Drawing.Size(320, 196);
+        this.ClientSize = new System.Drawing.Size(608, 370);
         this.Controls.AddRange(new Control[]
         {
             lblStaleness, spnStaleness,
             lblTermStart, dteTermStart,
             lblTermEnd,   dteTermEnd,
             lblCritical,  spnCriticalThreshold,
+            lbl2Day,      memo2Day,
+            lblDayOf,     memoDayOf,
             btnOK, btnCancel,
         });
         this.FormBorderStyle = FormBorderStyle.FixedToolWindow;

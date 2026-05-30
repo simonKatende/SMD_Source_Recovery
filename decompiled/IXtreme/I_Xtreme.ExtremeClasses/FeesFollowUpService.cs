@@ -64,6 +64,8 @@ public class FeesFollowUpService
                 dict.TryGetValue("TermEndDate", out var te) && DateTime.TryParse(te, out DateTime ted) ? ted : (DateTime?)null,
             CriticalPacingGapThreshold =
                 dict.TryGetValue("CriticalPacingGapThreshold", out var ct) && double.TryParse(ct, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double ctd) ? ctd : 0.50,
+            SmsTemplate2Day  = dict.TryGetValue("SmsTemplate2Day",  out var t2)  ? t2  : "",
+            SmsTemplateDayOf = dict.TryGetValue("SmsTemplateDayOf", out var tdo) ? tdo : "",
         };
     }
 
@@ -71,10 +73,12 @@ public class FeesFollowUpService
     {
         using var conn = new SqlConnection(connectionString);
         conn.Open();
-        Upsert(conn, "StalenessThresholdDays",        s.StaleThresholdDays.ToString());
-        Upsert(conn, "TermStartDate",                 s.TermStartDate?.ToString("yyyy-MM-dd") ?? "");
-        Upsert(conn, "TermEndDate",                   s.TermEndDate?.ToString("yyyy-MM-dd") ?? "");
-        Upsert(conn, "CriticalPacingGapThreshold",    s.CriticalPacingGapThreshold.ToString("R"));
+        Upsert(conn, "StalenessThresholdDays",     s.StaleThresholdDays.ToString());
+        Upsert(conn, "TermStartDate",              s.TermStartDate?.ToString("yyyy-MM-dd") ?? "");
+        Upsert(conn, "TermEndDate",                s.TermEndDate?.ToString("yyyy-MM-dd") ?? "");
+        Upsert(conn, "CriticalPacingGapThreshold", s.CriticalPacingGapThreshold.ToString("R"));
+        Upsert(conn, "SmsTemplate2Day",            s.SmsTemplate2Day ?? "");
+        Upsert(conn, "SmsTemplateDayOf",           s.SmsTemplateDayOf ?? "");
     }
 
     private static void Upsert(SqlConnection conn, string key, string value)
@@ -89,6 +93,26 @@ public class FeesFollowUpService
         cmd.ExecuteNonQuery();
     }
 
+    // Returns the most-recently-used SemesterId in FeesPayment that is not the current semester.
+    private string GetPreviousSemesterId(string currentSemester)
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(
+            "SELECT TOP 1 SemesterId FROM FeesPayment WHERE SemesterId != @curr AND SemesterId IS NOT NULL GROUP BY SemesterId ORDER BY MAX(PaymentId) DESC",
+            conn);
+        cmd.Parameters.Add("@curr", SqlDbType.VarChar, 50).Value = currentSemester;
+        return cmd.ExecuteScalar() as string;
+    }
+
+    private int GetTotalEnrolledCount()
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("SELECT COUNT(1) FROM tbl_Stud", conn);
+        return (int)cmd.ExecuteScalar();
+    }
+
     public List<GuardianWorklistRow> GetGuardianWorklist(string classFilter, decimal minBalance)
     {
         var settings    = GetSettings();
@@ -97,21 +121,33 @@ public class FeesFollowUpService
         bool hasTermDates = tStart.HasValue && tEnd.HasValue;
 
         string currentSemester = AlienAge.Semesters.WorkingSemesters.GetWorkingSemester();
+        string prevSemester    = GetPreviousSemesterId(currentSemester);  // may be null
 
+        // Uses the same formula as the Fees Tracking Sheet (usrStudentAccounts):
+        //   TotalBilled = SUM(Debit, current semester) + stored Balance from last previous-semester entry
+        //   TotalPaid   = SUM(Credit, current semester)
+        //   Balance     = TotalBilled - TotalPaid
+        // Only students with at least one current-semester FeesPayment entry are included,
+        // which keeps this total consistent with what the tracking sheet reports.
         const string sql = @"
-    ;WITH TermPayments AS (
-        SELECT StudentNumber, ISNULL(SUM(Credit), 0) AS TotalPaid
+    ;WITH CurrentTermPayments AS (
+        SELECT StudentNumber,
+               ISNULL(SUM(ISNULL(Debit,  0)), 0) AS TotalBilled,
+               ISNULL(SUM(ISNULL(Credit, 0)), 0) AS TotalPaid
         FROM FeesPayment
         WHERE SemesterId = @currentSemester
         GROUP BY StudentNumber
     ),
-    BroughtForward AS (
-        -- Net balance (Debit - Credit) from all semesters before the current one.
-        SELECT StudentNumber,
-               ISNULL(SUM(ISNULL(Debit, 0)) - SUM(ISNULL(Credit, 0)), 0) AS BFAmount
-        FROM FeesPayment
-        WHERE SemesterId != @currentSemester
-        GROUP BY StudentNumber
+    PrevTermLastBalance AS (
+        -- Stored running balance at end of the previous semester (matches tracking sheet B/F column)
+        SELECT StudentNumber, Balance AS BFAmount
+        FROM (
+            SELECT StudentNumber, Balance,
+                   ROW_NUMBER() OVER (PARTITION BY StudentNumber ORDER BY PaymentId DESC) AS rn
+            FROM FeesPayment
+            WHERE SemesterId = @prevSemester
+        ) t
+        WHERE rn = 1
     ),
     StudentsWithBalance AS (
         SELECT
@@ -123,9 +159,9 @@ public class FeesFollowUpService
             s.OtherContact      AS Contact2,
             s.StudentID         AS StudentId,
             s.StudyStatus       AS DayBoarder,
-            s.cashOnAccount + ISNULL(bf.BFAmount, 0) AS TotalBilled,
-            ISNULL(tp.TotalPaid, 0) AS TotalPaid,
-            s.cashOnAccount + ISNULL(bf.BFAmount, 0) - ISNULL(tp.TotalPaid, 0) AS Balance,
+            ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) AS TotalBilled,
+            ctp.TotalPaid AS TotalPaid,
+            ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) - ctp.TotalPaid AS Balance,
             CASE
                 WHEN NULLIF(RTRIM(LTRIM(ISNULL(s.PriorityContact,''))), '') IS NOT NULL
                     THEN RTRIM(LTRIM(s.PriorityContact))
@@ -134,9 +170,9 @@ public class FeesFollowUpService
                 ELSE 'NOCONTACT-' + s.StudentNumber
             END AS GuardianKey
         FROM tbl_Stud s
-        LEFT JOIN TermPayments  tp ON tp.StudentNumber = s.StudentNumber
-        LEFT JOIN BroughtForward bf ON bf.StudentNumber = s.StudentNumber
-        WHERE s.cashOnAccount + ISNULL(bf.BFAmount, 0) - ISNULL(tp.TotalPaid, 0) > @minBalance
+        INNER JOIN CurrentTermPayments ctp ON ctp.StudentNumber = s.StudentNumber
+        LEFT JOIN  PrevTermLastBalance  ptb ON ptb.StudentNumber = s.StudentNumber
+        WHERE ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) - ctp.TotalPaid > @minBalance
           AND (@classFilter = '' OR s.ClassId = @classFilter)
     ),
     AllRelevantContacts AS (
@@ -209,6 +245,7 @@ public class FeesFollowUpService
             cmd.Parameters.Add("@minBalance",       SqlDbType.Money).Value      = minBalance;
             cmd.Parameters.Add("@classFilter",     SqlDbType.VarChar, 50).Value = classFilter ?? "";
             cmd.Parameters.Add("@currentSemester", SqlDbType.VarChar, 50).Value = currentSemester;
+            cmd.Parameters.Add("@prevSemester",    SqlDbType.VarChar, 50).Value = (object)prevSemester ?? DBNull.Value;
 
             using var rdr = cmd.ExecuteReader();
             while (rdr.Read())
@@ -361,12 +398,12 @@ public class FeesFollowUpService
 
     public DashboardData GetDashboardData()
     {
-        var all   = GetGuardianWorklist("", 0);
-        var today = DateTime.Today;
+        var settings = GetSettings();
+        var all      = GetGuardianWorklist("", 0);
+        var today    = DateTime.Today;
 
         int contactedToday = all.Count(g => WasContactedToday(g.GuardianContact));
 
-        // Compute daily list count inline — don't call GetDailyWorklist which re-runs the full query
         int dailyTotal = all.Count(g =>
         {
             bool hasActiveFuturePromise =
@@ -376,6 +413,21 @@ public class FeesFollowUpService
             if (hasActiveFuturePromise) return false;
             return !WasContactedToday(g.GuardianContact);
         }) + contactedToday;
+
+        int totalEnrolled      = GetTotalEnrolledCount();
+        int studentsWithBalance = all.Sum(g => g.StudentCount);
+        int nilBalanceStudents  = Math.Max(0, totalEnrolled - studentsWithBalance);
+        int zeroPaidStudents    = all.SelectMany(g => g.Students).Count(s => s.TotalPaid == 0);
+        int belowPacingCount    = all.Count(g => g.PacingGap > 0);
+
+        int termWeek = 0, totalTermWeeks = 0;
+        if (settings.TermStartDate.HasValue && settings.TermEndDate.HasValue)
+        {
+            int totalDays  = (int)(settings.TermEndDate.Value - settings.TermStartDate.Value).TotalDays;
+            totalTermWeeks = Math.Max(1, (totalDays + 6) / 7);
+            int elapsed    = Math.Max(0, (int)(today - settings.TermStartDate.Value).TotalDays);
+            termWeek       = Math.Min(totalTermWeeks, elapsed / 7 + 1);
+        }
 
         return new DashboardData
         {
@@ -388,6 +440,12 @@ public class FeesFollowUpService
             BrokenPromiseCount        = all.Count(g => g.Tier == PriorityTier.BrokenPromise),
             ActivePromiseCount        = all.Count(g =>
                 g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date >= today),
+            TotalEnrolled      = totalEnrolled,
+            NilBalanceStudents = nilBalanceStudents,
+            ZeroPaidStudents   = zeroPaidStudents,
+            BelowPacingCount   = belowPacingCount,
+            CurrentTermWeek    = termWeek,
+            TotalTermWeeks     = totalTermWeeks,
             ByPriority = Enum.GetValues(typeof(PriorityTier))
                 .Cast<PriorityTier>()
                 .Select(t => new PriorityGroupStats
@@ -415,16 +473,46 @@ public class FeesFollowUpService
         catch { return ""; }
     }
 
-    public void CheckAndSendSmsReminders()
+    public SmsReminderResult CheckAndSendSmsReminders()
     {
-        var today  = DateTime.Today;
-        var gw     = new SMSGateWay(connectionString);
+        var today   = DateTime.Today;
+        var gw      = new SMSGateWay(connectionString);
         string school = GetSchoolName();
+        var settings  = GetSettings();
+        var result    = new SmsReminderResult();
+
+        string twoDayTemplate = !string.IsNullOrWhiteSpace(settings.SmsTemplate2Day)
+            ? settings.SmsTemplate2Day
+            : "Dear Parent, a reminder that fees of UGX {balance} for {names} is due on {date}. Please pay as promised. - {school}";
+        string dayOfTemplate = !string.IsNullOrWhiteSpace(settings.SmsTemplateDayOf)
+            ? settings.SmsTemplateDayOf
+            : "Dear Parent, today is your promised payment date for fees of UGX {balance} for {names}. Please make your payment today. - {school}";
 
         using var conn = new SqlConnection(connectionString);
         conn.Open();
 
-        // 2-day-before and day-of reminders — guardians with active promises and outstanding balance
+        // Once-per-day guard — check if this batch already ran today
+        using (var chk = new SqlCommand(
+            "SELECT COUNT(1) FROM tbl_SmsReminderLog WHERE GuardianKey = '__BATCH__' AND ReminderType = 'BatchRun' AND CAST(PromiseDate AS DATE) = @today",
+            conn))
+        {
+            chk.Parameters.Add("@today", SqlDbType.Date).Value = today;
+            if ((int)chk.ExecuteScalar() > 0)
+            {
+                result.AlreadyRanToday = true;
+                return result;
+            }
+        }
+
+        // Log the batch run marker before sending so we don't duplicate on error
+        using (var mark = new SqlCommand(
+            "INSERT INTO tbl_SmsReminderLog (GuardianKey, PromiseDate, ReminderType) VALUES ('__BATCH__', @today, 'BatchRun')",
+            conn))
+        {
+            mark.Parameters.Add("@today", SqlDbType.Date).Value = today;
+            mark.ExecuteNonQuery();
+        }
+
         var all = GetGuardianWorklist("", 0);
         foreach (var g in all)
         {
@@ -433,90 +521,56 @@ public class FeesFollowUpService
 
             DateTime pd   = g.LatestPromiseDate.Value.Date;
             string phone  = g.GuardianContact;
-            string names  = g.StudentNames;
             decimal bal   = g.TotalBalance;
+            if (bal <= 0) continue;
 
-            if (pd == today.AddDays(2) && bal > 0
-                && !AlreadySentReminder(conn, phone, pd, "2DayBefore"))
+            if (pd == today.AddDays(2) && !AlreadySentReminder(conn, phone, pd, "2DayBefore"))
             {
-                string msg = $"Dear Parent, a reminder that fees of UGX {bal:#,#} for {names} is due on {pd:dd-MMM-yyyy}. Please pay as promised. - {school}";
-                if (gw.TrySendSMSViaPOST(phone, msg, out _))
+                string msg = ApplySmsTemplate(twoDayTemplate, bal, g.StudentNames, pd, school);
+                if (gw.TrySendSMSViaPOST(phone, msg, out string err2))
+                {
                     LogReminderSent(conn, phone, pd, "2DayBefore");
+                    result.TwoDayCount++;
+                }
+                else
+                {
+                    result.Failures.Add($"2-day reminder to {phone}: {err2}");
+                }
             }
 
-            if (pd == today && bal > 0
-                && !AlreadySentReminder(conn, phone, pd, "DayOf"))
+            if (pd == today && !AlreadySentReminder(conn, phone, pd, "DayOf"))
             {
-                string msg = $"Dear Parent, today is your promised payment date for fees of UGX {bal:#,#} for {names}. Please make your payment today. - {school}";
-                if (gw.TrySendSMSViaPOST(phone, msg, out _))
+                string msg = ApplySmsTemplate(dayOfTemplate, bal, g.StudentNames, pd, school);
+                if (gw.TrySendSMSViaPOST(phone, msg, out string errD))
+                {
                     LogReminderSent(conn, phone, pd, "DayOf");
+                    result.DayOfCount++;
+                }
+                else
+                {
+                    result.Failures.Add($"Day-of reminder to {phone}: {errD}");
+                }
             }
         }
 
-        // ThankYou reminders — guardians who made a promise in the last 30 days and have now fully paid
-        const string tySql = @"
-            ;WITH LatestPromises AS (
-                SELECT GuardianKey, MAX(PromiseDate) AS PromiseDate
-                FROM tbl_FeesContactLog
-                WHERE Outcome      = 'Promised'
-                  AND PromiseDate  IS NOT NULL
-                  AND GuardianKey  IS NOT NULL
-                  AND GuardianKey  NOT LIKE 'NOCONTACT-%'
-                  AND PromiseDate  <= @today
-                  AND PromiseDate  >= DATEADD(day, -30, @today)
-                GROUP BY GuardianKey
-            )
-            SELECT
-                lp.GuardianKey,
-                lp.PromiseDate,
-                ISNULL((
-                    SELECT SUM(s.cashOnAccount - ISNULL(fp.TotalPaid, 0))
-                    FROM tbl_Stud s
-                    LEFT JOIN (
-                        SELECT StudentNumber, SUM(Credit) AS TotalPaid
-                        FROM FeesPayment GROUP BY StudentNumber
-                    ) fp ON fp.StudentNumber = s.StudentNumber
-                    WHERE RTRIM(LTRIM(ISNULL(s.PriorityContact, ''))) = lp.GuardianKey
-                       OR RTRIM(LTRIM(ISNULL(s.OtherContact, '')))   = lp.GuardianKey
-                ), 0) AS TotalBalance,
-                ISNULL((
-                    SELECT TOP 1 s2.fullName
-                    FROM tbl_Stud s2
-                    WHERE RTRIM(LTRIM(ISNULL(s2.PriorityContact, ''))) = lp.GuardianKey
-                       OR RTRIM(LTRIM(ISNULL(s2.OtherContact, '')))   = lp.GuardianKey
-                    ORDER BY s2.fullName
-                ), '') AS SampleName
-            FROM LatestPromises lp
-            WHERE NOT EXISTS (
-                SELECT 1 FROM tbl_SmsReminderLog r
-                WHERE r.GuardianKey  = lp.GuardianKey
-                  AND r.PromiseDate  = lp.PromiseDate
-                  AND r.ReminderType = 'ThankYou'
-            )";
+        return result;
+    }
 
-        var tyRows = new List<(string Key, DateTime Pd, decimal Bal, string Name)>();
-        using (var tyCmd = new SqlCommand(tySql, conn))
-        {
-            tyCmd.Parameters.Add("@today", SqlDbType.Date).Value = today;
-            using var rdr = tyCmd.ExecuteReader();
-            while (rdr.Read())
-            {
-                tyRows.Add((
-                    rdr["GuardianKey"].ToString(),
-                    ((DateTime)rdr["PromiseDate"]).Date,
-                    (decimal)rdr["TotalBalance"],
-                    rdr["SampleName"].ToString()
-                ));
-            }
-        }
+    private static string ApplySmsTemplate(string template, decimal balance, string names, DateTime date, string school)
+        => template
+            .Replace("{balance}", $"{balance:#,#}")
+            .Replace("{names}",   names)
+            .Replace("{date}",    date.ToString("dd-MMM-yyyy"))
+            .Replace("{school}",  school);
 
-        foreach (var (gk, pd, bal, name) in tyRows)
-        {
-            if (bal > 0) continue;
-            string msg = $"Dear Parent, thank you for clearing fees for {name}. Your account is now up to date. - {school}";
-            if (gw.TrySendSMSViaPOST(gk, msg, out _))
-                LogReminderSent(conn, gk, pd, "ThankYou");
-        }
+    public string GetSmsTemplate(string key)
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(
+            "SELECT SettingValue FROM tbl_FollowUpSettings WHERE SettingKey = @k", conn);
+        cmd.Parameters.Add("@k", SqlDbType.NVarChar, 200).Value = key;
+        return cmd.ExecuteScalar() as string ?? "";
     }
 
     private bool AlreadySentReminder(SqlConnection conn, string guardianKey, DateTime promiseDate, string type)

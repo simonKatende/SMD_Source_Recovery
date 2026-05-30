@@ -10,6 +10,18 @@ public class FeesFollowUpSettings
     public DateTime? TermStartDate           { get; set; }
     public DateTime? TermEndDate             { get; set; }
     public double CriticalPacingGapThreshold { get; set; } = 0.50;
+    public string SmsTemplate2Day  { get; set; } = "";
+    public string SmsTemplateDayOf { get; set; } = "";
+}
+
+public class SmsReminderResult
+{
+    public bool AlreadyRanToday { get; set; }
+    public int  TwoDayCount     { get; set; }
+    public int  DayOfCount      { get; set; }
+    public List<string> Failures { get; set; } = new List<string>();
+    public bool HasFailures => Failures.Count > 0;
+    public int  TotalSent   => TwoDayCount + DayOfCount;
 }
 
 public class StudentSummary
@@ -107,12 +119,22 @@ public class DashboardData
     public decimal TotalCollected             { get; set; }
     public decimal CollectionRate             => TotalBilled == 0 ? 0 : TotalCollected / TotalBilled * 100m;
     public int     TotalGuardiansWithBalance  { get; set; }
-    public int     DailyListTotal             { get; set; }   // guardians on today's list (before any contacts)
-    public int     DailyListContacted         { get; set; }   // successfully reached today
+    public int     DailyListTotal             { get; set; }
+    public int     DailyListContacted         { get; set; }
     public int     DailyListRemaining         => DailyListTotal - DailyListContacted;
     public int     BrokenPromiseCount         { get; set; }
     public int     ActivePromiseCount         { get; set; }
-    public List<PriorityGroupStats> ByPriority  { get; set; } = new();
-    public List<GuardianWorklistRow> TopByBalance { get; set; } = new();   // top 5 by balance
-    public DateTime AsOf                        { get; set; } = DateTime.Now;
+    public int     TotalEnrolled              { get; set; }
+    public int     NilBalanceStudents         { get; set; }
+    public int     ZeroPaidStudents           { get; set; }
+    public int     BelowPacingCount           { get; set; }
+    public int     CurrentTermWeek            { get; set; }
+    public int     TotalTermWeeks             { get; set; }
+    public string  TermWeekDisplay            =>
+        CurrentTermWeek > 0 && TotalTermWeeks > 0
+            ? $"WK {CurrentTermWeek} / {TotalTermWeeks}"
+            : "—";
+    public List<PriorityGroupStats>  ByPriority   { get; set; } = new List<PriorityGroupStats>();
+    public List<GuardianWorklistRow> TopByBalance { get; set; } = new List<GuardianWorklistRow>();
+    public DateTime AsOf { get; set; } = DateTime.Now;
 }

@@ -18,7 +18,7 @@ public class dlgFeesContactInteraction : XtraForm
 
     // ── Info panel (structured header) ────────────────────────────────────────
     private Panel        _infoPanel;
-    private Label        _lblGuardianName, _lblContacts, _lblBalance;
+    private Label        _lblGuardianName, _lblContacts, _lblBalance, _lblBalanceRight;
 
     // ── Students grid ─────────────────────────────────────────────────────────
     private DevExpress.XtraGrid.GridControl gridStudents;
@@ -75,20 +75,13 @@ public class dlgFeesContactInteraction : XtraForm
         this.btnNext = new SimpleButton { Text = "Next →", Location = new Point(800, 8), Width = 80 };
         this.btnNext.Click += (s, e) => Navigate(+1);
 
-        this.lblTitle = new LabelControl
-        {
-            AutoSizeMode = LabelAutoSizeMode.None,
-            Size         = new Size(700, 22),
-            Location     = new Point(96, 12),
-            Appearance   = { Font = new Font("Tahoma", 11F, FontStyle.Bold) },
-        };
-        navBar.Controls.AddRange(new Control[] { btnPrev, btnNext, lblTitle });
+        navBar.Controls.AddRange(new Control[] { btnPrev, btnNext });
 
         // ── Info panel (structured header) ────────────────────────────────────
         this._infoPanel = new Panel
         {
             Dock      = DockStyle.Top,
-            Height    = 72,
+            Height    = 80,
             BackColor = Color.FromArgb(245, 245, 245),
         };
 
@@ -101,21 +94,35 @@ public class dlgFeesContactInteraction : XtraForm
         this._lblContacts = new Label
         {
             Font      = new Font("Consolas", 11),
-            Location  = new Point(8, 30),
+            Location  = new Point(8, 32),
             AutoSize  = true,
             ForeColor = Color.Navy,
         };
         this._lblBalance = new Label
         {
             Font      = new Font("Tahoma", 9),
-            ForeColor = Color.DarkRed,
-            Location  = new Point(8, 52),
+            ForeColor = Color.DimGray,
+            Location  = new Point(8, 58),
             AutoSize  = true,
+        };
+        // Right-side balance — large, bold, right-anchored
+        this._lblBalanceRight = new Label
+        {
+            Font      = new Font("Tahoma", 18, FontStyle.Bold),
+            ForeColor = Color.DarkRed,
+            AutoSize  = true,
+            Anchor    = AnchorStyles.Top | AnchorStyles.Right,
         };
         this._infoPanel.Controls.AddRange(new Control[]
         {
-            _lblGuardianName, _lblContacts, _lblBalance,
+            _lblGuardianName, _lblContacts, _lblBalance, _lblBalanceRight,
         });
+        this._infoPanel.Resize += (s, e) =>
+        {
+            if (_lblBalanceRight != null)
+                _lblBalanceRight.Location = new Point(
+                    _infoPanel.ClientSize.Width - _lblBalanceRight.Width - 12, 20);
+        };
 
         // ── Contact log panel (Bottom) ─────────────────────────────────────────
         var logPanel = new Panel { Dock = DockStyle.Bottom, Height = 220 };
@@ -132,6 +139,7 @@ public class dlgFeesContactInteraction : XtraForm
         this.rgChannel.SelectedIndex = 1;    // Phone
         this.rgChannel.Location = new Point(70, 4);
         this.rgChannel.Size     = new Size(280, 36);
+        this.rgChannel.EditValueChanged += RgChannel_EditValueChanged;
 
         this.lblContactDate = new LabelControl { Text = "Date:", Location = new Point(360, 12) };
         this.dteContactDate = new DateEdit
@@ -166,13 +174,13 @@ public class dlgFeesContactInteraction : XtraForm
 
         this.memoNote = new MemoEdit { Location = new Point(8, 80), Size = new Size(560, 80) };
 
-        this.btnSave = new SimpleButton { Text = "Save Contact", Location = new Point(8, 168), Width = 120 };
+        this.btnSave = new SimpleButton { Text = "Save", Location = new Point(8, 168), Width = 80 };
         this.btnSave.Click += BtnSave_Click;
 
-        this.btnSaveNext = new SimpleButton { Text = "Save & Next", Location = new Point(136, 168), Width = 110 };
+        this.btnSaveNext = new SimpleButton { Text = "Save & Next", Location = new Point(96, 168), Width = 110 };
         this.btnSaveNext.Click += BtnSaveNext_Click;
 
-        this.btnClear = new SimpleButton { Text = "Clear", Location = new Point(254, 168), Width = 80 };
+        this.btnClear = new SimpleButton { Text = "Clear", Location = new Point(214, 168), Width = 80 };
         this.btnClear.Click += (s, e) => ResetContactForm();
 
         logPanel.Controls.AddRange(new Control[]
@@ -238,8 +246,7 @@ public class dlgFeesContactInteraction : XtraForm
         // Navigation buttons
         btnPrev.Enabled = _currentIndex > 0;
         btnNext.Enabled = _currentIndex < _worklist.Count - 1;
-        Text            = $"Contact Interaction — {g.GuardianLabel} ({_currentIndex + 1} of {_worklist.Count})";
-        lblTitle.Text   = g.GuardianLabel;
+        Text = $"Contact Interaction — {g.GuardianLabel} ({_currentIndex + 1} of {_worklist.Count})";
 
         // Structured info header
         bool noPhone = g.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal);
@@ -247,7 +254,23 @@ public class dlgFeesContactInteraction : XtraForm
         _lblContacts.Text     = noPhone
             ? "(no phone on file)"
             : $"Contact: {g.GuardianContact}     Alt: {(!string.IsNullOrEmpty(g.Contact2) ? g.Contact2 : "—")}";
-        _lblBalance.Text      = $"Balance: UGX {g.TotalBalance:N0}   ·   {g.StudentCount} student(s)   ·   {g.PaymentPercent:F1}% paid";
+        _lblBalance.Text = $"{g.StudentCount} student(s)   ·   {g.PaymentPercent:F1}% paid";
+
+        // Right-side balance badge
+        if (g.TotalBalance <= 0)
+        {
+            string creditNote = g.TotalBalance < 0 ? $" (cr {Math.Abs(g.TotalBalance):N0})" : "";
+            _lblBalanceRight.Text      = $"CLEARED{creditNote}";
+            _lblBalanceRight.ForeColor = Color.ForestGreen;
+        }
+        else
+        {
+            _lblBalanceRight.Text      = $"UGX {g.TotalBalance:N0}";
+            _lblBalanceRight.ForeColor = Color.DarkRed;
+        }
+        // Reposition after text change (AutoSize recalculates Width)
+        _lblBalanceRight.Location = new Point(
+            _infoPanel.ClientSize.Width - _lblBalanceRight.Width - 12, 20);
 
         // Students grid
         gridStudents.DataSource = g.Students;
@@ -364,6 +387,8 @@ public class dlgFeesContactInteraction : XtraForm
         var student = gridViewStudents.GetRow(hit.RowHandle) as StudentSummary;
         if (student == null) return;
 
+        StudentOptions.SetActiveStudent(student.StudentNumber);
+        StudentOptions.SetPaymentMode("SingleStudentPayment");
         using var dlg = new StudentFeesPayment("SingleStudentPayment");
         dlg.ShowDialog(this);
     }
@@ -404,7 +429,7 @@ public class dlgFeesContactInteraction : XtraForm
         if (row["PromiseAmount"] != DBNull.Value && decimal.TryParse(row["PromiseAmount"]?.ToString(), out decimal pa))
             txtPromiseAmount.Value = pa;
 
-        btnSave.Text = "Update Contact";
+        btnSave.Text = "Update";
     }
 
     private void DeleteHistoryContact(int contactId)
@@ -439,7 +464,7 @@ public class dlgFeesContactInteraction : XtraForm
         txtPromiseAmount.Value   = 0;
         lblPromiseDate.Visible   = dtePromiseDate.Visible   = false;
         lblPromiseAmount.Visible = txtPromiseAmount.Visible = false;
-        btnSave.Text             = "Save Contact";
+        btnSave.Text             = "Save";
     }
 
     private bool TrySaveContact()
@@ -505,47 +530,46 @@ public class dlgFeesContactInteraction : XtraForm
         }
     }
 
-    private void BtnSave_Click(object sender, EventArgs e)
+    // Opens the SMS dialog; on success sets outcome=Contacted and fills note with sent message.
+    private void RgChannel_EditValueChanged(object sender, EventArgs e)
     {
         bool isSms = rgChannel.EditValue is ContactChannel ch && ch == ContactChannel.SMS;
-        if (isSms)
+        if (!isSms) return;
+
+        if (Current.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal))
         {
-            if (Current.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal))
-            {
-                DevExpress.XtraEditors.XtraMessageBox.Show(
-                    "No phone number on file for this guardian.",
-                    "Cannot Send SMS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            var smsForm = new SMSGuardian();
-            smsForm.txtReceipient.Text = Current.GuardianContact;
-            if (smsForm.ShowDialog(this) != DialogResult.OK) return;
-            var contactedIdx = cboOutcome.Properties.Items.IndexOf(ContactOutcome.Contacted);
-            if (contactedIdx < 0) contactedIdx = cboOutcome.Properties.Items.IndexOf("Contacted");
-            if (contactedIdx >= 0) cboOutcome.SelectedIndex = contactedIdx;
+            XtraMessageBox.Show("No phone number on file for this guardian.",
+                "Cannot Send SMS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            rgChannel.SelectedIndex = 1;   // reset to Phone
+            return;
         }
+
+        using var smsForm = new SMSGuardian();
+        smsForm.txtReceipient.Text = Current.GuardianContact;
+        if (smsForm.ShowDialog(this) == DialogResult.OK)
+        {
+            // Auto-fill outcome = Contacted
+            int idx = cboOutcome.Properties.Items.IndexOf(ContactOutcome.Contacted);
+            if (idx < 0) idx = cboOutcome.Properties.Items.IndexOf("Contacted");
+            if (idx >= 0) cboOutcome.SelectedIndex = idx;
+            // Fill note with the sent message body
+            if (!string.IsNullOrEmpty(smsForm.SentMessage))
+                memoNote.Text = smsForm.SentMessage;
+        }
+        else
+        {
+            // SMS dialog was cancelled — revert channel to Phone
+            rgChannel.SelectedIndex = 1;
+        }
+    }
+
+    private void BtnSave_Click(object sender, EventArgs e)
+    {
         if (!TrySaveContact()) return;
     }
 
     private void BtnSaveNext_Click(object sender, EventArgs e)
     {
-        bool isSms = rgChannel.EditValue is ContactChannel ch && ch == ContactChannel.SMS;
-        if (isSms)
-        {
-            if (Current.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal))
-            {
-                DevExpress.XtraEditors.XtraMessageBox.Show(
-                    "No phone number on file for this guardian.",
-                    "Cannot Send SMS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            var smsForm = new SMSGuardian();
-            smsForm.txtReceipient.Text = Current.GuardianContact;
-            if (smsForm.ShowDialog(this) != DialogResult.OK) return;
-            var contactedIdx = cboOutcome.Properties.Items.IndexOf(ContactOutcome.Contacted);
-            if (contactedIdx < 0) contactedIdx = cboOutcome.Properties.Items.IndexOf("Contacted");
-            if (contactedIdx >= 0) cboOutcome.SelectedIndex = contactedIdx;
-        }
         if (!TrySaveContact()) return;
         if (_currentIndex < _worklist.Count - 1)
             LoadGuardian(_currentIndex + 1);

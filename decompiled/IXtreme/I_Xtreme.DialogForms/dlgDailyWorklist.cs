@@ -73,9 +73,10 @@ public class dlgDailyWorklist : XtraForm
         _grid.MainView = _view;
         _grid.ViewCollection.Add(_view);
 
-        _view.OptionsView.ShowGroupPanel        = false;
-        _view.OptionsView.ShowAutoFilterRow     = false;
-        _view.OptionsBehavior.Editable          = false;
+        _view.OptionsView.ShowGroupPanel    = false;
+        _view.OptionsView.ShowAutoFilterRow = false;
+        _view.OptionsBehavior.Editable      = false;
+        _view.OptionsDetail.SmartDetailExpand = false;
 
         _view.RowStyle   += View_RowStyle;
         _view.DoubleClick += View_DoubleClick;
