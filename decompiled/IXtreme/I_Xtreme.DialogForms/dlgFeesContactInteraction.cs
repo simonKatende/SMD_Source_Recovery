@@ -267,7 +267,7 @@ public class dlgFeesContactInteraction : XtraForm
 
     private void ConfigureStudentsColumns()
     {
-        if (_studentsColumnsConfigured) return;
+        if (_studentsColumnsConfigured && gridViewStudents.Columns.Count > 0) return;
         _studentsColumnsConfigured = true;
 
         // Hide columns not explicitly listed
@@ -510,6 +510,13 @@ public class dlgFeesContactInteraction : XtraForm
         bool isSms = rgChannel.EditValue is ContactChannel ch && ch == ContactChannel.SMS;
         if (isSms)
         {
+            if (Current.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal))
+            {
+                DevExpress.XtraEditors.XtraMessageBox.Show(
+                    "No phone number on file for this guardian.",
+                    "Cannot Send SMS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             var smsForm = new SMSGuardian();
             smsForm.txtReceipient.Text = Current.GuardianContact;
             if (smsForm.ShowDialog(this) != DialogResult.OK) return;
@@ -517,7 +524,7 @@ public class dlgFeesContactInteraction : XtraForm
             if (contactedIdx < 0) contactedIdx = cboOutcome.Properties.Items.IndexOf("Contacted");
             if (contactedIdx >= 0) cboOutcome.SelectedIndex = contactedIdx;
         }
-        TrySaveContact();
+        if (!TrySaveContact()) return;
     }
 
     private void BtnSaveNext_Click(object sender, EventArgs e)
@@ -525,6 +532,13 @@ public class dlgFeesContactInteraction : XtraForm
         bool isSms = rgChannel.EditValue is ContactChannel ch && ch == ContactChannel.SMS;
         if (isSms)
         {
+            if (Current.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal))
+            {
+                DevExpress.XtraEditors.XtraMessageBox.Show(
+                    "No phone number on file for this guardian.",
+                    "Cannot Send SMS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             var smsForm = new SMSGuardian();
             smsForm.txtReceipient.Text = Current.GuardianContact;
             if (smsForm.ShowDialog(this) != DialogResult.OK) return;
