@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using DevExpress.Drawing;
 using DevExpress.Drawing.Printing;
 using DevExpress.XtraPrinting;
 using DevExpress.XtraReports.UI;
@@ -15,6 +16,7 @@ public class rptDailyWorklist : XtraReport
         this.DataSource = data;
         this.PaperKind  = DXPaperKind.A4;
         this.Landscape  = true;
+        this.Margins    = new DXMargins(25f, 25f, 25f, 25f);
 
         ReportHelper.AddSchoolHeader(this, $"Daily Follow-up Worklist — {DateTime.Today:dd-MMMM-yyyy}");
         AddColumnHeader();
@@ -63,7 +65,10 @@ public class rptDailyWorklist : XtraReport
                 BoundsF = new RectangleF(x, 0, cols[i].width, 18),
                 Borders = BorderSide.All,
             };
-            lbl.DataBindings.Add("Text", null, fields[i]);
+            if (fields[i] == "LastContactDate")
+                lbl.DataBindings.Add(new XRBinding("Text", null, "LastContactDate", "{0:dd-MMM-yyyy}"));
+            else
+                lbl.DataBindings.Add("Text", null, fields[i]);
             band.Controls.Add(lbl);
             x += cols[i].width;
         }

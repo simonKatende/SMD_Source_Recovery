@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using DevExpress.Drawing;
 using DevExpress.Drawing.Printing;
 using DevExpress.XtraPrinting;
 using DevExpress.XtraReports.UI;
@@ -15,6 +16,7 @@ public class rptStudentWorklist : XtraReport
         this.DataSource = data;
         this.PaperKind  = DXPaperKind.A4;
         this.Landscape  = true;
+        this.Margins    = new DXMargins(25f, 25f, 25f, 25f);
 
         ReportHelper.AddSchoolHeader(this, "Student Fees Worklist");
         AddColumnHeader();
@@ -24,9 +26,9 @@ public class rptStudentWorklist : XtraReport
 
     private static (string caption, float width)[] Columns() => new[]
     {
-        ("Name",         160f), ("Stud#",        90f), ("ID",       90f), ("Class",  50f), ("D/B",        35f),
-        ("Payable",       90f), ("Paid",          90f), ("Balance",  90f), ("% Paid", 55f), ("Status",     75f),
-        ("Priority",      90f), ("Guardian",     140f), ("Contact", 100f), ("Last Contact", 80f), ("Last Outcome", 90f),
+        ("Name",         135f), ("Stud#",        76f), ("ID",       76f), ("Class",  42f), ("D/B",        30f),
+        ("Payable",       76f), ("Paid",          76f), ("Balance",  76f), ("% Paid", 46f), ("Status",     63f),
+        ("Priority",      76f), ("Guardian",     118f), ("Contact",  84f), ("Last Contact", 68f), ("Last Outcome", 76f),
     };
 
     private void AddColumnHeader()
@@ -64,7 +66,10 @@ public class rptStudentWorklist : XtraReport
                 BoundsF = new RectangleF(x, 0, cols[i].width, 18),
                 Borders = BorderSide.All,
             };
-            lbl.DataBindings.Add("Text", null, fields[i]);
+            if (fields[i] == "LastContactDate")
+                lbl.DataBindings.Add(new XRBinding("Text", null, "LastContactDate", "{0:dd-MMM-yyyy}"));
+            else
+                lbl.DataBindings.Add("Text", null, fields[i]);
             band.Controls.Add(lbl);
             x += cols[i].width;
         }

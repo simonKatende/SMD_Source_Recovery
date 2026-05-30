@@ -27,7 +27,11 @@ internal static class ReportHelper
             catch { name = rawName; }
             return (name, rawContact);
         }
-        catch { return ("", ""); }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"ReportHelper.GetSchoolInfo failed: {ex.Message}");
+            return ("", "");
+        }
     }
 
     internal static void AddSchoolHeader(XtraReport report, string reportTitle)

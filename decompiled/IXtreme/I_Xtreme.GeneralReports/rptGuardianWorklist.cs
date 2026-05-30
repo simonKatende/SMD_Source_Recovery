@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using DevExpress.Drawing;
 using DevExpress.Drawing.Printing;
 using DevExpress.XtraPrinting;
 using DevExpress.XtraReports.UI;
@@ -15,6 +16,7 @@ public class rptGuardianWorklist : XtraReport
         this.DataSource = data;
         this.PaperKind  = DXPaperKind.A4;
         this.Landscape  = true;
+        this.Margins    = new DXMargins(25f, 25f, 25f, 25f);
 
         ReportHelper.AddSchoolHeader(this, "Guardian Worklist");
         AddColumnHeader();
@@ -26,7 +28,7 @@ public class rptGuardianWorklist : XtraReport
     {
         ("Guardian",      180f), ("Contact",   110f), ("Alt Contact", 110f), ("Students", 180f),
         ("Balance",       110f), ("% Paid",     60f), ("Status",       90f), ("Priority",  100f),
-        ("Last Contact",   90f), ("Last Outcome", 100f),
+        ("Last Contact",   90f), ("Last Outcome",  89f),
     };
 
     private void AddColumnHeader()
@@ -64,7 +66,10 @@ public class rptGuardianWorklist : XtraReport
                 BoundsF = new RectangleF(x, 0, cols[i].width, 18),
                 Borders = BorderSide.All,
             };
-            lbl.DataBindings.Add("Text", null, fields[i]);
+            if (fields[i] == "LastContactDate")
+                lbl.DataBindings.Add(new XRBinding("Text", null, "LastContactDate", "{0:dd-MMM-yyyy}"));
+            else
+                lbl.DataBindings.Add("Text", null, fields[i]);
             band.Controls.Add(lbl);
             x += cols[i].width;
         }
