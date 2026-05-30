@@ -24742,17 +24742,17 @@ public class MainForm : RibbonForm
 		this.ribbonPageGroupFeesWorklists.ItemLinks.Add(this.bbiDailyWorklist);
 		this.ribbonPageGroupFeesWorklists.ItemLinks.Add(this.bbiGuardianWorklist);
 		this.ribbonPageGroupFeesWorklists.ItemLinks.Add(this.bbiStudentWorklist);
-		this.ribbonPageGroupFeesSettings = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
-		this.ribbonPageGroupFeesSettings.Name = "ribbonPageGroupFeesSettings";
-		this.ribbonPageGroupFeesSettings.Text = "Settings";
-		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiFeesSettings);
-		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiSendReminders);
 		this.bbiSendReminders = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiSendReminders.Name    = "bbiSendReminders";
 		this.bbiSendReminders.Caption = "Send Reminders";
 		this.bbiSendReminders.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesTracking;
 		this.bbiSendReminders.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesTracking;
 		this.bbiSendReminders.ItemClick += (s, e) => _usrFeesFollowUp?.SendReminders();
+		this.ribbonPageGroupFeesSettings = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
+		this.ribbonPageGroupFeesSettings.Name = "ribbonPageGroupFeesSettings";
+		this.ribbonPageGroupFeesSettings.Text = "Settings";
+		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiFeesSettings);
+		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiSendReminders);
 		// --- Fees Follow-up: Printing & Exporting group ---
 		this.bbiFeesPreview = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiFeesPreview.Name    = "bbiFeesPreview";
