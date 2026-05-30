@@ -15,6 +15,7 @@ public class dlgFeesContactInteraction : XtraForm
     // ── Navigation ────────────────────────────────────────────────────────────
     private SimpleButton btnPrev, btnNext;
     private LabelControl lblTitle;
+    private DevExpress.XtraEditors.SearchLookUpEdit _searchEdit;
 
     // ── Info panel (structured header) ────────────────────────────────────────
     private Panel        _infoPanel;
@@ -67,15 +68,50 @@ public class dlgFeesContactInteraction : XtraForm
         this.FormBorderStyle = FormBorderStyle.Sizable;
 
         // ── Navigation bar ────────────────────────────────────────────────────
-        var navBar = new Panel { Dock = DockStyle.Top, Height = 44 };
+        var navBar = new System.Windows.Forms.TableLayoutPanel
+        {
+            Dock        = DockStyle.Top,
+            Height      = 44,
+            ColumnCount = 3,
+            RowCount    = 1,
+            Padding     = new Padding(4),
+        };
+        navBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));   // Prev
+        navBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));   // Search
+        navBar.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90));   // Next
 
-        this.btnPrev = new SimpleButton { Text = "← Prev", Location = new Point(8, 8), Width = 80 };
+        this.btnPrev = new SimpleButton { Text = "← Prev", Dock = DockStyle.Fill };
         this.btnPrev.Click += (s, e) => Navigate(-1);
 
-        this.btnNext = new SimpleButton { Text = "Next →", Location = new Point(800, 8), Width = 80 };
+        this.btnNext = new SimpleButton { Text = "Next →", Dock = DockStyle.Fill };
         this.btnNext.Click += (s, e) => Navigate(+1);
 
-        navBar.Controls.AddRange(new Control[] { btnPrev, btnNext });
+        // Search lookup
+        this._searchEdit = new DevExpress.XtraEditors.SearchLookUpEdit { Dock = DockStyle.Fill };
+        this._searchEdit.Properties.DataSource    = _worklist;
+        this._searchEdit.Properties.DisplayMember = "GuardianLabel";
+        this._searchEdit.Properties.ValueMember   = "GuardianContact";
+        this._searchEdit.Properties.NullText      = "Search by guardian name, contact, or student...";
+        var slv = this._searchEdit.Properties.View;
+        slv.OptionsView.ShowGroupPanel          = false;
+        slv.OptionsBehavior.AutoPopulateColumns = false;
+        slv.Columns.Add(new DevExpress.XtraGrid.Columns.GridColumn
+            { FieldName = "GuardianLabel",   Caption = "Guardian",  Width = 200, VisibleIndex = 0 });
+        slv.Columns.Add(new DevExpress.XtraGrid.Columns.GridColumn
+            { FieldName = "GuardianContact", Caption = "Contact",   Width = 120, VisibleIndex = 1 });
+        slv.Columns.Add(new DevExpress.XtraGrid.Columns.GridColumn
+            { FieldName = "StudentNames",    Caption = "Students",  Width = 280, VisibleIndex = 2 });
+        this._searchEdit.EditValueChanged += (s2, e2) =>
+        {
+            if (this._searchEdit.EditValue == null || this._searchEdit.EditValue == DBNull.Value) return;
+            string contact = this._searchEdit.EditValue.ToString();
+            int idx = _worklist.FindIndex(g => g.GuardianContact == contact);
+            if (idx >= 0 && idx != _currentIndex) { _currentIndex = idx; LoadCurrent(); }
+        };
+
+        navBar.Controls.Add(btnPrev,       0, 0);
+        navBar.Controls.Add(_searchEdit,   1, 0);
+        navBar.Controls.Add(btnNext,       2, 0);
 
         // ── Info panel (structured header) ────────────────────────────────────
         this._infoPanel = new Panel

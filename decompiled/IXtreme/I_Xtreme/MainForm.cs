@@ -538,6 +538,10 @@ public class MainForm : RibbonForm
 
 	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesPrint;
 
+	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesInteractions;
+
+	private DevExpress.XtraBars.BarButtonItem bbiLogInteraction;
+
 	private DevExpress.XtraBars.BarButtonItem bbiDailyWorklist;
 
 	private DevExpress.XtraBars.BarButtonItem bbiGuardianWorklist;
@@ -4934,6 +4938,33 @@ public class MainForm : RibbonForm
 		_currentWorklistCtl = ctl;
 		ribbon.SelectedPage = ribbonPageFeesFollowUp;
 		CurrentControl.LoadControl(ctl, panelMain);
+	}
+
+	private void OpenLogInteraction()
+	{
+		try
+		{
+			var svc      = new I_Xtreme.ExtremeClasses.FeesFollowUpService();
+			var worklist = svc.GetGuardianWorklist("", 0);
+			if (worklist.Count == 0)
+			{
+				DevExpress.XtraEditors.XtraMessageBox.Show(
+					"No guardian records with outstanding balances were found.",
+					"Log Interaction", System.Windows.Forms.MessageBoxButtons.OK,
+					System.Windows.Forms.MessageBoxIcon.Information);
+				return;
+			}
+			using var dlg = new I_Xtreme.DialogForms.dlgFeesContactInteraction(worklist, 0);
+			dlg.ShowDialog(this);
+			_usrFeesFollowUp?.LoadDashboard();
+		}
+		catch (Exception ex)
+		{
+			DevExpress.XtraEditors.XtraMessageBox.Show(
+				$"Could not open interaction log.\n\n{ex.Message}",
+				"Log Interaction", System.Windows.Forms.MessageBoxButtons.OK,
+				System.Windows.Forms.MessageBoxIcon.Warning);
+		}
 	}
 
 	private void DispatchFeesPrint(bool preview)
@@ -24835,12 +24866,24 @@ public class MainForm : RibbonForm
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesPrint);
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesPreview);
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesExport);
+		// --- Fees Follow-up: Interactions group ---
+		this.bbiLogInteraction = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiLogInteraction.Name    = "bbiLogInteraction";
+		this.bbiLogInteraction.Caption = "Log Interaction";
+		this.bbiLogInteraction.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesPayIn;
+		this.bbiLogInteraction.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesPayIn;
+		this.bbiLogInteraction.ItemClick += (s, e) => OpenLogInteraction();
+		this.ribbonPageGroupFeesInteractions = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
+		this.ribbonPageGroupFeesInteractions.Name = "ribbonPageGroupFeesInteractions";
+		this.ribbonPageGroupFeesInteractions.Text = "Interactions";
+		this.ribbonPageGroupFeesInteractions.ItemLinks.Add(this.bbiLogInteraction);
 		// Register items with the ribbon manager
 		this.ribbon.Items.AddRange(new DevExpress.XtraBars.BarItem[]
-			{ bbiFeesSettings, bbiSendReminders, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPrint, bbiFeesPreview, bbiFeesExport });
-		// Attach groups in order: Home | Worklists | Settings | Printing & Exporting
+			{ bbiFeesSettings, bbiSendReminders, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPrint, bbiFeesPreview, bbiFeesExport, bbiLogInteraction });
+		// Attach groups in order: Home | Worklists | Interactions | Settings | Printing & Exporting
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesHome);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesWorklists);
+		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesInteractions);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesSettings);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesPrint);
 		this.ribbonPageGroup35.ItemLinks.Add(this.barButtonItem43);
