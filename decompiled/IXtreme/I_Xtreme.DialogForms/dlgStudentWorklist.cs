@@ -350,7 +350,13 @@ public class dlgStudentWorklist : XtraForm
         // Load full guardian worklist to get the GuardianWorklistRow with students list
         var guardianRows = _service.GetGuardianWorklist("", 0);
         var guardianRow  = guardianRows.FirstOrDefault(g => g.GuardianContact == row.GuardianKey);
-        if (guardianRow == null) return;
+        if (guardianRow == null)
+        {
+            XtraMessageBox.Show("Could not locate the guardian record. Please refresh and try again.",
+                "Fees Follow-up", System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Warning);
+            return;
+        }
 
         int idx = guardianRows.IndexOf(guardianRow);
         using var dlg = new dlgFeesContactInteraction(guardianRows, idx);
