@@ -96,21 +96,21 @@ public class FeesFollowUpService
         DateTime? tEnd   = settings.TermEndDate;
         bool hasTermDates = tStart.HasValue && tEnd.HasValue;
 
+        string currentSemester = AlienAge.Semesters.WorkingSemesters.GetWorkingSemester();
+
         const string sql = @"
     ;WITH TermPayments AS (
         SELECT StudentNumber, ISNULL(SUM(Credit), 0) AS TotalPaid
         FROM FeesPayment
-        WHERE (@termStart IS NULL OR DateOfPayment >= @termStart)
-          AND (@termEnd   IS NULL OR DateOfPayment <= @termEnd)
+        WHERE SemesterId = @currentSemester
         GROUP BY StudentNumber
     ),
     BroughtForward AS (
-        -- Net balance (Debit - Credit) from all transactions before the current term.
-        -- Returns 0 per student when @termStart is not configured.
+        -- Net balance (Debit - Credit) from all semesters before the current one.
         SELECT StudentNumber,
                ISNULL(SUM(ISNULL(Debit, 0)) - SUM(ISNULL(Credit, 0)), 0) AS BFAmount
         FROM FeesPayment
-        WHERE @termStart IS NOT NULL AND DateOfPayment < @termStart
+        WHERE SemesterId != @currentSemester
         GROUP BY StudentNumber
     ),
     StudentsWithBalance AS (
@@ -206,10 +206,9 @@ public class FeesFollowUpService
         {
             conn.Open();
             using var cmd = new SqlCommand(sql, conn);
-            cmd.Parameters.Add("@minBalance",  SqlDbType.Money).Value  = minBalance;
-            cmd.Parameters.Add("@classFilter", SqlDbType.VarChar, 50).Value = classFilter ?? "";
-            cmd.Parameters.Add("@termStart",   SqlDbType.Date).Value   = (object)tStart ?? DBNull.Value;
-            cmd.Parameters.Add("@termEnd",     SqlDbType.Date).Value   = (object)tEnd   ?? DBNull.Value;
+            cmd.Parameters.Add("@minBalance",       SqlDbType.Money).Value      = minBalance;
+            cmd.Parameters.Add("@classFilter",     SqlDbType.VarChar, 50).Value = classFilter ?? "";
+            cmd.Parameters.Add("@currentSemester", SqlDbType.VarChar, 50).Value = currentSemester;
 
             using var rdr = cmd.ExecuteReader();
             while (rdr.Read())
