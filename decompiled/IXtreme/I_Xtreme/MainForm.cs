@@ -24802,7 +24802,7 @@ public class MainForm : RibbonForm
 		this.ribbon.Items.Add(this.bbiFeesHome);
 		this.ribbonPageGroupFeesHome = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroupFeesHome.Name = "ribbonPageGroupFeesHome";
-		this.ribbonPageGroupFeesHome.Text = "Home";
+		this.ribbonPageGroupFeesHome.Text = "";
 		this.ribbonPageGroupFeesHome.ItemLinks.Add(this.bbiFeesHome);
 		// --- Fees Follow-up: Settings group ---
 		this.ribbonPageGroupFeesSettings = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
@@ -24831,7 +24831,7 @@ public class MainForm : RibbonForm
 		this.bbiFeesExport.ItemClick += (s, e) => DispatchFeesExport();
 		this.ribbonPageGroupFeesPrint = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroupFeesPrint.Name = "ribbonPageGroupFeesPrint";
-		this.ribbonPageGroupFeesPrint.Text = "Printing & Exporting";
+		this.ribbonPageGroupFeesPrint.Text = "Printing && Exporting";
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesPrint);
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesPreview);
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesExport);

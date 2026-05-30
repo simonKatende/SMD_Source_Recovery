@@ -7,6 +7,7 @@ using DevExpress.XtraEditors;
 using DevExpress.XtraGrid;
 using DevExpress.XtraGrid.Columns;
 using DevExpress.XtraGrid.Views.Grid;
+using DevExpress.XtraPrinting;
 using I_Xtreme.ExtremeClasses;
 using I_Xtreme.Models;
 using I_Xtreme.DialogForms;
@@ -275,18 +276,18 @@ public class usrStudentWorklist : XtraUserControl
 
     public void Print(bool preview = false)
     {
-        if (preview) _grid.ShowRibbonPrintPreview();
-        else         _grid.Print();
+        var ps   = new PrintingSystem();
+        var link = new PrintableComponentLink(ps);
+        if (preview)
+            PrintableControl.PreviewControl("Student Worklist", DateTime.Today.ToString("dd-MMM-yyyy"), link, IsLandScape: true, _grid);
+        else
+            PrintableControl.PrintControl("Student Worklist", DateTime.Today.ToString("dd-MMM-yyyy"), link, IsLandScape: true, _grid);
     }
 
     public void Export()
     {
-        using var save = new SaveFileDialog
-        {
-            Filter   = "Excel (*.xlsx)|*.xlsx",
-            FileName = $"StudentWorklist_{DateTime.Today:yyyyMMdd}.xlsx",
-        };
-        if (save.ShowDialog() == DialogResult.OK)
-            _view.ExportToXlsx(save.FileName);
+        var ps   = new PrintingSystem();
+        var link = new PrintableComponentLink(ps);
+        PrintableControl.ExportControl("Student Worklist", DateTime.Today.ToString("dd-MMM-yyyy"), link, _grid);
     }
 }
