@@ -82,7 +82,9 @@ public class StudentWorklistRow
     public string GuardianLabel =>
         !string.IsNullOrWhiteSpace(GuardianName)
             ? $"{GuardianName} ({GuardianRelation})"
-            : GuardianContact;
+            : !string.IsNullOrWhiteSpace(GuardianRelation)
+                ? $"{GuardianContact} ({GuardianRelation})"
+                : GuardianContact;
     public DateTime?       LastContactDate { get; set; }
     public ContactOutcome? LastOutcome     { get; set; }
     public string PaymentStatus =>
