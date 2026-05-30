@@ -106,10 +106,14 @@ public class FeesFollowUpService
     StudentsWithBalance AS (
         SELECT
             s.StudentNumber,
-            s.fullName      AS FullName,
+            s.fullName          AS FullName,
             s.ClassId,
-            ISNULL(s.Guardian, '') AS GuardianRel,
-            s.cashOnAccount AS TotalBilled,
+            s.Guardian          AS GuardianName,
+            s.GuardianRelation  AS GuardianRelation,
+            s.OtherContact      AS Contact2,
+            s.StudentID         AS StudentId,
+            s.StudyStatus       AS DayBoarder,
+            s.cashOnAccount     AS TotalBilled,
             ISNULL(tp.TotalPaid, 0) AS TotalPaid,
             s.cashOnAccount - ISNULL(tp.TotalPaid, 0) AS Balance,
             CASE
@@ -171,8 +175,10 @@ public class FeesFollowUpService
     )
     SELECT
         sw.StudentNumber, sw.FullName, sw.ClassId,
-        sw.GuardianKey,   sw.GuardianRel,
-        sw.TotalBilled,   sw.TotalPaid, sw.Balance,
+        sw.GuardianKey,
+        sw.GuardianName, sw.GuardianRelation, sw.Contact2,
+        sw.StudentId,    sw.DayBoarder,
+        sw.TotalBilled,  sw.TotalPaid, sw.Balance,
         lcd.LastContactDate, lcd.LastOutcome,
         lpd.PromiseDate      AS LatestPromiseDate,
         lpd.PromiseAmount    AS LatestPromiseAmount,
@@ -198,14 +204,15 @@ public class FeesFollowUpService
             while (rdr.Read())
             {
                 string gKey = rdr["GuardianKey"].ToString();
-                string gRel = rdr["GuardianRel"]?.ToString() ?? "";
 
                 if (!grouped.TryGetValue(gKey, out var g))
                 {
                     g = new GuardianWorklistRow
                     {
                         GuardianContact            = gKey,
-                        GuardianRelation           = gRel,
+                        GuardianName               = rdr.IsDBNull(rdr.GetOrdinal("GuardianName"))     ? "" : rdr.GetString(rdr.GetOrdinal("GuardianName")),
+                        GuardianRelation           = rdr.IsDBNull(rdr.GetOrdinal("GuardianRelation")) ? "" : rdr.GetString(rdr.GetOrdinal("GuardianRelation")),
+                        Contact2                   = rdr.IsDBNull(rdr.GetOrdinal("Contact2"))         ? "" : rdr.GetString(rdr.GetOrdinal("Contact2")),
                         LastContactDate            = rdr["LastContactDate"] as DateTime?,
                         LastOutcome                = ParseOutcome(rdr["LastOutcome"]?.ToString()),
                         LatestPromiseDate          = rdr["LatestPromiseDate"] as DateTime?,
@@ -219,7 +226,7 @@ public class FeesFollowUpService
                 decimal paid   = (decimal)rdr["TotalPaid"];
                 decimal bal    = (decimal)rdr["Balance"];
 
-                g.Students.Add(new StudentSummary
+                var student = new StudentSummary
                 {
                     StudentNumber  = rdr["StudentNumber"].ToString(),
                     FullName       = rdr["FullName"]?.ToString() ?? "",
@@ -228,7 +235,10 @@ public class FeesFollowUpService
                     TotalPaid      = paid,
                     Balance        = bal,
                     PaymentPercent = billed > 0 ? Math.Round(paid / billed * 100m, 1) : 0m,
-                });
+                };
+                student.StudentId  = rdr.IsDBNull(rdr.GetOrdinal("StudentId"))  ? "" : rdr.GetString(rdr.GetOrdinal("StudentId"));
+                student.DayBoarder = rdr.IsDBNull(rdr.GetOrdinal("DayBoarder")) ? "" : rdr.GetString(rdr.GetOrdinal("DayBoarder"));
+                g.Students.Add(student);
                 g.TotalBilled  += billed;
                 g.TotalPaid    += paid;
                 g.TotalBalance += bal;
@@ -263,6 +273,133 @@ public class FeesFollowUpService
             return p != 0 ? p : b.TotalBalance.CompareTo(a.TotalBalance);
         });
         return rows;
+    }
+
+    private bool WasContactedToday(string guardianKey)
+    {
+        const string sql = @"
+        SELECT COUNT(1) FROM tbl_FeesContactLog
+        WHERE GuardianKey = @key
+          AND CAST(ContactDate AS DATE) = CAST(GETDATE() AS DATE)
+          AND Outcome IN ('Contacted', 'Promised', 'Refused', 'InPerson')";
+        using var conn = new SqlConnection(connectionString);
+        using var cmd  = new SqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@key", guardianKey);
+        conn.Open();
+        return (int)cmd.ExecuteScalar() > 0;
+    }
+
+    public List<GuardianWorklistRow> GetDailyWorklist(decimal minBalance = 0)
+    {
+        var all   = GetGuardianWorklist("", minBalance);
+        var today = DateTime.Today;
+
+        return all.Where(g =>
+        {
+            // Exclude if there is an active future promise (waiting for guardian to fulfil)
+            bool hasActiveFuturePromise =
+                g.LatestPromiseDate.HasValue
+                && g.LatestPromiseDate.Value.Date >= today
+                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0);
+            if (hasActiveFuturePromise) return false;
+
+            // Exclude if successfully reached today
+            return !WasContactedToday(g.GuardianContact);
+        })
+        .OrderBy(g => (int)g.Tier)
+        .ThenByDescending(g => g.TotalBalance)
+        .ToList();
+    }
+
+    public List<StudentWorklistRow> GetStudentWorklist(string classFilter = "", decimal minBalance = 0)
+    {
+        var guardianRows = GetGuardianWorklist(classFilter, minBalance);
+        var result = new List<StudentWorklistRow>();
+
+        foreach (var g in guardianRows)
+        {
+            foreach (var s in g.Students)
+            {
+                result.Add(new StudentWorklistRow
+                {
+                    StudentNumber    = s.StudentNumber,
+                    StudentId        = s.StudentId,
+                    FullName         = s.FullName,
+                    ClassId          = s.ClassId,
+                    DayBoarder       = s.DayBoarder,
+                    TotalBilled      = s.TotalBilled,
+                    TotalPaid        = s.TotalPaid,
+                    Balance          = s.Balance,
+                    PaymentPercent   = s.PaymentPercent,
+                    Tier             = g.Tier,
+                    GuardianKey      = g.GuardianContact,
+                    GuardianContact  = g.GuardianContact,
+                    GuardianName     = g.GuardianName,
+                    GuardianRelation = g.GuardianRelation,
+                    LastContactDate  = g.LastContactDate,
+                    LastOutcome      = g.LastOutcome,
+                });
+            }
+        }
+
+        return result
+            .OrderBy(s => (int)s.Tier)
+            .ThenBy(s => s.ClassId)
+            .ThenBy(s => s.FullName)
+            .ToList();
+    }
+
+    public DashboardData GetDashboardData()
+    {
+        var all   = GetGuardianWorklist("", 0);
+        var today = DateTime.Today;
+
+        int contactedToday = all.Count(g => WasContactedToday(g.GuardianContact));
+
+        // Daily list (would exclude those contacted today) + those already contacted today
+        int dailyTotal = GetDailyWorklist(0).Count + contactedToday;
+
+        return new DashboardData
+        {
+            TotalOutstanding          = all.Sum(g => g.TotalBalance),
+            TotalBilled               = all.Sum(g => g.TotalBilled),
+            TotalCollected            = all.Sum(g => g.TotalPaid),
+            TotalGuardiansWithBalance = all.Count,
+            DailyListTotal            = dailyTotal,
+            DailyListContacted        = contactedToday,
+            BrokenPromiseCount        = all.Count(g => g.Tier == PriorityTier.BrokenPromise),
+            ActivePromiseCount        = all.Count(g =>
+                g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date >= today),
+            ByPriority = Enum.GetValues(typeof(PriorityTier))
+                .Cast<PriorityTier>()
+                .Select(t => new PriorityGroupStats
+                {
+                    Tier          = t,
+                    GuardianCount = all.Count(g => g.Tier == t),
+                    TotalBalance  = all.Where(g => g.Tier == t).Sum(g => g.TotalBalance),
+                }).ToList(),
+            TopCritical = all.OrderByDescending(g => g.TotalBalance).Take(5).ToList(),
+        };
+    }
+
+    private string GetSchoolName()
+    {
+        const string sql = "SELECT TOP 1 SchoolName FROM SchoolDetails";
+        try
+        {
+            using var conn = new SqlConnection(connectionString);
+            using var cmd  = new SqlCommand(sql, conn);
+            conn.Open();
+            var raw = cmd.ExecuteScalar() as string ?? "";
+            try { return AlienAge.Security.CryptorEngine.Decrypt(raw); }
+            catch { return raw; }   // return raw if decryption fails
+        }
+        catch { return ""; }
+    }
+
+    public void CheckAndSendSmsReminders()
+    {
+        // Full implementation in Task 12 — requires tbl_SmsReminderLog migration to be run first
     }
 
     private static PriorityTier ComputeGuardianTier(
