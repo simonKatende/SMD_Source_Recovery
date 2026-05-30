@@ -202,15 +202,10 @@ public class FeesFollowUpService
 
                 if (!grouped.TryGetValue(gKey, out var g))
                 {
-                    bool noContact = gKey.StartsWith("NOCONTACT-", StringComparison.Ordinal);
-                    string label = noContact
-                        ? $"(no contact) {rdr["FullName"]}"
-                        : string.IsNullOrEmpty(gRel) ? gKey : $"{gKey} ({gRel})";
-
                     g = new GuardianWorklistRow
                     {
                         GuardianContact            = gKey,
-                        GuardianLabel              = label,
+                        GuardianRelation           = gRel,
                         LastContactDate            = rdr["LastContactDate"] as DateTime?,
                         LastOutcome                = ParseOutcome(rdr["LastOutcome"]?.ToString()),
                         LatestPromiseDate          = rdr["LatestPromiseDate"] as DateTime?,
