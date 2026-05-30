@@ -73,3 +73,81 @@ The decompiler emits valid-looking C# that doesn't quite compile. These are the 
 - **Build logs go to `notes/`** — never let `*.binlog` or scratch log files land in project folders. The convention is `notes\<Project>_buildN.log`.
 - **Per-project, not per-solution** — there is no `.sln`. Build each `.csproj` directly with `dotnet build`. If a solution is later assembled, it goes in `reconstructed/`.
 - **Recovery details belong in commit messages.** When you fix a new class of decompiler artifact, document the pattern in the commit message (filename, line, before → after) so the README and this file can be updated from `git log`.
+
+## Fees Follow-up Glossary
+
+Shared vocabulary for developing the Fees Follow-up CRM feature. When either of us uses these terms, these definitions apply.
+
+### Guardian & Family
+
+**Guardian** — the parent or contact person responsible for paying fees for one or more students. The unit of communication in the follow-up process — you contact a guardian, not individual students.
+
+**Guardian Key** — the unique identifier for a guardian family. Derived from the student record: `PriorityContact` phone → `OtherContact` phone → `"NOCONTACT-{StudentNumber}"` when both are blank. Stored in `tbl_FeesContactLog.GuardianKey`.
+
+**Guardian Label** — the display string shown in the worklist, e.g. `"0771234567 (Mother)"`. Combines the phone number with the guardian relationship field.
+
+**Guardian Family** — all students that share the same Guardian Key. One row per family in the worklist, not one row per student.
+
+**Priority Contact** — the primary phone number on the student record (`tbl_Stud.PriorityContact`). Used first when deriving the Guardian Key.
+
+**Other Contact** — the secondary phone number (`tbl_Stud.OtherContact`). Fallback when Priority Contact is blank.
+
+### Worklist
+
+**Worklist** — the grid on the Fees Follow-up page. One row per guardian family with an outstanding balance, sorted by Priority Tier (Critical first). Backed by `List<GuardianWorklistRow>`.
+
+**Guardian Worklist Row** — a single worklist row. Holds aggregated financials, priority tier, and last contact info for one guardian family. Backed by `GuardianWorklistRow`.
+
+**Student Summary** — per-student breakdown inside a guardian family row. Shown in the interaction dialog. Holds individual Balance, TotalBilled, TotalPaid, and PaymentPercent. Backed by `StudentSummary`.
+
+### Financial
+
+**Billed** — total fees charged for the term. What the school expects to collect.
+
+**Paid** — total payments received for the term.
+
+**Balance** — outstanding amount still owed: `Billed − Paid`. When we say "balance" we mean what's still owed, not what was charged.
+
+**Payment Percent** — `Paid / Billed × 100`. How much of the billed amount has been settled (e.g. 40%).
+
+### Pacing
+
+**Pacing Gap** — `(TermElapsedDays / TermTotalDays) − (TotalPaid / TotalBilled)`. Positive = guardian is behind pace. Zero when term dates are not configured.
+
+**Term Elapsed Days** — days since Term Start Date as of today.
+
+**Term Total Days** — total days in the term: `TermEndDate − TermStartDate`.
+
+### Priority Tiers
+
+Sorted ascending — lower number = higher urgency.
+
+**Critical (0)** — Pacing Gap ≥ Critical Threshold. Guardian is significantly behind payment pace relative to term progress. Shown in red.
+
+**Broken Promise (1)** — guardian made a promise but Promise Date passed and Payments Since Promise did not cover the Promise Amount. Displayed in UI as "Missed Promise". Shown in coral.
+
+**Stale (2)** — no contact logged within the Stale Threshold. Displayed in UI as "Contact Overdue". Shown in yellow.
+
+**Current (3)** — none of the above apply. Displayed in UI as "Up to Date".
+
+### Contact & Interaction
+
+**Contact Log** — a single logged interaction with a guardian. Records date, channel, outcome, note, and optional promise. Stored in `tbl_FeesContactLog`. Backed by `FeesContactLog`.
+
+**Contact Channel** — how the contact was made: `Phone`, `SMS`, or `InPerson`.
+
+**Contact Outcome** — result of a contact attempt: `Contacted`, `NoAnswer`, `ContactUnavailable` (out of coverage), `ContactOff` (phone off), `Promised` (committed to pay), `Refused`.
+
+**Promise Date** — date the guardian committed to paying by. Required when Outcome = `Promised`.
+
+**Promise Amount** — amount the guardian committed to paying. Optional alongside Promise Date.
+
+**Payments Since Promise** — sum of payments received after the latest Promise Date. Used to evaluate whether a promise was honoured.
+
+### Settings
+
+**Stale Threshold** — days since last contact before a row becomes Stale. Default: 7.
+
+**Term Start / Term End** — boundaries of the current academic term. Required for Pacing Gap. When not set, Pacing Gap is 0 and Critical tier cannot trigger.
+
+**Critical Threshold** — Pacing Gap above which a row becomes Critical. Stored as decimal (0–1), shown as percentage (0–100%). Default: 50%.
