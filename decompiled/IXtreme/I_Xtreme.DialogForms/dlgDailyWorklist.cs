@@ -196,7 +196,7 @@ public class dlgDailyWorklist : XtraForm
     {
         var col = AddCol(fieldName, caption, width);
         col.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.DateTime;
-        col.DisplayFormat.FormatString = "{0:dd-MMM-yyyy}";
+        col.DisplayFormat.FormatString = "dd-MMM-yyyy";
     }
 
     private void AddOutcomeCol(string fieldName, string caption, int width)
