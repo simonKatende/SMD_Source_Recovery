@@ -29,8 +29,8 @@ public class FollowUpSettings : XtraForm
         dteTermEnd.EditValue       = (object)s.TermEndDate   ?? DBNull.Value;
         spnCriticalThreshold.Value = (decimal)(s.CriticalPacingGapThreshold * 100);
 
-        const string default2Day  = "Dear Parent, a reminder that fees of UGX {balance} for {names} is due on {date}. Please pay as promised. - {school}";
-        const string defaultDayOf = "Dear Parent, today is your promised payment date for fees of UGX {balance} for {names}. Please make your payment today. - {school}";
+        const string default2Day  = "Dear Parent, you promised to pay UGX {promised_amount} for {names} by {date}. Your overall balance is UGX {balance}. Please pay as promised. - {school}";
+        const string defaultDayOf = "Dear Parent, today is your promised payment date of UGX {promised_amount} for {names}. Your overall balance is UGX {balance}. Please make your payment today. - {school}";
         memo2Day.Text   = !string.IsNullOrWhiteSpace(s.SmsTemplate2Day)  ? s.SmsTemplate2Day  : default2Day;
         memoDayOf.Text  = !string.IsNullOrWhiteSpace(s.SmsTemplateDayOf) ? s.SmsTemplateDayOf : defaultDayOf;
     }
@@ -65,13 +65,13 @@ public class FollowUpSettings : XtraForm
 
         // Row 5: 2-day reminder template
         var lbl2Day = new LabelControl
-            { Text = "2-day reminder template ({balance},{names},{date},{school}):", Location = new System.Drawing.Point(12, 162), AutoSize = true };
+            { Text = "2-day reminder template ({promised_amount},{balance},{names},{date},{school}):", Location = new System.Drawing.Point(12, 162), AutoSize = true };
         this.memo2Day = new MemoEdit { Location = new System.Drawing.Point(12, 180), Size = new System.Drawing.Size(580, 60) };
         this.memo2Day.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Row 6: Day-of reminder template
         var lblDayOf = new LabelControl
-            { Text = "Day-of reminder template:", Location = new System.Drawing.Point(12, 248), AutoSize = true };
+            { Text = "Day-of reminder template ({promised_amount},{balance},{names},{date},{school}):", Location = new System.Drawing.Point(12, 248), AutoSize = true };
         this.memoDayOf = new MemoEdit { Location = new System.Drawing.Point(12, 264), Size = new System.Drawing.Size(580, 60) };
         this.memoDayOf.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 

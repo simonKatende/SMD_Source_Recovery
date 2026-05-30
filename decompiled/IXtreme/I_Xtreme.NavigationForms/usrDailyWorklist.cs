@@ -40,18 +40,15 @@ public class usrDailyWorklist : XtraUserControl
         _txtSearch.Properties.NullText = "Search guardian name, contact, student...";
         _txtSearch.EditValueChanged += TxtSearch_EditValueChanged;
 
-        var btnRefresh = new SimpleButton { Text = "Refresh", Width = 80 };
-        var btnPrint   = new SimpleButton { Text = "Print",   Width = 80 };
-        var btnExport  = new SimpleButton { Text = "Export",  Width = 80 };
-        btnRefresh.Anchor = btnPrint.Anchor = btnExport.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-
-        PositionTopButtons(topPanel, btnRefresh, btnPrint, btnExport);
-        topPanel.Controls.AddRange(new Control[] { _txtSearch, btnRefresh, btnPrint, btnExport });
-        topPanel.Resize += (s, e) => PositionTopButtons(topPanel, btnRefresh, btnPrint, btnExport);
-
+        var btnRefresh = new SimpleButton
+        {
+            Text     = "Refresh",
+            Width    = 70,
+            Location = new Point(332, 10),
+            Anchor   = AnchorStyles.Top | AnchorStyles.Left,
+        };
+        topPanel.Controls.AddRange(new Control[] { _txtSearch, btnRefresh });
         btnRefresh.Click += (s, e) => LoadData();
-        btnPrint.Click   += BtnPrint_Click;
-        btnExport.Click  += BtnExport_Click;
 
         _grid = new GridControl { Dock = DockStyle.Fill };
         _view = new GridView();
@@ -67,12 +64,6 @@ public class usrDailyWorklist : XtraUserControl
         this.Controls.Add(_grid);
         this.Controls.Add(topPanel);
         this.ResumeLayout(false);
-    }
-
-    private static void PositionTopButtons(Panel panel, params SimpleButton[] buttons)
-    {
-        int x = panel.ClientSize.Width - 8;
-        foreach (var btn in buttons) { x -= btn.Width; btn.Location = new Point(x, 10); x -= 4; }
     }
 
     private void LoadData()
@@ -216,14 +207,15 @@ public class usrDailyWorklist : XtraUserControl
         LoadData();
     }
 
-    private void BtnPrint_Click(object sender, EventArgs e)
+    public void Print(bool preview = false)
     {
         var rpt  = new rptDailyWorklist(_allRows);
         var tool = new ReportPrintTool(rpt);
-        tool.ShowRibbonPreview();
+        if (preview) tool.ShowRibbonPreview();
+        else         tool.Print();
     }
 
-    private void BtnExport_Click(object sender, EventArgs e)
+    public void Export()
     {
         using var save = new SaveFileDialog
         {
@@ -231,11 +223,6 @@ public class usrDailyWorklist : XtraUserControl
             FileName = $"DailyWorklist_{DateTime.Today:yyyyMMdd}.xlsx",
         };
         if (save.ShowDialog() == DialogResult.OK)
-        {
-            var btn = (Control)sender;
-            btn.Enabled = false;
-            try { _view.ExportToXlsx(save.FileName); }
-            finally { btn.Enabled = true; }
-        }
+            _view.ExportToXlsx(save.FileName);
     }
 }

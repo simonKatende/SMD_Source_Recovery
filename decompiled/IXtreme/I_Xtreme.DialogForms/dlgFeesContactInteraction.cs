@@ -388,7 +388,8 @@ public class dlgFeesContactInteraction : XtraForm
         if (student == null) return;
 
         StudentOptions.SetActiveStudent(student.StudentNumber);
-        StudentOptions.SetPaymentMode("SingleStudentPayment");
+        StudentOptions.SetActiveClass(student.ClassId);
+        StudentOptions.SetPaymentMode("SingleStudent");
         using var dlg = new StudentFeesPayment("SingleStudentPayment");
         dlg.ShowDialog(this);
     }
@@ -402,6 +403,9 @@ public class dlgFeesContactInteraction : XtraForm
         if (!hit.InRow) return;
         var dataRow = gridViewHistory.GetDataRow(hit.RowHandle);
         if (dataRow == null) return;
+
+        string ch = dataRow["Channel"]?.ToString() ?? "";
+        if (ch == "SMS") return;   // SMS entries are not editable
 
         int contactId = Convert.ToInt32(dataRow["ContactId"]);
 
@@ -555,6 +559,8 @@ public class dlgFeesContactInteraction : XtraForm
             // Fill note with the sent message body
             if (!string.IsNullOrEmpty(smsForm.SentMessage))
                 memoNote.Text = smsForm.SentMessage;
+            // Auto-save — no manual click required for SMS interactions
+            TrySaveContact();
         }
         else
         {

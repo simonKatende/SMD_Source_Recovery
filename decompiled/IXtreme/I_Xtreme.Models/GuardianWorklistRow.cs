@@ -115,9 +115,9 @@ public class PriorityGroupStats
 public class DashboardData
 {
     public decimal TotalOutstanding           { get; set; }
-    public decimal TotalBilled                { get; set; }
+    public decimal TotalPayable               { get; set; }
     public decimal TotalCollected             { get; set; }
-    public decimal CollectionRate             => TotalBilled == 0 ? 0 : TotalCollected / TotalBilled * 100m;
+    public decimal CollectionRate             => TotalPayable == 0 ? 0 : TotalCollected / TotalPayable * 100m;
     public int     TotalGuardiansWithBalance  { get; set; }
     public int     DailyListTotal             { get; set; }
     public int     DailyListContacted         { get; set; }

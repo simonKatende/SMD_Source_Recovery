@@ -14,7 +14,7 @@ namespace I_Xtreme.NavigationForms;
 public class usrFeesFollowUp : XtraUserControl
 {
     // ── KPI strip ─────────────────────────────────────────────────────────────
-    private readonly Label[] _kpiValues = new Label[9];
+    private readonly Label[] _kpiValues = new Label[10];
     private FlowLayoutPanel  _kpiPanel;
 
     // ── Priority breakdown grid ───────────────────────────────────────────────
@@ -129,19 +129,23 @@ public class usrFeesFollowUp : XtraUserControl
         _kpiPanel = new FlowLayoutPanel
         {
             Dock          = DockStyle.Top,
-            Height        = 100,
+            Height        = 200,
             FlowDirection = FlowDirection.LeftToRight,
-            AutoScroll    = true,
+            WrapContents  = true,
+            AutoScroll    = false,
         };
+        // Row 1: financial overview
         _kpiPanel.Controls.Add(BuildKpiCard(0, "Total Outstanding (UGX)", Color.DarkRed));
-        _kpiPanel.Controls.Add(BuildKpiCard(1, "Collection Rate (%)",     Color.DarkGreen));
-        _kpiPanel.Controls.Add(BuildKpiCard(2, "Guardians with Balance",  Color.DarkBlue));
-        _kpiPanel.Controls.Add(BuildKpiCard(3, "Today's Remaining",       Color.DarkOrange));
-        _kpiPanel.Controls.Add(BuildKpiCard(4, "Broken Promises",         Color.Crimson));
-        _kpiPanel.Controls.Add(BuildKpiCard(5, "Total Enrolled",          Color.DimGray));
-        _kpiPanel.Controls.Add(BuildKpiCard(6, "Cleared (Nil Balance)",   Color.ForestGreen));
-        _kpiPanel.Controls.Add(BuildKpiCard(7, "Zero Paid",               Color.OrangeRed));
-        _kpiPanel.Controls.Add(BuildKpiCard(8, "Term Week",               Color.SlateBlue));
+        _kpiPanel.Controls.Add(BuildKpiCard(1, "Total Payable (UGX)",     Color.DarkSlateGray));
+        _kpiPanel.Controls.Add(BuildKpiCard(2, "Collection Rate (%)",     Color.DarkGreen));
+        _kpiPanel.Controls.Add(BuildKpiCard(3, "Total Enrolled",          Color.DimGray));
+        _kpiPanel.Controls.Add(BuildKpiCard(4, "Cleared (Nil Balance)",   Color.ForestGreen));
+        // Row 2: follow-up activity
+        _kpiPanel.Controls.Add(BuildKpiCard(5, "Guardians with Balance",  Color.DarkBlue));
+        _kpiPanel.Controls.Add(BuildKpiCard(6, "Today's Remaining",       Color.DarkOrange));
+        _kpiPanel.Controls.Add(BuildKpiCard(7, "Broken Promises",         Color.Crimson));
+        _kpiPanel.Controls.Add(BuildKpiCard(8, "Zero Paid",               Color.OrangeRed));
+        _kpiPanel.Controls.Add(BuildKpiCard(9, "Term Week",               Color.SlateBlue));
 
         // Add controls — bottom-docked first, then top-docked in reverse visual order
         this.Controls.Add(lblTop5);
@@ -199,15 +203,18 @@ public class usrFeesFollowUp : XtraUserControl
 
     private void UpdateKpiStrip(DashboardData data)
     {
+        // Row 1: financial overview
         _kpiValues[0].Text = $"{data.TotalOutstanding:N0}";
-        _kpiValues[1].Text = $"{data.CollectionRate:F1}%";
-        _kpiValues[2].Text = $"{data.TotalGuardiansWithBalance}";
-        _kpiValues[3].Text = $"{data.DailyListRemaining} / {data.DailyListTotal}";
-        _kpiValues[4].Text = $"{data.BrokenPromiseCount}";
-        _kpiValues[5].Text = $"{data.TotalEnrolled}";
-        _kpiValues[6].Text = $"{data.NilBalanceStudents}";
-        _kpiValues[7].Text = $"{data.ZeroPaidStudents}";
-        _kpiValues[8].Text = data.TermWeekDisplay;
+        _kpiValues[1].Text = $"{data.TotalPayable:N0}";
+        _kpiValues[2].Text = $"{data.CollectionRate:F1}%";
+        _kpiValues[3].Text = $"{data.TotalEnrolled}";
+        _kpiValues[4].Text = $"{data.NilBalanceStudents}";
+        // Row 2: follow-up activity
+        _kpiValues[5].Text = $"{data.TotalGuardiansWithBalance}";
+        _kpiValues[6].Text = $"{data.DailyListRemaining} / {data.DailyListTotal}";
+        _kpiValues[7].Text = $"{data.BrokenPromiseCount}";
+        _kpiValues[8].Text = $"{data.ZeroPaidStudents}";
+        _kpiValues[9].Text = data.TermWeekDisplay;
     }
 
     private void UpdatePriorityBreakdown(DashboardData data)

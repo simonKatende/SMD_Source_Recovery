@@ -105,12 +105,66 @@ public class FeesFollowUpService
         return cmd.ExecuteScalar() as string;
     }
 
-    private int GetTotalEnrolledCount()
+    private struct DashboardTotals
     {
+        public int     TotalEnrolled;
+        public decimal TotalPayable;
+        public decimal TotalPaid;
+        public int     NilBalance;
+        public int     ZeroPaid;
+    }
+
+    // Mirrors the tracking sheet formula for all students in the current semester —
+    // no balance filter, so fully-paid and credit-balance students are included.
+    private DashboardTotals GetDashboardTotals(string currentSemester, string prevSemester)
+    {
+        const string sql = @"
+    ;WITH CurrentTermPayments AS (
+        SELECT StudentNumber,
+               ISNULL(SUM(ISNULL(Debit,  0)), 0) AS TotalBilled,
+               ISNULL(SUM(ISNULL(Credit, 0)), 0) AS TotalPaid
+        FROM FeesPayment
+        WHERE SemesterId = @currentSemester
+        GROUP BY StudentNumber
+    ),
+    PrevTermLastBalance AS (
+        SELECT StudentNumber, Balance AS BFAmount
+        FROM (
+            SELECT StudentNumber, Balance,
+                   ROW_NUMBER() OVER (PARTITION BY StudentNumber ORDER BY PaymentId DESC) AS rn
+            FROM FeesPayment
+            WHERE SemesterId = @prevSemester
+        ) t
+        WHERE rn = 1
+    )
+    SELECT
+        COUNT(*)                                                              AS TotalEnrolled,
+        ISNULL(SUM(ctp.TotalBilled + ISNULL(ptb.BFAmount, 0)), 0)           AS TotalPayable,
+        ISNULL(SUM(ctp.TotalPaid), 0)                                        AS TotalPaid,
+        SUM(CASE WHEN ctp.TotalBilled + ISNULL(ptb.BFAmount, 0)
+                      - ctp.TotalPaid <= 0 THEN 1 ELSE 0 END)               AS NilBalance,
+        SUM(CASE WHEN ctp.TotalPaid = 0
+                  AND ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) > 0
+                 THEN 1 ELSE 0 END)                                          AS ZeroPaid
+    FROM tbl_Stud s
+    INNER JOIN CurrentTermPayments ctp ON ctp.StudentNumber = s.StudentNumber
+    LEFT  JOIN PrevTermLastBalance  ptb ON ptb.StudentNumber = s.StudentNumber";
+
         using var conn = new SqlConnection(connectionString);
         conn.Open();
-        using var cmd = new SqlCommand("SELECT COUNT(1) FROM tbl_Stud", conn);
-        return (int)cmd.ExecuteScalar();
+        using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.Add("@currentSemester", SqlDbType.VarChar, 50).Value = currentSemester;
+        cmd.Parameters.Add("@prevSemester",    SqlDbType.VarChar, 50).Value = (object)prevSemester ?? DBNull.Value;
+        using var rdr = cmd.ExecuteReader();
+        if (!rdr.Read()) return new DashboardTotals();
+        return new DashboardTotals
+        {
+            TotalEnrolled = (int)rdr["TotalEnrolled"],
+            TotalPayable  = (decimal)rdr["TotalPayable"],
+            TotalPaid     = (decimal)rdr["TotalPaid"],
+            NilBalance    = (int)(long)rdr["NilBalance"],
+            ZeroPaid      = (int)(long)rdr["ZeroPaid"],
+        };
     }
 
     public List<GuardianWorklistRow> GetGuardianWorklist(string classFilter, decimal minBalance)
@@ -399,8 +453,12 @@ public class FeesFollowUpService
     public DashboardData GetDashboardData()
     {
         var settings = GetSettings();
-        var all      = GetGuardianWorklist("", 0);
-        var today    = DateTime.Today;
+        string currentSemester = AlienAge.Semesters.WorkingSemesters.GetWorkingSemester();
+        string prevSemester    = GetPreviousSemesterId(currentSemester);
+
+        var all    = GetGuardianWorklist("", 0);
+        var totals = GetDashboardTotals(currentSemester, prevSemester);
+        var today  = DateTime.Today;
 
         int contactedToday = all.Count(g => WasContactedToday(g.GuardianContact));
 
@@ -414,11 +472,7 @@ public class FeesFollowUpService
             return !WasContactedToday(g.GuardianContact);
         }) + contactedToday;
 
-        int totalEnrolled      = GetTotalEnrolledCount();
-        int studentsWithBalance = all.Sum(g => g.StudentCount);
-        int nilBalanceStudents  = Math.Max(0, totalEnrolled - studentsWithBalance);
-        int zeroPaidStudents    = all.SelectMany(g => g.Students).Count(s => s.TotalPaid == 0);
-        int belowPacingCount    = all.Count(g => g.PacingGap > 0);
+        int belowPacingCount = all.Count(g => g.PacingGap > 0);
 
         int termWeek = 0, totalTermWeeks = 0;
         if (settings.TermStartDate.HasValue && settings.TermEndDate.HasValue)
@@ -431,18 +485,18 @@ public class FeesFollowUpService
 
         return new DashboardData
         {
-            TotalOutstanding          = all.Sum(g => g.TotalBalance),
-            TotalBilled               = all.Sum(g => g.TotalBilled),
-            TotalCollected            = all.Sum(g => g.TotalPaid),
+            TotalOutstanding          = all.Sum(g => g.TotalBalance),  // positive balances only
+            TotalPayable              = totals.TotalPayable,            // all students, matches tracking sheet
+            TotalCollected            = totals.TotalPaid,               // all students
             TotalGuardiansWithBalance = all.Count,
             DailyListTotal            = dailyTotal,
             DailyListContacted        = contactedToday,
             BrokenPromiseCount        = all.Count(g => g.Tier == PriorityTier.BrokenPromise),
             ActivePromiseCount        = all.Count(g =>
                 g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date >= today),
-            TotalEnrolled      = totalEnrolled,
-            NilBalanceStudents = nilBalanceStudents,
-            ZeroPaidStudents   = zeroPaidStudents,
+            TotalEnrolled      = totals.TotalEnrolled,
+            NilBalanceStudents = totals.NilBalance,
+            ZeroPaidStudents   = totals.ZeroPaid,
             BelowPacingCount   = belowPacingCount,
             CurrentTermWeek    = termWeek,
             TotalTermWeeks     = totalTermWeeks,
@@ -483,10 +537,10 @@ public class FeesFollowUpService
 
         string twoDayTemplate = !string.IsNullOrWhiteSpace(settings.SmsTemplate2Day)
             ? settings.SmsTemplate2Day
-            : "Dear Parent, a reminder that fees of UGX {balance} for {names} is due on {date}. Please pay as promised. - {school}";
+            : "Dear Parent, you promised to pay UGX {promised_amount} for {names} by {date}. Your overall balance is UGX {balance}. Please pay as promised. - {school}";
         string dayOfTemplate = !string.IsNullOrWhiteSpace(settings.SmsTemplateDayOf)
             ? settings.SmsTemplateDayOf
-            : "Dear Parent, today is your promised payment date for fees of UGX {balance} for {names}. Please make your payment today. - {school}";
+            : "Dear Parent, today is your promised payment date of UGX {promised_amount} for {names}. Your overall balance is UGX {balance}. Please make your payment today. - {school}";
 
         using var conn = new SqlConnection(connectionString);
         conn.Open();
@@ -524,9 +578,11 @@ public class FeesFollowUpService
             decimal bal   = g.TotalBalance;
             if (bal <= 0) continue;
 
+            decimal promised = g.LatestPromiseAmount ?? bal;
+
             if (pd == today.AddDays(2) && !AlreadySentReminder(conn, phone, pd, "2DayBefore"))
             {
-                string msg = ApplySmsTemplate(twoDayTemplate, bal, g.StudentNames, pd, school);
+                string msg = ApplySmsTemplate(twoDayTemplate, bal, g.StudentNames, pd, school, promised);
                 if (gw.TrySendSMSViaPOST(phone, msg, out string err2))
                 {
                     LogReminderSent(conn, phone, pd, "2DayBefore");
@@ -540,7 +596,7 @@ public class FeesFollowUpService
 
             if (pd == today && !AlreadySentReminder(conn, phone, pd, "DayOf"))
             {
-                string msg = ApplySmsTemplate(dayOfTemplate, bal, g.StudentNames, pd, school);
+                string msg = ApplySmsTemplate(dayOfTemplate, bal, g.StudentNames, pd, school, promised);
                 if (gw.TrySendSMSViaPOST(phone, msg, out string errD))
                 {
                     LogReminderSent(conn, phone, pd, "DayOf");
@@ -556,12 +612,14 @@ public class FeesFollowUpService
         return result;
     }
 
-    private static string ApplySmsTemplate(string template, decimal balance, string names, DateTime date, string school)
+    private static string ApplySmsTemplate(string template, decimal balance,
+        string names, DateTime date, string school, decimal promisedAmount)
         => template
-            .Replace("{balance}", $"{balance:#,#}")
-            .Replace("{names}",   names)
-            .Replace("{date}",    date.ToString("dd-MMM-yyyy"))
-            .Replace("{school}",  school);
+            .Replace("{promised_amount}", $"{promisedAmount:#,#}")
+            .Replace("{balance}",         $"{balance:#,#}")
+            .Replace("{names}",           names)
+            .Replace("{date}",            date.ToString("dd-MMM-yyyy"))
+            .Replace("{school}",          school);
 
     public string GetSmsTemplate(string key)
     {

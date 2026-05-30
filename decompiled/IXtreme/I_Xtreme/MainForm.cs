@@ -172,6 +172,7 @@ public class MainForm : RibbonForm
 	private usrFeesPaymentAnalysis _usrFeesPaymentAnalysis;
 
 	private usrFeesFollowUp _usrFeesFollowUp;
+	private DevExpress.XtraEditors.XtraUserControl _currentWorklistCtl;
 
 	private usrSubjectList _usrSubjectList;
 
@@ -4903,14 +4904,30 @@ public class MainForm : RibbonForm
 	{
 		if (_usrFeesFollowUp == null)
 			_usrFeesFollowUp = new usrFeesFollowUp();
+		_currentWorklistCtl = null;
 		CurrentControl.LoadControl(_usrFeesFollowUp, panelMain);
 		ribbon.SelectedPage = ribbonPageFeesFollowUp;
 	}
 
 	private void ShowFeesWorklist(DevExpress.XtraEditors.XtraUserControl ctl)
 	{
+		_currentWorklistCtl = ctl;
 		ribbon.SelectedPage = ribbonPageFeesFollowUp;
 		CurrentControl.LoadControl(ctl, panelMain);
+	}
+
+	private void DispatchFeesPrint(bool preview)
+	{
+		if      (_currentWorklistCtl is I_Xtreme.NavigationForms.usrDailyWorklist    d)  d.Print(preview);
+		else if (_currentWorklistCtl is I_Xtreme.NavigationForms.usrGuardianWorklist g)  g.Print(preview);
+		else if (_currentWorklistCtl is I_Xtreme.NavigationForms.usrStudentWorklist  sw) sw.Print(preview);
+	}
+
+	private void DispatchFeesExport()
+	{
+		if      (_currentWorklistCtl is I_Xtreme.NavigationForms.usrDailyWorklist    d)  d.Export();
+		else if (_currentWorklistCtl is I_Xtreme.NavigationForms.usrGuardianWorklist g)  g.Export();
+		else if (_currentWorklistCtl is I_Xtreme.NavigationForms.usrStudentWorklist  sw) sw.Export();
 	}
 
 	private void HidePageCategories()
@@ -24774,19 +24791,19 @@ public class MainForm : RibbonForm
 		this.bbiFeesPreview.Caption = "Preview";
 		this.bbiFeesPreview.ImageOptions.Image      = (System.Drawing.Image)resources.GetObject("barButtonItem76.ImageOptions.Image");
 		this.bbiFeesPreview.ImageOptions.LargeImage = (System.Drawing.Image)resources.GetObject("barButtonItem76.ImageOptions.LargeImage");
-		this.bbiFeesPreview.ItemClick += (s, e) => _usrFeesFollowUp?.PrintPreviewWorklist();
+		this.bbiFeesPreview.ItemClick += (s, e) => DispatchFeesPrint(preview: true);
 		this.bbiFeesPrint = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiFeesPrint.Name    = "bbiFeesPrint";
 		this.bbiFeesPrint.Caption = "Print";
 		this.bbiFeesPrint.ImageOptions.Image      = (System.Drawing.Image)resources.GetObject("barButtonItem75.ImageOptions.Image");
 		this.bbiFeesPrint.ImageOptions.LargeImage = (System.Drawing.Image)resources.GetObject("barButtonItem75.ImageOptions.LargeImage");
-		this.bbiFeesPrint.ItemClick += (s, e) => _usrFeesFollowUp?.PrintWorklist();
+		this.bbiFeesPrint.ItemClick += (s, e) => DispatchFeesPrint(preview: false);
 		this.bbiFeesExport = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiFeesExport.Name    = "bbiFeesExport";
 		this.bbiFeesExport.Caption = "Export";
 		this.bbiFeesExport.ImageOptions.Image      = (System.Drawing.Image)resources.GetObject("barButtonItem178.ImageOptions.Image");
 		this.bbiFeesExport.ImageOptions.LargeImage = (System.Drawing.Image)resources.GetObject("barButtonItem178.ImageOptions.LargeImage");
-		this.bbiFeesExport.ItemClick += (s, e) => _usrFeesFollowUp?.ExportWorklistToExcel();
+		this.bbiFeesExport.ItemClick += (s, e) => DispatchFeesExport();
 		this.ribbonPageGroupFeesPrint = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroupFeesPrint.Name = "ribbonPageGroupFeesPrint";
 		this.ribbonPageGroupFeesPrint.Text = "Printing & Exporting";

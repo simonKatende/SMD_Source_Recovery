@@ -295,6 +295,24 @@ public class usrStudentAccounts : XtraUserControl
 		}
 	}
 
+	private double _balanceSummaryAccum;
+	private void gridViewStudentLists_CustomSummaryCalculate(object sender, DevExpress.Data.CustomSummaryEventArgs e)
+	{
+		switch (e.SummaryProcess)
+		{
+			case DevExpress.Data.CustomSummaryProcess.Start:
+				_balanceSummaryAccum = 0;
+				break;
+			case DevExpress.Data.CustomSummaryProcess.Calculate:
+				double v = Convert.ToDouble(e.FieldValue);
+				if (v > 0) _balanceSummaryAccum += v;
+				break;
+			case DevExpress.Data.CustomSummaryProcess.Finalize:
+				e.TotalValue = _balanceSummaryAccum;
+				break;
+		}
+	}
+
 	private void gridViewStudentLists_RowCellStyle(object sender, RowCellStyleEventArgs e)
 	{
 		if (e.RowHandle == HotTrackRow)
@@ -401,6 +419,7 @@ public class usrStudentAccounts : XtraUserControl
 		this.gridViewStudentLists.OptionsView.ShowIndicator = false;
 		this.gridViewStudentLists.RowCellStyle += new DevExpress.XtraGrid.Views.Grid.RowCellStyleEventHandler(gridViewStudentLists_RowCellStyle);
 		this.gridViewStudentLists.CustomColumnDisplayText += new DevExpress.XtraGrid.Views.Base.CustomColumnDisplayTextEventHandler(gridViewStudentLists_CustomColumnDisplayText);
+		this.gridViewStudentLists.CustomSummaryCalculate += new DevExpress.Data.CustomSummaryEventHandler(gridViewStudentLists_CustomSummaryCalculate);
 		this.gridViewStudentLists.MouseMove += new System.Windows.Forms.MouseEventHandler(gridViewStudentLists_MouseMove);
 		this.gridViewStudentLists.DoubleClick += new System.EventHandler(gridViewStudentLists_DoubleClick);
 		this.gridColNo.Caption = "No";
@@ -503,7 +522,7 @@ public class usrStudentAccounts : XtraUserControl
 		this.gridColBalance.Name = "gridColBalance";
 		this.gridColBalance.Summary.AddRange(new DevExpress.XtraGrid.GridSummaryItem[1]
 		{
-			new DevExpress.XtraGrid.GridColumnSummaryItem(DevExpress.Data.SummaryItemType.Sum, "Balance", "{0:#,#.0}")
+			new DevExpress.XtraGrid.GridColumnSummaryItem(DevExpress.Data.SummaryItemType.Custom, "Balance", "{0:#,#.0}")
 		});
 		this.gridColBalance.Visible = true;
 		this.gridColBalance.VisibleIndex = 11;
