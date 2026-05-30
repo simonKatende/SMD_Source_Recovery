@@ -104,6 +104,15 @@ public class FeesFollowUpService
           AND (@termEnd   IS NULL OR DateOfPayment <= @termEnd)
         GROUP BY StudentNumber
     ),
+    BroughtForward AS (
+        -- Net balance (Debit - Credit) from all transactions before the current term.
+        -- Returns 0 per student when @termStart is not configured.
+        SELECT StudentNumber,
+               ISNULL(SUM(ISNULL(Debit, 0)) - SUM(ISNULL(Credit, 0)), 0) AS BFAmount
+        FROM FeesPayment
+        WHERE @termStart IS NOT NULL AND DateOfPayment < @termStart
+        GROUP BY StudentNumber
+    ),
     StudentsWithBalance AS (
         SELECT
             s.StudentNumber,
@@ -114,9 +123,9 @@ public class FeesFollowUpService
             s.OtherContact      AS Contact2,
             s.StudentID         AS StudentId,
             s.StudyStatus       AS DayBoarder,
-            s.cashOnAccount     AS TotalBilled,
+            s.cashOnAccount + ISNULL(bf.BFAmount, 0) AS TotalBilled,
             ISNULL(tp.TotalPaid, 0) AS TotalPaid,
-            s.cashOnAccount - ISNULL(tp.TotalPaid, 0) AS Balance,
+            s.cashOnAccount + ISNULL(bf.BFAmount, 0) - ISNULL(tp.TotalPaid, 0) AS Balance,
             CASE
                 WHEN NULLIF(RTRIM(LTRIM(ISNULL(s.PriorityContact,''))), '') IS NOT NULL
                     THEN RTRIM(LTRIM(s.PriorityContact))
@@ -125,8 +134,9 @@ public class FeesFollowUpService
                 ELSE 'NOCONTACT-' + s.StudentNumber
             END AS GuardianKey
         FROM tbl_Stud s
-        LEFT JOIN TermPayments tp ON tp.StudentNumber = s.StudentNumber
-        WHERE s.cashOnAccount - ISNULL(tp.TotalPaid, 0) > @minBalance
+        LEFT JOIN TermPayments  tp ON tp.StudentNumber = s.StudentNumber
+        LEFT JOIN BroughtForward bf ON bf.StudentNumber = s.StudentNumber
+        WHERE s.cashOnAccount + ISNULL(bf.BFAmount, 0) - ISNULL(tp.TotalPaid, 0) > @minBalance
           AND (@classFilter = '' OR s.ClassId = @classFilter)
     ),
     AllRelevantContacts AS (
