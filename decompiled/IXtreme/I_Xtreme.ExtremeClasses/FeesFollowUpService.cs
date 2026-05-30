@@ -281,10 +281,10 @@ public class FeesFollowUpService
         SELECT COUNT(1) FROM tbl_FeesContactLog
         WHERE GuardianKey = @key
           AND CAST(ContactDate AS DATE) = CAST(GETDATE() AS DATE)
-          AND Outcome IN ('Contacted', 'Promised', 'Refused', 'InPerson')";
+          AND Outcome IN ('Contacted', 'Promised', 'Refused')";
         using var conn = new SqlConnection(connectionString);
         using var cmd  = new SqlCommand(sql, conn);
-        cmd.Parameters.AddWithValue("@key", guardianKey);
+        cmd.Parameters.Add("@key", SqlDbType.VarChar, 20).Value = guardianKey;
         conn.Open();
         return (int)cmd.ExecuteScalar() > 0;
     }
@@ -356,8 +356,16 @@ public class FeesFollowUpService
 
         int contactedToday = all.Count(g => WasContactedToday(g.GuardianContact));
 
-        // Daily list (would exclude those contacted today) + those already contacted today
-        int dailyTotal = GetDailyWorklist(0).Count + contactedToday;
+        // Compute daily list count inline — don't call GetDailyWorklist which re-runs the full query
+        int dailyTotal = all.Count(g =>
+        {
+            bool hasActiveFuturePromise =
+                g.LatestPromiseDate.HasValue
+                && g.LatestPromiseDate.Value.Date >= today
+                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0);
+            if (hasActiveFuturePromise) return false;
+            return !WasContactedToday(g.GuardianContact);
+        }) + contactedToday;
 
         return new DashboardData
         {
@@ -378,7 +386,7 @@ public class FeesFollowUpService
                     GuardianCount = all.Count(g => g.Tier == t),
                     TotalBalance  = all.Where(g => g.Tier == t).Sum(g => g.TotalBalance),
                 }).ToList(),
-            TopCritical = all.OrderByDescending(g => g.TotalBalance).Take(5).ToList(),
+            TopByBalance = all.OrderByDescending(g => g.TotalBalance).Take(5).ToList(),
         };
     }
 

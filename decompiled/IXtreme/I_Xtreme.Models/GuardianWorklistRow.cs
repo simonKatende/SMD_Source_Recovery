@@ -113,6 +113,6 @@ public class DashboardData
     public int     BrokenPromiseCount         { get; set; }
     public int     ActivePromiseCount         { get; set; }
     public List<PriorityGroupStats> ByPriority  { get; set; } = new();
-    public List<GuardianWorklistRow> TopCritical { get; set; } = new();   // top 5 by balance
+    public List<GuardianWorklistRow> TopByBalance { get; set; } = new();   // top 5 by balance
     public DateTime AsOf                        { get; set; } = DateTime.Now;
 }
