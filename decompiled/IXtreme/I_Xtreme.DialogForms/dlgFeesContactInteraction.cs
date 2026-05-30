@@ -16,8 +16,9 @@ public class dlgFeesContactInteraction : XtraForm
     private SimpleButton btnPrev, btnNext;
     private LabelControl lblTitle;
 
-    // ── Info bar ──────────────────────────────────────────────────────────────
-    private LabelControl lblContactNum, lblStudentCount, lblTotalBalance, lblPayPct;
+    // ── Info panel (structured header) ────────────────────────────────────────
+    private Panel        _infoPanel;
+    private Label        _lblGuardianName, _lblContacts, _lblBalance;
 
     // ── Students grid ─────────────────────────────────────────────────────────
     private DevExpress.XtraGrid.GridControl gridStudents;
@@ -31,12 +32,13 @@ public class dlgFeesContactInteraction : XtraForm
     private DevExpress.XtraEditors.RadioGroup rgChannel;
     private DateEdit      dteContactDate;
     private LabelControl  lblContactDate;
+    private LabelControl  lblOutcome;
     private ComboBoxEdit  cboOutcome;
     private MemoEdit      memoNote;
     private LabelControl  lblPromiseDate, lblPromiseAmount;
     private DateEdit      dtePromiseDate;
     private SpinEdit      txtPromiseAmount;
-    private SimpleButton  btnSave, btnClear;
+    private SimpleButton  btnSave, btnSaveNext, btnClear;
 
     // ── State ─────────────────────────────────────────────────────────────────
     private readonly List<GuardianWorklistRow> _worklist;
@@ -60,7 +62,7 @@ public class dlgFeesContactInteraction : XtraForm
     {
         this.SuspendLayout();
         this.Text            = "Contact Interaction";
-        this.Size            = new Size(900, 720);
+        this.Size            = new Size(900, 760);
         this.StartPosition   = FormStartPosition.CenterParent;
         this.FormBorderStyle = FormBorderStyle.Sizable;
 
@@ -82,14 +84,38 @@ public class dlgFeesContactInteraction : XtraForm
         };
         navBar.Controls.AddRange(new Control[] { btnPrev, btnNext, lblTitle });
 
-        // ── Info bar ──────────────────────────────────────────────────────────
-        var infoBar = new Panel { Dock = DockStyle.Top, Height = 28 };
+        // ── Info panel (structured header) ────────────────────────────────────
+        this._infoPanel = new Panel
+        {
+            Dock      = DockStyle.Top,
+            Height    = 72,
+            BackColor = Color.FromArgb(245, 245, 245),
+        };
 
-        this.lblContactNum   = new LabelControl { Location = new Point(8, 6),   AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(200, 18) };
-        this.lblStudentCount = new LabelControl { Location = new Point(220, 6),  AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(120, 18) };
-        this.lblTotalBalance = new LabelControl { Location = new Point(350, 6),  AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(200, 18) };
-        this.lblPayPct       = new LabelControl { Location = new Point(560, 6),  AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(160, 18) };
-        infoBar.Controls.AddRange(new Control[] { lblContactNum, lblStudentCount, lblTotalBalance, lblPayPct });
+        this._lblGuardianName = new Label
+        {
+            Font     = new Font("Tahoma", 13, FontStyle.Bold),
+            Location = new Point(8, 6),
+            AutoSize = true,
+        };
+        this._lblContacts = new Label
+        {
+            Font      = new Font("Consolas", 11),
+            Location  = new Point(8, 30),
+            AutoSize  = true,
+            ForeColor = Color.Navy,
+        };
+        this._lblBalance = new Label
+        {
+            Font      = new Font("Tahoma", 9),
+            ForeColor = Color.DarkRed,
+            Location  = new Point(8, 52),
+            AutoSize  = true,
+        };
+        this._infoPanel.Controls.AddRange(new Control[]
+        {
+            _lblGuardianName, _lblContacts, _lblBalance,
+        });
 
         // ── Contact log panel (Bottom) ─────────────────────────────────────────
         var logPanel = new Panel { Dock = DockStyle.Bottom, Height = 220 };
@@ -115,24 +141,26 @@ public class dlgFeesContactInteraction : XtraForm
             EditValue = DateTime.Today,
         };
 
+        this.lblOutcome = new LabelControl { Text = "Outcome:", Location = new Point(8, 52) };
+
         this.cboOutcome = new ComboBoxEdit();
         this.cboOutcome.Properties.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
         foreach (ContactOutcome o in Enum.GetValues(typeof(ContactOutcome)))
             this.cboOutcome.Properties.Items.Add(o);
         this.cboOutcome.SelectedIndex = -1;
-        this.cboOutcome.Location      = new Point(8, 48);
+        this.cboOutcome.Location      = new Point(70, 46);
         this.cboOutcome.Width         = 200;
         this.cboOutcome.SelectedIndexChanged += (s, e) =>
         {
             bool promised = cboOutcome.SelectedItem is ContactOutcome o2 && o2 == ContactOutcome.Promised;
-            lblPromiseDate.Visible  = dtePromiseDate.Visible  = promised;
+            lblPromiseDate.Visible   = dtePromiseDate.Visible   = promised;
             lblPromiseAmount.Visible = txtPromiseAmount.Visible = promised;
         };
 
-        this.lblPromiseDate  = new LabelControl { Text = "Promise date:",   Location = new Point(220, 52), Visible = false };
-        this.dtePromiseDate  = new DateEdit     { Location = new Point(310, 47), Width = 120, Visible = false };
-        this.lblPromiseAmount = new LabelControl { Text = "Promise amount:", Location = new Point(440, 52), Visible = false };
-        this.txtPromiseAmount = new SpinEdit    { Location = new Point(545, 47), Width = 110, Visible = false };
+        this.lblPromiseDate   = new LabelControl { Text = "Promise date:",   Location = new Point(282, 52), Visible = false };
+        this.dtePromiseDate   = new DateEdit     { Location = new Point(370, 47), Width = 120, Visible = false };
+        this.lblPromiseAmount = new LabelControl { Text = "Promise amount:", Location = new Point(500, 52), Visible = false };
+        this.txtPromiseAmount = new SpinEdit     { Location = new Point(600, 47), Width = 110, Visible = false };
         this.txtPromiseAmount.Properties.IsFloatValue = true;
         this.txtPromiseAmount.Properties.MaskSettings.Set("mask", "N0");
 
@@ -141,15 +169,19 @@ public class dlgFeesContactInteraction : XtraForm
         this.btnSave = new SimpleButton { Text = "Save Contact", Location = new Point(8, 168), Width = 120 };
         this.btnSave.Click += BtnSave_Click;
 
-        this.btnClear = new SimpleButton { Text = "Clear", Location = new Point(136, 168), Width = 80 };
+        this.btnSaveNext = new SimpleButton { Text = "Save & Next", Location = new Point(136, 168), Width = 110 };
+        this.btnSaveNext.Click += BtnSaveNext_Click;
+
+        this.btnClear = new SimpleButton { Text = "Clear", Location = new Point(254, 168), Width = 80 };
         this.btnClear.Click += (s, e) => ResetContactForm();
 
         logPanel.Controls.AddRange(new Control[]
         {
             lblChannel, rgChannel, lblContactDate, dteContactDate,
-            cboOutcome, lblPromiseDate, dtePromiseDate,
+            lblOutcome, cboOutcome,
+            lblPromiseDate, dtePromiseDate,
             lblPromiseAmount, txtPromiseAmount,
-            memoNote, btnSave, btnClear,
+            memoNote, btnSave, btnSaveNext, btnClear,
         });
 
         // ── Students grid ─────────────────────────────────────────────────────
@@ -161,6 +193,7 @@ public class dlgFeesContactInteraction : XtraForm
         this.gridViewStudents.OptionsView.ShowGroupPanel     = false;
         this.gridViewStudents.OptionsBehavior.Editable       = false;
         this.gridViewStudents.CustomColumnDisplayText       += GridViewStudents_CustomColumnDisplayText;
+        this.gridStudents.MouseDoubleClick                  += GridStudents_MouseDoubleClick;
         studentsPanel.Controls.Add(this.gridStudents);
 
         // ── History grid (Fill) ───────────────────────────────────────────────
@@ -176,7 +209,7 @@ public class dlgFeesContactInteraction : XtraForm
         this.Controls.Add(this.gridHistory);     // Fill
         this.Controls.Add(studentsPanel);        // Top (after logPanel so z-order correct)
         this.Controls.Add(logPanel);             // Bottom
-        this.Controls.Add(infoBar);              // Top
+        this.Controls.Add(this._infoPanel);      // Top
         this.Controls.Add(navBar);               // Top
 
         this.ResumeLayout(false);
@@ -192,6 +225,12 @@ public class dlgFeesContactInteraction : XtraForm
         LoadCurrent();
     }
 
+    private void LoadGuardian(int index)
+    {
+        _currentIndex = index;
+        LoadCurrent();
+    }
+
     private void LoadCurrent()
     {
         var g = Current;
@@ -202,12 +241,13 @@ public class dlgFeesContactInteraction : XtraForm
         Text            = $"Contact Interaction — {g.GuardianLabel} ({_currentIndex + 1} of {_worklist.Count})";
         lblTitle.Text   = g.GuardianLabel;
 
-        // Info bar
+        // Structured info header
         bool noPhone = g.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal);
-        lblContactNum.Text   = noPhone ? "(no phone on file)" : g.GuardianContact;
-        lblStudentCount.Text = $"{g.StudentCount} student{(g.StudentCount == 1 ? "" : "s")}";
-        lblTotalBalance.Text = $"Balance: UGX {g.TotalBalance:N0}";
-        lblPayPct.Text       = $"Paid: {g.PaymentPercent:F1}%  (Pacing: {g.PacingGap:P0} behind)";
+        _lblGuardianName.Text = g.GuardianLabel;
+        _lblContacts.Text     = noPhone
+            ? "(no phone on file)"
+            : $"Contact: {g.GuardianContact}     Alt: {(!string.IsNullOrEmpty(g.Contact2) ? g.Contact2 : "—")}";
+        _lblBalance.Text      = $"Balance: UGX {g.TotalBalance:N0}   ·   {g.StudentCount} student(s)   ·   {g.PaymentPercent:F1}% paid";
 
         // Students grid
         gridStudents.DataSource = g.Students;
@@ -230,13 +270,41 @@ public class dlgFeesContactInteraction : XtraForm
         if (_studentsColumnsConfigured) return;
         _studentsColumnsConfigured = true;
 
-        HideStudCol("TotalBilled");
-        HideStudCol("TotalPaid");
+        // Hide columns not explicitly listed
+        var keep = new HashSet<string>
+        {
+            "StudentNumber", "StudentId", "FullName", "ClassId",
+            "DayBoarder", "TotalBilled", "Balance", "PaymentPercent",
+        };
+        foreach (DevExpress.XtraGrid.Columns.GridColumn col in gridViewStudents.Columns)
+        {
+            if (!keep.Contains(col.FieldName))
+                col.Visible = false;
+        }
 
-        SetStudCaption("FullName",       "Name");
-        SetStudCaption("ClassId",        "Class");
-        SetStudCaption("Balance",        "Balance (UGX)");
-        SetStudCaption("PaymentPercent", "% Paid");
+        void SetStud(string field, string caption, int width)
+        {
+            var c = gridViewStudents.Columns[field];
+            if (c == null) return;
+            c.Caption = caption;
+            c.Width   = width;
+        }
+
+        SetStud("StudentNumber",  "Student#",      110);
+        SetStud("StudentId",      "Student ID",    100);
+        SetStud("FullName",       "Name",          200);
+        SetStud("ClassId",        "Class",          60);
+        SetStud("DayBoarder",     "D/B",            45);
+        SetStud("TotalBilled",    "Total Payable", 110);
+        SetStud("Balance",        "Balance (UGX)", 110);
+        SetStud("PaymentPercent", "% Paid",         70);
+
+        var colBilled = gridViewStudents.Columns["TotalBilled"];
+        if (colBilled != null)
+        {
+            colBilled.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
+            colBilled.DisplayFormat.FormatString = "N0";
+        }
 
         var colBal = gridViewStudents.Columns["Balance"];
         if (colBal != null)
@@ -244,20 +312,6 @@ public class dlgFeesContactInteraction : XtraForm
             colBal.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
             colBal.DisplayFormat.FormatString = "N0";
         }
-
-        gridViewStudents.BestFitColumns();
-    }
-
-    private void HideStudCol(string field)
-    {
-        var c = gridViewStudents.Columns[field];
-        if (c != null) c.Visible = false;
-    }
-
-    private void SetStudCaption(string field, string caption)
-    {
-        var c = gridViewStudents.Columns[field];
-        if (c != null) c.Caption = caption;
     }
 
     private bool _historyColumnsConfigured = false;
@@ -298,6 +352,20 @@ public class dlgFeesContactInteraction : XtraForm
     {
         if (e.Column.FieldName == "PaymentPercent" && e.Value is decimal pct)
             e.DisplayText = $"{pct:F1}%";
+    }
+
+    // ── Student grid double-click → open payment form ─────────────────────────
+
+    private void GridStudents_MouseDoubleClick(object sender, MouseEventArgs e)
+    {
+        var pt  = gridStudents.PointToClient(Cursor.Position);
+        var hit = gridViewStudents.CalcHitInfo(pt);
+        if (!hit.InRow) return;
+        var student = gridViewStudents.GetRow(hit.RowHandle) as StudentSummary;
+        if (student == null) return;
+
+        using var dlg = new StudentFeesPayment("SingleStudentPayment");
+        dlg.ShowDialog(this);
     }
 
     // ── History right-click (Edit / Delete) ───────────────────────────────────
@@ -362,7 +430,7 @@ public class dlgFeesContactInteraction : XtraForm
 
     private void ResetContactForm()
     {
-        _editContactId          = -1;
+        _editContactId           = -1;
         dteContactDate.EditValue = DateTime.Today;
         rgChannel.SelectedIndex  = 1;   // Phone
         cboOutcome.SelectedIndex = -1;
@@ -374,19 +442,19 @@ public class dlgFeesContactInteraction : XtraForm
         btnSave.Text             = "Save Contact";
     }
 
-    private void BtnSave_Click(object sender, EventArgs e)
+    private bool TrySaveContact()
     {
         if (dteContactDate.DateTime.Date > DateTime.Today)
         {
             XtraMessageBox.Show("Contact date cannot be in the future.", "Validation",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
+            return false;
         }
         if (cboOutcome.SelectedItem == null)
         {
             XtraMessageBox.Show("Please select a contact outcome before saving.", "Validation",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
+            return false;
         }
 
         var channel = (ContactChannel)rgChannel.EditValue;
@@ -396,7 +464,7 @@ public class dlgFeesContactInteraction : XtraForm
         {
             XtraMessageBox.Show("Please set a promise date when outcome is 'Promised'.", "Validation",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return;
+            return false;
         }
 
         var entry = new FeesContactLog
@@ -428,10 +496,46 @@ public class dlgFeesContactInteraction : XtraForm
             var nums = Current.Students.Select(s => s.StudentNumber);
             gridHistory.DataSource = _service.GetGuardianContactHistory(Current.GuardianContact, nums);
             ResetContactForm();
+            return true;
         }
         catch (Exception ex)
         {
             XtraMessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+            return false;
         }
+    }
+
+    private void BtnSave_Click(object sender, EventArgs e)
+    {
+        bool isSms = rgChannel.EditValue is ContactChannel ch && ch == ContactChannel.SMS;
+        if (isSms)
+        {
+            var smsForm = new SMSGuardian();
+            smsForm.txtReceipient.Text = Current.GuardianContact;
+            if (smsForm.ShowDialog(this) != DialogResult.OK) return;
+            var contactedIdx = cboOutcome.Properties.Items.IndexOf(ContactOutcome.Contacted);
+            if (contactedIdx < 0) contactedIdx = cboOutcome.Properties.Items.IndexOf("Contacted");
+            if (contactedIdx >= 0) cboOutcome.SelectedIndex = contactedIdx;
+        }
+        TrySaveContact();
+    }
+
+    private void BtnSaveNext_Click(object sender, EventArgs e)
+    {
+        bool isSms = rgChannel.EditValue is ContactChannel ch && ch == ContactChannel.SMS;
+        if (isSms)
+        {
+            var smsForm = new SMSGuardian();
+            smsForm.txtReceipient.Text = Current.GuardianContact;
+            if (smsForm.ShowDialog(this) != DialogResult.OK) return;
+            var contactedIdx = cboOutcome.Properties.Items.IndexOf(ContactOutcome.Contacted);
+            if (contactedIdx < 0) contactedIdx = cboOutcome.Properties.Items.IndexOf("Contacted");
+            if (contactedIdx >= 0) cboOutcome.SelectedIndex = contactedIdx;
+        }
+        if (!TrySaveContact()) return;
+        if (_currentIndex < _worklist.Count - 1)
+            LoadGuardian(_currentIndex + 1);
+        else
+            this.DialogResult = DialogResult.OK;
     }
 }
