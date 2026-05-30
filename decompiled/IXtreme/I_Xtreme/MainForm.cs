@@ -541,6 +541,8 @@ public class MainForm : RibbonForm
 
 	private DevExpress.XtraBars.BarButtonItem bbiStudentWorklist;
 
+	private DevExpress.XtraBars.BarButtonItem bbiSendReminders;
+
 	private DevExpress.XtraBars.BarButtonItem bbiFeesSettings;
 
 	private DevExpress.XtraBars.BarButtonItem bbiFeesPreview;
@@ -24744,6 +24746,13 @@ public class MainForm : RibbonForm
 		this.ribbonPageGroupFeesSettings.Name = "ribbonPageGroupFeesSettings";
 		this.ribbonPageGroupFeesSettings.Text = "Settings";
 		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiFeesSettings);
+		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiSendReminders);
+		this.bbiSendReminders = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiSendReminders.Name    = "bbiSendReminders";
+		this.bbiSendReminders.Caption = "Send Reminders";
+		this.bbiSendReminders.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesTracking;
+		this.bbiSendReminders.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesTracking;
+		this.bbiSendReminders.ItemClick += (s, e) => _usrFeesFollowUp?.SendReminders();
 		// --- Fees Follow-up: Printing & Exporting group ---
 		this.bbiFeesPreview = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiFeesPreview.Name    = "bbiFeesPreview";
@@ -24771,7 +24780,7 @@ public class MainForm : RibbonForm
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesExport);
 		// Register items with the ribbon manager so they get an ID
 		this.ribbon.Items.AddRange(new DevExpress.XtraBars.BarItem[]
-			{ bbiFeesSettings, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPreview, bbiFeesPrint, bbiFeesExport });
+			{ bbiFeesSettings, bbiSendReminders, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPreview, bbiFeesPrint, bbiFeesExport });
 		// Attach both groups to the ribbon page
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesWorklists);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesSettings);

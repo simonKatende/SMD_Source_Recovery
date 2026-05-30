@@ -381,6 +381,27 @@ public class usrFeesFollowUp : XtraUserControl
             LoadDashboard();
     }
 
+    public void SendReminders()
+    {
+        try
+        {
+            _service.CheckAndSendSmsReminders();
+            XtraMessageBox.Show(
+                "SMS reminders sent successfully.",
+                "Fees Follow-up",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            XtraMessageBox.Show(
+                $"Could not send SMS reminders.\n\n{ex.Message}",
+                "Fees Follow-up",
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Warning);
+        }
+    }
+
     // ── Legacy ribbon stubs — kept until Task 11 restructures the ribbon ──────
     // These were on the old worklist-grid design. They are no-ops here;
     // Task 11 will remove or replace the ribbon buttons that call them.
