@@ -529,13 +529,19 @@ public class MainForm : RibbonForm
 
 	private RibbonPage ribbonPageFeesFollowUp;
 
+	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesWorklists;
+
 	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesSettings;
 
 	private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupFeesPrint;
 
-	private DevExpress.XtraBars.BarButtonItem bbiFeesSettings;
+	private DevExpress.XtraBars.BarButtonItem bbiDailyWorklist;
 
-	private DevExpress.XtraBars.BarButtonItem bbiFeesOpenContact;
+	private DevExpress.XtraBars.BarButtonItem bbiGuardianWorklist;
+
+	private DevExpress.XtraBars.BarButtonItem bbiStudentWorklist;
+
+	private DevExpress.XtraBars.BarButtonItem bbiFeesSettings;
 
 	private DevExpress.XtraBars.BarButtonItem bbiFeesPreview;
 
@@ -24709,17 +24715,35 @@ public class MainForm : RibbonForm
 		this.bbiFeesSettings.ImageOptions.Image      = (System.Drawing.Image)resources.GetObject("barButtonItem296.ImageOptions.Image");
 		this.bbiFeesSettings.ImageOptions.LargeImage = (System.Drawing.Image)resources.GetObject("barButtonItem296.ImageOptions.LargeImage");
 		this.bbiFeesSettings.ItemClick += (s, e) => _usrFeesFollowUp?.OpenSettings();
-		this.bbiFeesOpenContact = new DevExpress.XtraBars.BarButtonItem();
-		this.bbiFeesOpenContact.Name    = "bbiFeesOpenContact";
-		this.bbiFeesOpenContact.Caption = "Open Contact View";
-		this.bbiFeesOpenContact.ImageOptions.Image      = I_Xtreme.Properties.Resources.inv_catEditCat;
-		this.bbiFeesOpenContact.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.inv_catEditCat;
-		this.bbiFeesOpenContact.ItemClick += (s, e) => _usrFeesFollowUp?.OpenContactView();
+		// --- Fees Follow-up: Worklists group ---
+		this.bbiDailyWorklist = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiDailyWorklist.Name    = "bbiDailyWorklist";
+		this.bbiDailyWorklist.Caption = "Daily Worklist";
+		this.bbiDailyWorklist.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesReport;
+		this.bbiDailyWorklist.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesReport;
+		this.bbiDailyWorklist.ItemClick += (s, e) => _usrFeesFollowUp?.OpenDailyWorklist();
+		this.bbiGuardianWorklist = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiGuardianWorklist.Name    = "bbiGuardianWorklist";
+		this.bbiGuardianWorklist.Caption = "Guardian Worklist";
+		this.bbiGuardianWorklist.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesTracking;
+		this.bbiGuardianWorklist.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesTracking;
+		this.bbiGuardianWorklist.ItemClick += (s, e) => _usrFeesFollowUp?.OpenGuardianWorklist();
+		this.bbiStudentWorklist = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiStudentWorklist.Name    = "bbiStudentWorklist";
+		this.bbiStudentWorklist.Caption = "Student Worklist";
+		this.bbiStudentWorklist.ImageOptions.Image      = I_Xtreme.Properties.Resources.StudentLedger;
+		this.bbiStudentWorklist.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.StudentLedger;
+		this.bbiStudentWorklist.ItemClick += (s, e) => _usrFeesFollowUp?.OpenStudentWorklist();
+		this.ribbonPageGroupFeesWorklists = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
+		this.ribbonPageGroupFeesWorklists.Name = "ribbonPageGroupFeesWorklists";
+		this.ribbonPageGroupFeesWorklists.Text = "Worklists";
+		this.ribbonPageGroupFeesWorklists.ItemLinks.Add(this.bbiDailyWorklist);
+		this.ribbonPageGroupFeesWorklists.ItemLinks.Add(this.bbiGuardianWorklist);
+		this.ribbonPageGroupFeesWorklists.ItemLinks.Add(this.bbiStudentWorklist);
 		this.ribbonPageGroupFeesSettings = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroupFeesSettings.Name = "ribbonPageGroupFeesSettings";
 		this.ribbonPageGroupFeesSettings.Text = "Settings";
 		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiFeesSettings);
-		this.ribbonPageGroupFeesSettings.ItemLinks.Add(this.bbiFeesOpenContact);
 		// --- Fees Follow-up: Printing & Exporting group ---
 		this.bbiFeesPreview = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiFeesPreview.Name    = "bbiFeesPreview";
@@ -24747,8 +24771,9 @@ public class MainForm : RibbonForm
 		this.ribbonPageGroupFeesPrint.ItemLinks.Add(this.bbiFeesExport);
 		// Register items with the ribbon manager so they get an ID
 		this.ribbon.Items.AddRange(new DevExpress.XtraBars.BarItem[]
-			{ bbiFeesSettings, bbiFeesOpenContact, bbiFeesPreview, bbiFeesPrint, bbiFeesExport });
+			{ bbiFeesSettings, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPreview, bbiFeesPrint, bbiFeesExport });
 		// Attach both groups to the ribbon page
+		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesWorklists);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesSettings);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesPrint);
 		this.ribbonPageGroup35.ItemLinks.Add(this.barButtonItem43);
