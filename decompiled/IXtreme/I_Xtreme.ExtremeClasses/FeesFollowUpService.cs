@@ -93,6 +93,35 @@ public class FeesFollowUpService
             SmsTemplate2Day  = dict.TryGetValue("SmsTemplate2Day",  out var t2)  ? t2  : "",
             SmsTemplateDayOf = dict.TryGetValue("SmsTemplateDayOf", out var tdo) ? tdo : "",
             SmsTemplateOverdue = dict.TryGetValue("SmsTemplateOverdue", out var tov) ? tov : "",
+            PartialPromiseCoverageThreshold =
+                dict.TryGetValue("PartialPromiseCoverageThreshold", out var pp)
+                && double.TryParse(pp, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double ppd)
+                    ? ppd : 0.50,
+            StaleHighBalanceAmount =
+                dict.TryGetValue("StaleHighBalanceAmount", out var sha)
+                && decimal.TryParse(sha, System.Globalization.NumberStyles.Number,
+                                    System.Globalization.CultureInfo.InvariantCulture, out decimal shav)
+                    ? shav : 1_000_000m,
+            StaleHighBalanceDays =
+                dict.TryGetValue("StaleHighBalanceDays", out var shd) && int.TryParse(shd, out int shdi)
+                    ? shdi : 3,
+            StaleMedBalanceAmount =
+                dict.TryGetValue("StaleMedBalanceAmount", out var sma)
+                && decimal.TryParse(sma, System.Globalization.NumberStyles.Number,
+                                    System.Globalization.CultureInfo.InvariantCulture, out decimal smav)
+                    ? smav : 500_000m,
+            StaleMedBalanceDays =
+                dict.TryGetValue("StaleMedBalanceDays", out var smd) && int.TryParse(smd, out int smdi)
+                    ? smdi : 5,
+            NoProgressEscalationWeeks =
+                dict.TryGetValue("NoProgressEscalationWeeks", out var npw) && int.TryParse(npw, out int npwi)
+                    ? npwi : 4,
+            NoProgressPaymentThreshold =
+                dict.TryGetValue("NoProgressPaymentThreshold", out var npt)
+                && double.TryParse(npt, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double nptd)
+                    ? nptd : 30.0,
         };
     }
 
@@ -107,6 +136,18 @@ public class FeesFollowUpService
         Upsert(conn, "SmsTemplate2Day",            s.SmsTemplate2Day ?? "");
         Upsert(conn, "SmsTemplateDayOf",           s.SmsTemplateDayOf ?? "");
         Upsert(conn, "SmsTemplateOverdue", s.SmsTemplateOverdue ?? "");
+        Upsert(conn, "PartialPromiseCoverageThreshold",
+            s.PartialPromiseCoverageThreshold.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "StaleHighBalanceAmount",
+            s.StaleHighBalanceAmount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "StaleHighBalanceDays",  s.StaleHighBalanceDays.ToString());
+        Upsert(conn, "StaleMedBalanceAmount",
+            s.StaleMedBalanceAmount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "StaleMedBalanceDays",   s.StaleMedBalanceDays.ToString());
+        Upsert(conn, "NoProgressEscalationWeeks",
+            s.NoProgressEscalationWeeks.ToString());
+        Upsert(conn, "NoProgressPaymentThreshold",
+            s.NoProgressPaymentThreshold.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private static void Upsert(SqlConnection conn, string key, string value)
