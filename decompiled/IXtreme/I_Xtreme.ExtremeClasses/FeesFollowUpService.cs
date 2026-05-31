@@ -236,9 +236,10 @@ public class FeesFollowUpService
         };
     }
 
-    public List<GuardianWorklistRow> GetGuardianWorklist(string classFilter, decimal minBalance)
+    public List<GuardianWorklistRow> GetGuardianWorklist(string classFilter, decimal minBalance,
+        FeesFollowUpSettings settings = null)
     {
-        var settings    = GetSettings();
+        settings ??= GetSettings();
         DateTime? tStart = settings.TermStartDate;
         DateTime? tEnd   = settings.TermEndDate;
         bool hasTermDates = tStart.HasValue && tEnd.HasValue;
@@ -439,8 +440,14 @@ public class FeesFollowUpService
                 ? Math.Round(g.TotalPaid / g.TotalBilled * 100m, 1) : 0m;
             double payProgress = g.TotalBilled > 0 ? (double)(g.TotalPaid / g.TotalBilled) : 0.0;
             g.PacingGap = hasTermDates ? termProgress - payProgress : 0.0;
-            g.Tier = ComputeGuardianTier(g, settings.StaleThresholdDays,
-                                         settings.CriticalPacingGapThreshold, hasTermDates);
+            int effectiveStaleDays = g.TotalBalance >= settings.StaleHighBalanceAmount
+                ? settings.StaleHighBalanceDays
+                : g.TotalBalance >= settings.StaleMedBalanceAmount
+                    ? settings.StaleMedBalanceDays
+                    : settings.StaleThresholdDays;
+            g.Tier = ComputeGuardianTier(g, effectiveStaleDays,
+                settings.CriticalPacingGapThreshold, hasTermDates,
+                settings.NoProgressEscalationWeeks, settings.NoProgressPaymentThreshold);
         }
 
         // Mark Call Required for guardians with any Overdue SMS sent
@@ -836,10 +843,18 @@ WHERE lp.rn = 1
     }
 
     private static PriorityTier ComputeGuardianTier(
-        GuardianWorklistRow g, int stalenessDays, double criticalThreshold, bool hasTermDates)
+        GuardianWorklistRow g, int stalenessDays, double criticalThreshold, bool hasTermDates,
+        int noProgressWeeks, double noProgressThreshold)
     {
         if (hasTermDates && g.PacingGap >= criticalThreshold)
             return PriorityTier.Critical;
+
+        if (noProgressWeeks > 0 && g.FirstContactDate.HasValue)
+        {
+            double weeksFollowedUp = (DateTime.Today - g.FirstContactDate.Value.Date).TotalDays / 7.0;
+            if (weeksFollowedUp > noProgressWeeks && (double)g.PaymentPercent < noProgressThreshold)
+                return PriorityTier.Critical;
+        }
 
         if (g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date < DateTime.Today)
         {
