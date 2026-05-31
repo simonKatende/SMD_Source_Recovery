@@ -485,7 +485,7 @@ public class FeesFollowUpService
             int totalDays  = (int)(tEnd - termSunday).TotalDays;
             totalTermWeeks = Math.Max(1, (totalDays + 6) / 7);
             int elapsedWeeks = Math.Max(0, (int)(todaySunday - termSunday).TotalDays / 7);
-            termWeek = Math.Min(totalTermWeeks, elapsedWeeks + 1);
+            termWeek = Math.Min(totalTermWeeks - 1, elapsedWeeks);  // 0-based: week 0 = first week
         }
 
         return new DashboardData
