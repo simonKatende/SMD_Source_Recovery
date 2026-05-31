@@ -66,6 +66,7 @@ public class FeesFollowUpService
                 dict.TryGetValue("CriticalPacingGapThreshold", out var ct) && double.TryParse(ct, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double ctd) ? ctd : 0.50,
             SmsTemplate2Day  = dict.TryGetValue("SmsTemplate2Day",  out var t2)  ? t2  : "",
             SmsTemplateDayOf = dict.TryGetValue("SmsTemplateDayOf", out var tdo) ? tdo : "",
+            SmsTemplateOverdue = dict.TryGetValue("SmsTemplateOverdue", out var tov) ? tov : "",
         };
     }
 
@@ -79,6 +80,7 @@ public class FeesFollowUpService
         Upsert(conn, "CriticalPacingGapThreshold", s.CriticalPacingGapThreshold.ToString("R"));
         Upsert(conn, "SmsTemplate2Day",            s.SmsTemplate2Day ?? "");
         Upsert(conn, "SmsTemplateDayOf",           s.SmsTemplateDayOf ?? "");
+        Upsert(conn, "SmsTemplateOverdue", s.SmsTemplateOverdue ?? "");
     }
 
     private static void Upsert(SqlConnection conn, string key, string value)
@@ -618,11 +620,12 @@ public class FeesFollowUpService
     }
 
     private static string ApplySmsTemplate(string template, decimal balance,
-        string names, DateTime date, string school, decimal promisedAmount)
+        string studentName, string classId, DateTime date, string school, decimal promisedAmount)
         => template
             .Replace("{promised_amount}", $"{promisedAmount:#,#}")
             .Replace("{balance}",         $"{balance:#,#}")
-            .Replace("{names}",           names)
+            .Replace("{names}",           studentName)
+            .Replace("{class}",           classId ?? "")
             .Replace("{date}",            date.ToString("dd-MMM-yyyy"))
             .Replace("{school}",          school);
 
@@ -636,25 +639,33 @@ public class FeesFollowUpService
         return cmd.ExecuteScalar() as string ?? "";
     }
 
-    private bool AlreadySentReminder(SqlConnection conn, string guardianKey, DateTime promiseDate, string type)
+    private bool AlreadySentReminder(SqlConnection conn, string guardianKey,
+        string studentNumber, DateTime promiseDate, string type)
     {
         using var cmd = new SqlCommand(
-            "SELECT COUNT(1) FROM tbl_SmsReminderLog WHERE GuardianKey = @gk AND PromiseDate = @pd AND ReminderType = @type",
+            @"SELECT COUNT(1) FROM tbl_SmsReminderLog
+              WHERE GuardianKey = @gk
+                AND (StudentNumber = @sn OR (StudentNumber IS NULL AND @sn IS NULL))
+                AND PromiseDate   = @pd
+                AND ReminderType  = @type",
             conn);
-        cmd.Parameters.Add("@gk",   SqlDbType.VarChar, 20).Value = guardianKey;
-        cmd.Parameters.Add("@pd",   SqlDbType.Date).Value         = promiseDate.Date;
-        cmd.Parameters.Add("@type", SqlDbType.VarChar, 20).Value  = type;
+        cmd.Parameters.Add("@gk",   SqlDbType.VarChar,  20).Value = guardianKey;
+        cmd.Parameters.Add("@sn",   SqlDbType.NVarChar,  20).Value = (object)studentNumber ?? DBNull.Value;
+        cmd.Parameters.Add("@pd",   SqlDbType.Date).Value           = promiseDate.Date;
+        cmd.Parameters.Add("@type", SqlDbType.VarChar,  20).Value  = type;
         return (int)cmd.ExecuteScalar() > 0;
     }
 
-    private void LogReminderSent(SqlConnection conn, string guardianKey, DateTime promiseDate, string type)
+    private void LogReminderSent(SqlConnection conn, string guardianKey,
+        string studentNumber, DateTime promiseDate, string type)
     {
         using var cmd = new SqlCommand(
-            "INSERT INTO tbl_SmsReminderLog (GuardianKey, PromiseDate, ReminderType) VALUES (@gk, @pd, @type)",
+            "INSERT INTO tbl_SmsReminderLog (GuardianKey, StudentNumber, PromiseDate, ReminderType) VALUES (@gk, @sn, @pd, @type)",
             conn);
-        cmd.Parameters.Add("@gk",   SqlDbType.VarChar, 20).Value = guardianKey;
-        cmd.Parameters.Add("@pd",   SqlDbType.Date).Value         = promiseDate.Date;
-        cmd.Parameters.Add("@type", SqlDbType.VarChar, 20).Value  = type;
+        cmd.Parameters.Add("@gk",   SqlDbType.VarChar,  20).Value = guardianKey;
+        cmd.Parameters.Add("@sn",   SqlDbType.NVarChar,  20).Value = (object)studentNumber ?? DBNull.Value;
+        cmd.Parameters.Add("@pd",   SqlDbType.Date).Value           = promiseDate.Date;
+        cmd.Parameters.Add("@type", SqlDbType.VarChar,  20).Value  = type;
         cmd.ExecuteNonQuery();
     }
 
