@@ -36,6 +36,8 @@ public class StudentSummary
     public decimal TotalPaid      { get; set; }
     public decimal Balance        { get; set; }
     public decimal PaymentPercent { get; set; }
+
+    public override string ToString() => $"{FullName} ({ClassId})";
 }
 
 public class GuardianWorklistRow

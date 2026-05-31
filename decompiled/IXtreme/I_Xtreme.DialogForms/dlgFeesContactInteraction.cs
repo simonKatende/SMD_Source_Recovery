@@ -40,6 +40,8 @@ public class dlgFeesContactInteraction : XtraForm
     private DateEdit      dtePromiseDate;
     private SpinEdit      txtPromiseAmount;
     private SimpleButton  btnSave, btnSaveNext, btnClear;
+    private ComboBoxEdit  _cboPromiseStudent;
+    private LabelControl  _lblPromiseStudent;
 
     // ── State ─────────────────────────────────────────────────────────────────
     private readonly List<GuardianWorklistRow> _worklist;
@@ -197,8 +199,9 @@ public class dlgFeesContactInteraction : XtraForm
         this.cboOutcome.SelectedIndexChanged += (s, e) =>
         {
             bool promised = cboOutcome.SelectedItem is ContactOutcome o2 && o2 == ContactOutcome.Promised;
-            lblPromiseDate.Visible   = dtePromiseDate.Visible   = promised;
-            lblPromiseAmount.Visible = txtPromiseAmount.Visible = promised;
+            lblPromiseDate.Visible     = dtePromiseDate.Visible     = promised;
+            lblPromiseAmount.Visible   = txtPromiseAmount.Visible   = promised;
+            _lblPromiseStudent.Visible = _cboPromiseStudent.Visible = promised;
         };
 
         this.lblPromiseDate   = new LabelControl { Text = "Promise date:",   Location = new Point(282, 52), Visible = false };
@@ -207,6 +210,21 @@ public class dlgFeesContactInteraction : XtraForm
         this.txtPromiseAmount = new SpinEdit     { Location = new Point(600, 47), Width = 110, Visible = false };
         this.txtPromiseAmount.Properties.IsFloatValue = true;
         this.txtPromiseAmount.Properties.MaskSettings.Set("mask", "N0");
+
+        this._lblPromiseStudent = new LabelControl
+        {
+            Text     = "Student:",
+            Location = new System.Drawing.Point(725, 52),
+            Visible  = false,
+        };
+        this._cboPromiseStudent = new ComboBoxEdit
+        {
+            Location = new System.Drawing.Point(786, 47),
+            Width    = 200,
+            Visible  = false,
+        };
+        this._cboPromiseStudent.Properties.TextEditStyle =
+            DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
 
         this.memoNote = new MemoEdit { Location = new Point(8, 80), Size = new Size(560, 80) };
 
@@ -225,6 +243,7 @@ public class dlgFeesContactInteraction : XtraForm
             lblOutcome, cboOutcome,
             lblPromiseDate, dtePromiseDate,
             lblPromiseAmount, txtPromiseAmount,
+            _lblPromiseStudent, _cboPromiseStudent,
             memoNote, btnSave, btnSaveNext, btnClear,
         });
 
@@ -309,6 +328,13 @@ public class dlgFeesContactInteraction : XtraForm
         // Reposition after text change (AutoSize recalculates Width)
         _lblBalanceRight.Location = new Point(
             _infoPanel.ClientSize.Width - _lblBalanceRight.Width - 12, 20);
+
+        // Student dropdown for promise logging
+        _cboPromiseStudent.Properties.Items.Clear();
+        foreach (var st in g.Students)
+            _cboPromiseStudent.Properties.Items.Add(st);
+        if (g.Students.Count > 0)
+            _cboPromiseStudent.SelectedIndex = 0;
 
         // Students grid
         gridStudents.DataSource = g.Students;
@@ -512,8 +538,11 @@ public class dlgFeesContactInteraction : XtraForm
         memoNote.Text            = "";
         dtePromiseDate.EditValue = null;
         txtPromiseAmount.Value   = 0;
-        lblPromiseDate.Visible   = dtePromiseDate.Visible   = false;
-        lblPromiseAmount.Visible = txtPromiseAmount.Visible = false;
+        lblPromiseDate.Visible     = dtePromiseDate.Visible     = false;
+        lblPromiseAmount.Visible   = txtPromiseAmount.Visible   = false;
+        _lblPromiseStudent.Visible = _cboPromiseStudent.Visible = false;
+        if (_cboPromiseStudent.Properties.Items.Count > 0)
+            _cboPromiseStudent.SelectedIndex = 0;
         btnSave.Text             = "Save";
     }
 
@@ -544,7 +573,6 @@ public class dlgFeesContactInteraction : XtraForm
 
         var entry = new FeesContactLog
         {
-            StudentNumber = Current.Students.Count > 0 ? Current.Students[0].StudentNumber : "",
             ContactDate   = dteContactDate.DateTime,
             LoggedBy      = CurrentUser.GetSystemUser(),
             Channel       = channel,
@@ -558,14 +586,38 @@ public class dlgFeesContactInteraction : XtraForm
 
         try
         {
-            if (_editContactId >= 0)
+            if (outcome == ContactOutcome.Promised)
             {
-                entry.ContactId = _editContactId;
-                _service.UpdateContact(entry);
+                var selectedStudent = _cboPromiseStudent.SelectedItem as StudentSummary;
+                if (selectedStudent == null)
+                {
+                    XtraMessageBox.Show("Please select a student for this promise.", "Validation",
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return false;
+                }
+                entry.StudentNumber = selectedStudent.StudentNumber;
+                if (_editContactId >= 0)
+                {
+                    entry.ContactId = _editContactId;
+                    _service.UpdateContact(entry);
+                }
+                else
+                {
+                    _service.LogGuardianContact(Current.GuardianContact, entry);
+                }
             }
             else
             {
-                _service.LogGuardianContact(Current.GuardianContact, entry);
+                entry.StudentNumber = Current.Students.Count > 0 ? Current.Students[0].StudentNumber : "";
+                if (_editContactId >= 0)
+                {
+                    entry.ContactId = _editContactId;
+                    _service.UpdateContact(entry);
+                }
+                else
+                {
+                    _service.LogGuardianContact(Current.GuardianContact, entry);
+                }
             }
 
             var nums = Current.Students.Select(s => s.StudentNumber);
@@ -586,32 +638,34 @@ public class dlgFeesContactInteraction : XtraForm
         bool isSms = rgChannel.EditValue is ContactChannel ch && ch == ContactChannel.SMS;
         if (!isSms) return;
 
-        if (Current.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal))
+        string phone = Current.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal)
+            ? Current.Contact2 : Current.GuardianContact;
+        if (string.IsNullOrWhiteSpace(phone) || phone.StartsWith("NOCONTACT-", StringComparison.Ordinal))
         {
             XtraMessageBox.Show("No phone number on file for this guardian.",
                 "Cannot Send SMS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            rgChannel.SelectedIndex = 1;   // reset to Phone
+            rgChannel.SelectedIndex = 1;   // revert to Phone
             return;
         }
 
-        using var smsForm = new SMSGuardian();
-        smsForm.txtReceipient.Text = Current.GuardianContact;
+        using var smsForm = new dlgTemplatedSms
+        {
+            RecipientPhone = phone,
+            Students       = Current.Students,
+            PromiseDate    = Current.LatestPromiseDate,
+            PromisedAmount = Current.LatestPromiseAmount ?? 0m,
+            GuardianKey    = Current.GuardianContact,
+        };
         if (smsForm.ShowDialog(this) == DialogResult.OK)
         {
-            // Auto-fill outcome = Contacted
             int idx = cboOutcome.Properties.Items.IndexOf(ContactOutcome.Contacted);
-            if (idx < 0) idx = cboOutcome.Properties.Items.IndexOf("Contacted");
             if (idx >= 0) cboOutcome.SelectedIndex = idx;
-            // Fill note with the sent message body
-            if (!string.IsNullOrEmpty(smsForm.SentMessage))
-                memoNote.Text = smsForm.SentMessage;
-            // Auto-save — no manual click required for SMS interactions
+            memoNote.Text = smsForm.SentSummary;
             TrySaveContact();
         }
         else
         {
-            // SMS dialog was cancelled — revert channel to Phone
-            rgChannel.SelectedIndex = 1;
+            rgChannel.SelectedIndex = 1;   // revert to Phone on cancel
         }
     }
 
