@@ -13,21 +13,35 @@ public class FeesFollowUpService
 {
     private readonly string connectionString;
 
-    private const string DefaultPreDue  =
+    internal const string DefaultPreDue  =
         "Dear Parent, you promised to pay UGX {promised_amount} for {names} ({class}) by {date}. " +
         "Your balance is UGX {balance}. Please pay as promised. - {school}";
 
-    private const string DefaultDayOf   =
+    internal const string DefaultDayOf   =
         "Dear Parent, today is your promised payment date of UGX {promised_amount} for {names} ({class}). " +
         "Balance: UGX {balance}. Please pay today. - {school}";
 
-    private const string DefaultOverdue =
+    internal const string DefaultOverdue =
         "Dear Parent, your payment of UGX {promised_amount} for {names} ({class}) was due on {date} " +
         "but has not been received. Balance: UGX {balance}. Please pay immediately. - {school}";
 
     public FeesFollowUpService()
     {
         connectionString = DataConnection.ConnectToDatabase();
+    }
+
+    public string ConnectionString => connectionString;
+
+    public static string RenderTemplate(string template, decimal balance,
+        string studentName, string classId, DateTime date, string school, decimal promisedAmount)
+        => ApplySmsTemplate(template, balance, studentName, classId, date, school, promisedAmount);
+
+    public void LogManualReminderSent(string phone, string studentNumber, DateTime promiseDate, string type)
+    {
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        if (!AlreadySentReminder(conn, phone, studentNumber, promiseDate, type))
+            LogReminderSent(conn, phone, studentNumber, promiseDate, type);
     }
 
     public int GetStalenessThresholdDays()
@@ -540,7 +554,7 @@ public class FeesFollowUpService
         };
     }
 
-    private string GetSchoolName()
+    public string GetSchoolName()
     {
         const string sql = "SELECT TOP 1 SchoolName FROM SchoolDetails";
         try
