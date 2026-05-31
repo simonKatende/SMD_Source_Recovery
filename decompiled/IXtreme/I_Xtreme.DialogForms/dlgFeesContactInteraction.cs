@@ -458,14 +458,16 @@ public class dlgFeesContactInteraction : XtraForm
         SetH("PromiseDate",   "Promise Date");
         SetH("PromiseAmount", "Promise Amt");
 
-        // Add Student column (shows name for Promised entries, "All" for guardian-level contacts)
-        var studentCol = gridViewHistory.Columns.AddField("StudentName");
-        studentCol.Caption      = "Student";
-        studentCol.Width        = 150;
-        studentCol.OptionsColumn.AllowEdit = false;
-        // Place after Outcome column
-        var outcomeCol = gridViewHistory.Columns["Outcome"];
-        studentCol.VisibleIndex = outcomeCol != null ? outcomeCol.VisibleIndex + 1 : 3;
+        // Configure the auto-generated StudentName column (already created by DevExpress from the DataTable)
+        var studentCol = gridViewHistory.Columns["StudentName"];
+        if (studentCol != null)
+        {
+            studentCol.Caption = "Student";
+            studentCol.Width   = 150;
+            studentCol.OptionsColumn.AllowEdit = false;
+            var outcomeCol = gridViewHistory.Columns["Outcome"];
+            studentCol.VisibleIndex = outcomeCol != null ? outcomeCol.VisibleIndex + 1 : 3;
+        }
 
         gridViewHistory.CustomColumnDisplayText += (s, e) =>
         {
