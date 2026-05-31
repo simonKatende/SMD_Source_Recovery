@@ -149,8 +149,12 @@ public class dlgTemplatedSms : XtraForm
             XtraMessageBox.Show($"Sent: {sent}. Failed:\n" + string.Join("\n", failures),
                 "SMS -- Partial Send", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
-        SentSummary  = $"Template SMS sent to {sent} student(s)";
-        DialogResult = DialogResult.OK;
-        Close();
+        if (sent > 0)
+        {
+            SentSummary  = $"Template SMS sent to {sent} student(s)";
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        // If sent == 0, failures already shown above -- dialog stays open
     }
 }

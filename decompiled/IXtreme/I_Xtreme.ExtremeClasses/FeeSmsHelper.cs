@@ -44,11 +44,11 @@ internal static class FeeSmsHelper
             ? "https://www.egosms.co/api/v1/plain/?"
             : (url.EndsWith("?") ? url : url + "?");
 
-        string requestUri = $"{baseUrl}number={Uri.EscapeDataString(phone)}" +
-                            $"&message={Uri.EscapeDataString(message)}" +
-                            $"&username={Uri.EscapeDataString(username)}" +
-                            $"&password={Uri.EscapeDataString(password)}" +
-                            $"&sender={Uri.EscapeDataString(sender)}";
+        string requestUri = $"{baseUrl}number={phone}" +
+                            $"&message={message}" +
+                            $"&username={username}" +
+                            $"&password={password}" +
+                            $"&sender={sender}";
 
         string response = null;
         try

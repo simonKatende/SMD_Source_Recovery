@@ -688,8 +688,8 @@ SELECT
     lp.GuardianKey,
     lp.PromiseDate,
     ISNULL(lp.PromiseAmount, 0)                                            AS PromisedAmount,
-    s.StudentName,
-    s.Stream                                                               AS ClassId,
+    s.fullName                                                             AS StudentName,
+    s.ClassId,
     ISNULL(ctp.TotalBilled, 0) + ISNULL(ptb.BFAmount, 0)
         - ISNULL(ctp.TotalPaid, 0)                                        AS Balance,
     s.PriorityContact,
