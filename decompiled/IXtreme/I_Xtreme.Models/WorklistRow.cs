@@ -2,7 +2,7 @@ using System;
 
 namespace I_Xtreme.Models;
 
-public enum PriorityTier { Critical = 0, BrokenPromise = 1, Stale = 2, Current = 3 }
+public enum PriorityTier { CallRequired = -1, Critical = 0, BrokenPromise = 1, Stale = 2, Current = 3 }
 
 public class WorklistRow
 {
