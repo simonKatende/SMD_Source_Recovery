@@ -671,10 +671,14 @@ CurrentTermPayments AS (
     GROUP BY StudentNumber
 ),
 PrevTermLastBalance AS (
-    SELECT StudentNumber,
-           ISNULL(SUM(CASE WHEN TransactionType = 'Balance B/F' THEN Debit ELSE 0 END), 0) AS BFAmount
-    FROM FeesPayment WHERE SemesterId = @prevSem
-    GROUP BY StudentNumber
+    SELECT StudentNumber, Balance AS BFAmount
+    FROM (
+        SELECT StudentNumber, Balance,
+               ROW_NUMBER() OVER (PARTITION BY StudentNumber ORDER BY PaymentId DESC) AS rn
+        FROM FeesPayment
+        WHERE SemesterId = @prevSem
+    ) t
+    WHERE rn = 1
 )
 SELECT
     lp.StudentNumber,
