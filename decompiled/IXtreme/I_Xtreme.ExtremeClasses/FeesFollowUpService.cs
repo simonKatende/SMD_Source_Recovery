@@ -875,7 +875,8 @@ WHERE lp.rn = 1
         if (g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date < DateTime.Today)
         {
             decimal promised = g.LatestPromiseAmount ?? (g.TotalBalance + g.PaymentsSinceLatestPromise);
-            if (g.PaymentsSinceLatestPromise < promised)
+            // Allow 5% tolerance — a 95%+ payment is treated as fulfilled to absorb rounding differences.
+            if (g.PaymentsSinceLatestPromise < promised * 0.95m)
                 return PriorityTier.BrokenPromise;
         }
 
