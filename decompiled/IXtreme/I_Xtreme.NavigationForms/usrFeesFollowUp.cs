@@ -303,6 +303,11 @@ public class usrFeesFollowUp : XtraUserControl
                 e.Appearance.BackColor = Color.LightYellow;
                 e.HighPriority = true;
                 break;
+            case PriorityTier.CallRequired:
+                e.Appearance.BackColor = Color.DarkSlateBlue;
+                e.Appearance.ForeColor = Color.White;
+                e.HighPriority = true;
+                break;
         }
     }
 
@@ -313,6 +318,7 @@ public class usrFeesFollowUp : XtraUserControl
         PriorityTier.Critical      => "Critical",
         PriorityTier.BrokenPromise => "Missed Promise",
         PriorityTier.Stale         => "Contact Overdue",
+        PriorityTier.CallRequired  => "Call Required",
         PriorityTier.Current       => "Up to Date",
         _                          => tier.ToString(),
     };
@@ -328,13 +334,19 @@ public class usrFeesFollowUp : XtraUserControl
 
     public void SendReminders()
     {
-        // TODO Task 9: replaced by dlgSendRemindersPreview
-        // var result = _service.CheckAndSendSmsReminders();
-        XtraMessageBox.Show(
-            "SMS reminders will be available in the next release.",
-            "Fees Follow-up",
-            System.Windows.Forms.MessageBoxButtons.OK,
-            System.Windows.Forms.MessageBoxIcon.Information);
+        try
+        {
+            using var dlg = new I_Xtreme.DialogForms.dlgSendRemindersPreview();
+            if (dlg.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+                LoadDashboard();
+        }
+        catch (Exception ex)
+        {
+            DevExpress.XtraEditors.XtraMessageBox.Show(
+                $"Could not open reminder preview.\n\n{ex.Message}",
+                "Fees Follow-up", System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Warning);
+        }
     }
 
     // Stubs kept for legacy ribbon items that reference these

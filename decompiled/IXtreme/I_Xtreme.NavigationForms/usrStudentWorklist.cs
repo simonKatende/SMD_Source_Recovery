@@ -195,6 +195,7 @@ public class usrStudentWorklist : XtraUserControl
                 PriorityTier.Critical      => "Critical",
                 PriorityTier.BrokenPromise => "Missed Promise",
                 PriorityTier.Stale         => "Contact Overdue",
+                PriorityTier.CallRequired  => "Call Required",
                 PriorityTier.Current       => "Up to Date",
                 _                          => e.DisplayText,
             };
@@ -233,9 +234,10 @@ public class usrStudentWorklist : XtraUserControl
         if (row == null) return;
         switch (row.Tier)
         {
-            case PriorityTier.Critical:      e.Appearance.BackColor = Color.OrangeRed;  e.Appearance.ForeColor = Color.White; e.HighPriority = true; break;
-            case PriorityTier.BrokenPromise: e.Appearance.BackColor = Color.LightCoral; e.HighPriority = true; break;
-            case PriorityTier.Stale:         e.Appearance.BackColor = Color.LightYellow; e.HighPriority = true; break;
+            case PriorityTier.Critical:      e.Appearance.BackColor = Color.OrangeRed;     e.Appearance.ForeColor = Color.White; e.HighPriority = true; break;
+            case PriorityTier.BrokenPromise: e.Appearance.BackColor = Color.LightCoral;   e.HighPriority = true; break;
+            case PriorityTier.Stale:         e.Appearance.BackColor = Color.LightYellow;  e.HighPriority = true; break;
+            case PriorityTier.CallRequired:  e.Appearance.BackColor = Color.DarkSlateBlue; e.Appearance.ForeColor = Color.White; e.HighPriority = true; break;
         }
     }
 
