@@ -380,6 +380,15 @@ public class FeesFollowUpService
                                          settings.CriticalPacingGapThreshold, hasTermDates);
         }
 
+        // Mark Call Required for guardians with any Overdue SMS sent
+        using (var crConn = new SqlConnection(connectionString))
+        {
+            crConn.Open();
+            foreach (var row in rows)
+                if (HasCallRequiredStudent(crConn, row.GuardianContact))
+                    row.Tier = PriorityTier.CallRequired;
+        }
+
         rows.Sort((a, b) =>
         {
             int t = a.Tier.CompareTo(b.Tier);
@@ -722,6 +731,15 @@ WHERE lp.rn = 1
             "SELECT SettingValue FROM tbl_FollowUpSettings WHERE SettingKey = @k", conn);
         cmd.Parameters.Add("@k", SqlDbType.NVarChar, 200).Value = key;
         return cmd.ExecuteScalar() as string ?? "";
+    }
+
+    private bool HasCallRequiredStudent(SqlConnection conn, string guardianKey)
+    {
+        using var cmd = new SqlCommand(
+            "SELECT COUNT(1) FROM tbl_SmsReminderLog WHERE GuardianKey = @gk AND ReminderType = 'Overdue'",
+            conn);
+        cmd.Parameters.Add("@gk", SqlDbType.VarChar, 20).Value = guardianKey;
+        return (int)cmd.ExecuteScalar() > 0;
     }
 
     private bool AlreadySentReminder(SqlConnection conn, string guardianKey,
