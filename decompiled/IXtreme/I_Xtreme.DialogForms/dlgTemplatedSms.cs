@@ -26,8 +26,8 @@ public class dlgTemplatedSms : XtraForm
     // Output
     public string SentSummary { get; private set; }
 
-    private readonly string[] _templateKeys  = { "3-Day Reminder", "Day-Of Reminder", "Overdue Reminder", "Freeform" };
-    private readonly string[] _templateTypes = { "3DayBefore",     "DayOf",           "Overdue",          null };
+    private readonly string[] _templateKeys  = { "3-Day Reminder", "Day-Of Reminder", "Overdue Reminder", "General Reminder", "Freeform" };
+    private readonly string[] _templateTypes = { "3DayBefore",     "DayOf",           "Overdue",          "General",          null };
 
     public dlgTemplatedSms() { InitializeComponent(); }
 
@@ -38,8 +38,10 @@ public class dlgTemplatedSms : XtraForm
         string names = string.Join(", ", (Students ?? new List<StudentSummary>())
             .Select(s => $"{s.FullName} ({s.ClassId})"));
         _lblStudents.Text = $"Students: {names}";
-        _cboTemplate.SelectedIndex = 0;
-        ApplyTemplate(0);
+        // Pre-select General Reminder when guardian has no promise on record
+        int defaultIdx = (PromisedAmount == 0 && PromiseDate == null) ? 3 : 0;
+        _cboTemplate.SelectedIndex = defaultIdx;
+        ApplyTemplate(defaultIdx);
     }
 
     private void InitializeComponent()
@@ -104,6 +106,7 @@ public class dlgTemplatedSms : XtraForm
             "3DayBefore" => !string.IsNullOrWhiteSpace(settings.SmsTemplate2Day)    ? settings.SmsTemplate2Day    : FeesFollowUpService.DefaultPreDue,
             "DayOf"      => !string.IsNullOrWhiteSpace(settings.SmsTemplateDayOf)   ? settings.SmsTemplateDayOf   : FeesFollowUpService.DefaultDayOf,
             "Overdue"    => !string.IsNullOrWhiteSpace(settings.SmsTemplateOverdue) ? settings.SmsTemplateOverdue : FeesFollowUpService.DefaultOverdue,
+            "General"    => FeesFollowUpService.DefaultGeneral,
             _            => ""
         };
         _memoMessage.Text = FeesFollowUpService.RenderTemplate(

@@ -24,6 +24,10 @@ public class FeesFollowUpService
         "Dear Parent, your payment of UGX {promised_amount} for {names} ({class}) was due on {date} " +
         "but has not been received. Balance: UGX {balance}. Please pay immediately. - {school}";
 
+    internal const string DefaultGeneral =
+        "Dear Parent, {names} ({class}) has an outstanding balance of UGX {balance}. " +
+        "Please pay or contact the bursar to arrange a payment plan. - {school}";
+
     public FeesFollowUpService()
     {
         connectionString = DataConnection.ConnectToDatabase();
