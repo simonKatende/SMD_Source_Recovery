@@ -485,17 +485,25 @@ public class FeesFollowUpService
 
     public List<GuardianWorklistRow> GetDailyWorklist(decimal minBalance = 0)
     {
-        var all   = GetGuardianWorklist("", minBalance);
+        var settings = GetSettings();
+        var all      = GetGuardianWorklist("", minBalance, settings);
         var today = DateTime.Today;
 
         return all.Where(g =>
         {
-            // Exclude if there is an active future promise (waiting for guardian to fulfil)
-            bool hasActiveFuturePromise =
-                g.LatestPromiseDate.HasValue
+            if (g.LatestPromiseDate.HasValue
                 && g.LatestPromiseDate.Value.Date >= today
-                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0);
-            if (hasActiveFuturePromise) return false;
+                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0))
+            {
+                // Only hide the guardian if their promise is large enough relative to their balance.
+                // A partial promise (covers < threshold) is not enough — keep them on the daily list.
+                decimal promiseAmt    = g.LatestPromiseAmount ?? 0m;
+                double  coverageRatio = g.TotalBalance > 0
+                    ? (double)(promiseAmt / g.TotalBalance)
+                    : 1.0;
+                if (coverageRatio >= settings.PartialPromiseCoverageThreshold)
+                    return false;
+            }
 
             // Exclude if successfully reached today
             return !WasContactedToday(g.GuardianContact);
@@ -549,7 +557,7 @@ public class FeesFollowUpService
         string currentSemester = AlienAge.Semesters.WorkingSemesters.GetWorkingSemester();
         string prevSemester    = GetPreviousSemesterId(currentSemester);
 
-        var all    = GetGuardianWorklist("", 0);
+        var all = GetGuardianWorklist("", 0, settings);
         var totals = GetDashboardTotals(currentSemester, prevSemester);
         var today  = DateTime.Today;
 
@@ -557,11 +565,17 @@ public class FeesFollowUpService
 
         int dailyTotal = all.Count(g =>
         {
-            bool hasActiveFuturePromise =
-                g.LatestPromiseDate.HasValue
+            if (g.LatestPromiseDate.HasValue
                 && g.LatestPromiseDate.Value.Date >= today
-                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0);
-            if (hasActiveFuturePromise) return false;
+                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0))
+            {
+                decimal promiseAmt    = g.LatestPromiseAmount ?? 0m;
+                double  coverageRatio = g.TotalBalance > 0
+                    ? (double)(promiseAmt / g.TotalBalance)
+                    : 1.0;
+                if (coverageRatio >= settings.PartialPromiseCoverageThreshold)
+                    return false;
+            }
             return !WasContactedToday(g.GuardianContact);
         }) + contactedToday;
 
