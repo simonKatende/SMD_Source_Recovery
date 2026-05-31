@@ -13,6 +13,18 @@ public class FeesFollowUpService
 {
     private readonly string connectionString;
 
+    private const string DefaultPreDue  =
+        "Dear Parent, you promised to pay UGX {promised_amount} for {names} ({class}) by {date}. " +
+        "Your balance is UGX {balance}. Please pay as promised. - {school}";
+
+    private const string DefaultDayOf   =
+        "Dear Parent, today is your promised payment date of UGX {promised_amount} for {names} ({class}). " +
+        "Balance: UGX {balance}. Please pay today. - {school}";
+
+    private const string DefaultOverdue =
+        "Dear Parent, your payment of UGX {promised_amount} for {names} ({class}) was due on {date} " +
+        "but has not been received. Balance: UGX {balance}. Please pay immediately. - {school}";
+
     public FeesFollowUpService()
     {
         connectionString = DataConnection.ConnectToDatabase();
@@ -534,88 +546,161 @@ public class FeesFollowUpService
         catch { return ""; }
     }
 
-    public SmsReminderResult CheckAndSendSmsReminders()
+    private List<ReminderItem> GetStudentsWithActivePromises(
+        SqlConnection conn, string school,
+        string preDueTemplate, string dayOfTemplate, string overdueTemplate)
     {
-        var today   = DateTime.Today;
-        var gw      = new SMSGateWay(connectionString);
+        var today        = DateTime.Today;
+        DateTime windowStart = today.AddDays(-8);  // T+1 of 7 days ago
+        DateTime windowEnd   = today.AddDays(3);   // T-3 of 3 days ahead
+        string currentSemester = AlienAge.Semesters.WorkingSemesters.GetWorkingSemester();
+        string prevSemester    = GetPreviousSemesterId(currentSemester);
+
+        // Latest promise per student within the window
+        string sql = @"
+;WITH LatestPromise AS (
+    SELECT cl.StudentNumber,
+           cl.GuardianKey,
+           cl.PromiseDate,
+           cl.PromiseAmount,
+           ROW_NUMBER() OVER (PARTITION BY cl.StudentNumber ORDER BY cl.ContactDate DESC) AS rn
+    FROM tbl_FeesContactLog cl
+    WHERE cl.Outcome = 'Promised'
+      AND cl.PromiseDate IS NOT NULL
+      AND cl.PromiseDate >= @windowStart
+      AND cl.PromiseDate <= @windowEnd
+),
+CurrentTermPayments AS (
+    SELECT StudentNumber,
+           ISNULL(SUM(Debit), 0)  AS TotalBilled,
+           ISNULL(SUM(Credit), 0) AS TotalPaid
+    FROM FeesPayment WHERE SemesterId = @sem
+    GROUP BY StudentNumber
+),
+PrevTermLastBalance AS (
+    SELECT StudentNumber,
+           ISNULL(SUM(CASE WHEN TransactionType = 'Balance B/F' THEN Debit ELSE 0 END), 0) AS BFAmount
+    FROM FeesPayment WHERE SemesterId = @prevSem
+    GROUP BY StudentNumber
+)
+SELECT
+    lp.StudentNumber,
+    lp.GuardianKey,
+    lp.PromiseDate,
+    ISNULL(lp.PromiseAmount, 0)                                            AS PromisedAmount,
+    s.StudentName,
+    s.Stream                                                               AS ClassId,
+    ISNULL(ctp.TotalBilled, 0) + ISNULL(ptb.BFAmount, 0)
+        - ISNULL(ctp.TotalPaid, 0)                                        AS Balance,
+    s.PriorityContact,
+    s.OtherContact
+FROM LatestPromise lp
+INNER JOIN tbl_Stud s  ON s.StudentNumber = lp.StudentNumber
+LEFT  JOIN CurrentTermPayments ctp ON ctp.StudentNumber = lp.StudentNumber
+LEFT  JOIN PrevTermLastBalance  ptb ON ptb.StudentNumber = lp.StudentNumber
+WHERE lp.rn = 1
+  AND (ISNULL(ctp.TotalBilled, 0) + ISNULL(ptb.BFAmount, 0) - ISNULL(ctp.TotalPaid, 0)) > 0";
+
+        var items = new List<ReminderItem>();
+        using var cmd = new SqlCommand(sql, conn);
+        cmd.Parameters.Add("@windowStart", SqlDbType.Date).Value = windowStart;
+        cmd.Parameters.Add("@windowEnd",   SqlDbType.Date).Value = windowEnd;
+        cmd.Parameters.Add("@sem",         SqlDbType.NVarChar, 50).Value = currentSemester;
+        cmd.Parameters.Add("@prevSem",     SqlDbType.NVarChar, 50).Value =
+            (object)prevSemester ?? DBNull.Value;
+
+        using var rdr = cmd.ExecuteReader();
+        while (rdr.Read())
+        {
+            string studentNo   = rdr["StudentNumber"].ToString();
+            string guardianKey = rdr["GuardianKey"].ToString();
+            DateTime pd        = Convert.ToDateTime(rdr["PromiseDate"]);
+            decimal promised   = Convert.ToDecimal(rdr["PromisedAmount"]);
+            decimal balance    = Convert.ToDecimal(rdr["Balance"]);
+            string name        = rdr["StudentName"].ToString();
+            string classId     = rdr["ClassId"].ToString();
+
+            // Resolve phone: priority contact -> alt contact -> skip
+            string phone = rdr["PriorityContact"].ToString();
+            if (string.IsNullOrWhiteSpace(phone) || phone.StartsWith("NOCONTACT-", StringComparison.Ordinal))
+                phone = rdr["OtherContact"].ToString();
+            if (string.IsNullOrWhiteSpace(phone) || phone.StartsWith("NOCONTACT-", StringComparison.Ordinal))
+                continue;
+
+            // Determine which reminder types are due today (with catch-up)
+            var candidates = new (string type, bool isDue)[]
+            {
+                ("3DayBefore", today >= pd.AddDays(-3) && today <= pd.AddDays(-1)),
+                ("DayOf",      today >= pd             && today <= pd.AddDays(1)),
+                ("Overdue",    today >= pd.AddDays(1)  && today <= pd.AddDays(7)),
+            };
+
+            foreach (var (type, isDue) in candidates)
+            {
+                if (!isDue) continue;
+                string template = type switch
+                {
+                    "3DayBefore" => !string.IsNullOrWhiteSpace(preDueTemplate)  ? preDueTemplate  : DefaultPreDue,
+                    "DayOf"      => !string.IsNullOrWhiteSpace(dayOfTemplate)   ? dayOfTemplate   : DefaultDayOf,
+                    "Overdue"    => !string.IsNullOrWhiteSpace(overdueTemplate) ? overdueTemplate : DefaultOverdue,
+                    _            => ""
+                };
+                string msg = ApplySmsTemplate(template, balance, name, classId, pd, school, promised);
+                items.Add(new ReminderItem
+                {
+                    GuardianKey    = guardianKey,
+                    Phone          = phone,
+                    StudentNumber  = studentNo,
+                    StudentName    = name,
+                    ClassId        = classId,
+                    PromiseDate    = pd,
+                    PromisedAmount = promised,
+                    Balance        = balance,
+                    ReminderType   = type,
+                    Message        = msg,
+                });
+            }
+        }
+        return items;
+    }
+
+    public List<ReminderItem> GetRemindersPreview()
+    {
+        var settings = GetSettings();
         string school = GetSchoolName();
-        var settings  = GetSettings();
-        var result    = new SmsReminderResult();
-
-        string twoDayTemplate = !string.IsNullOrWhiteSpace(settings.SmsTemplate2Day)
-            ? settings.SmsTemplate2Day
-            : "Dear Parent, you promised to pay UGX {promised_amount} for {names} by {date}. Your overall balance is UGX {balance}. Please pay as promised. - {school}";
-        string dayOfTemplate = !string.IsNullOrWhiteSpace(settings.SmsTemplateDayOf)
-            ? settings.SmsTemplateDayOf
-            : "Dear Parent, today is your promised payment date of UGX {promised_amount} for {names}. Your overall balance is UGX {balance}. Please make your payment today. - {school}";
-
         using var conn = new SqlConnection(connectionString);
         conn.Open();
+        var all = GetStudentsWithActivePromises(conn, school,
+            settings.SmsTemplate2Day, settings.SmsTemplateDayOf, settings.SmsTemplateOverdue);
+        // Filter out already-sent reminders
+        return all.Where(item =>
+            !AlreadySentReminder(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType))
+            .ToList();
+    }
 
-        // Once-per-day guard — check if this batch already ran today
-        using (var chk = new SqlCommand(
-            "SELECT COUNT(1) FROM tbl_SmsReminderLog WHERE GuardianKey = '__BATCH__' AND ReminderType = 'BatchRun' AND CAST(PromiseDate AS DATE) = @today",
-            conn))
+    public SmsReminderResult ExecuteSendReminders(List<ReminderItem> approved)
+    {
+        var gw     = new SMSGateWay(connectionString);
+        var result = new SmsReminderResult();
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        foreach (var item in approved)
         {
-            chk.Parameters.Add("@today", SqlDbType.Date).Value = today;
-            if ((int)chk.ExecuteScalar() > 0)
+            if (gw.TrySendSMSViaPOST(item.Phone, item.Message, out string err))
             {
-                result.AlreadyRanToday = true;
-                return result;
-            }
-        }
-
-        // Log the batch run marker before sending so we don't duplicate on error
-        using (var mark = new SqlCommand(
-            "INSERT INTO tbl_SmsReminderLog (GuardianKey, PromiseDate, ReminderType) VALUES ('__BATCH__', @today, 'BatchRun')",
-            conn))
-        {
-            mark.Parameters.Add("@today", SqlDbType.Date).Value = today;
-            mark.ExecuteNonQuery();
-        }
-
-        var all = GetGuardianWorklist("", 0);
-        foreach (var g in all)
-        {
-            if (g.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal)) continue;
-            if (!g.LatestPromiseDate.HasValue) continue;
-
-            DateTime pd   = g.LatestPromiseDate.Value.Date;
-            string phone  = g.GuardianContact;
-            decimal bal   = g.TotalBalance;
-            if (bal <= 0) continue;
-
-            decimal promised = g.LatestPromiseAmount ?? bal;
-
-            if (pd == today.AddDays(2) && !AlreadySentReminder(conn, phone, pd, "2DayBefore"))
-            {
-                string msg = ApplySmsTemplate(twoDayTemplate, bal, g.StudentNames, pd, school, promised);
-                if (gw.TrySendSMSViaPOST(phone, msg, out string err2))
+                LogReminderSent(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
+                switch (item.ReminderType)
                 {
-                    LogReminderSent(conn, phone, pd, "2DayBefore");
-                    result.TwoDayCount++;
-                }
-                else
-                {
-                    result.Failures.Add($"2-day reminder to {phone}: {err2}");
+                    case "3DayBefore": result.TwoDayCount++; break;
+                    case "DayOf":      result.DayOfCount++;  break;
+                    case "Overdue":    result.TwoDayCount++; break;
                 }
             }
-
-            if (pd == today && !AlreadySentReminder(conn, phone, pd, "DayOf"))
+            else
             {
-                string msg = ApplySmsTemplate(dayOfTemplate, bal, g.StudentNames, pd, school, promised);
-                if (gw.TrySendSMSViaPOST(phone, msg, out string errD))
-                {
-                    LogReminderSent(conn, phone, pd, "DayOf");
-                    result.DayOfCount++;
-                }
-                else
-                {
-                    result.Failures.Add($"Day-of reminder to {phone}: {errD}");
-                }
+                result.Failures.Add($"{item.ReminderType} to {item.Phone} ({item.StudentName}): {err}");
             }
         }
-
         return result;
     }
 

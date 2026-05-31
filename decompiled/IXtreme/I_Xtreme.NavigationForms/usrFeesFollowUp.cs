@@ -328,48 +328,13 @@ public class usrFeesFollowUp : XtraUserControl
 
     public void SendReminders()
     {
-        try
-        {
-            var result = _service.CheckAndSendSmsReminders();
-
-            if (result.AlreadyRanToday)
-            {
-                XtraMessageBox.Show(
-                    "Reminders have already been sent today. To resend, you may force a re-run tomorrow or if today's batch had failures.",
-                    "Fees Follow-up — Already Sent",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Information);
-                return;
-            }
-
-            if (result.TotalSent == 0 && !result.HasFailures)
-            {
-                XtraMessageBox.Show(
-                    "No reminders were due today (no guardians have a promise dated today or in 2 days).",
-                    "Fees Follow-up — Nothing to Send",
-                    System.Windows.Forms.MessageBoxButtons.OK,
-                    System.Windows.Forms.MessageBoxIcon.Information);
-                return;
-            }
-
-            string summary = $"Reminders sent:\n  2-day reminders: {result.TwoDayCount}\n  Day-of reminders: {result.DayOfCount}";
-            if (result.HasFailures)
-                summary += $"\n\nFailed ({result.Failures.Count}):\n" + string.Join("\n", result.Failures);
-
-            XtraMessageBox.Show(
-                summary,
-                "Fees Follow-up — Reminders Complete",
-                System.Windows.Forms.MessageBoxButtons.OK,
-                result.HasFailures ? System.Windows.Forms.MessageBoxIcon.Warning : System.Windows.Forms.MessageBoxIcon.Information);
-        }
-        catch (Exception ex)
-        {
-            XtraMessageBox.Show(
-                $"Could not send SMS reminders.\n\n{ex.Message}",
-                "Fees Follow-up",
-                System.Windows.Forms.MessageBoxButtons.OK,
-                System.Windows.Forms.MessageBoxIcon.Warning);
-        }
+        // TODO Task 9: replaced by dlgSendRemindersPreview
+        // var result = _service.CheckAndSendSmsReminders();
+        XtraMessageBox.Show(
+            "SMS reminders will be available in the next release.",
+            "Fees Follow-up",
+            System.Windows.Forms.MessageBoxButtons.OK,
+            System.Windows.Forms.MessageBoxIcon.Information);
     }
 
     // Stubs kept for legacy ribbon items that reference these
