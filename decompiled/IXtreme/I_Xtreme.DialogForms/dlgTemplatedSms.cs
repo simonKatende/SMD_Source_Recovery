@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
-using AlienAge.ExtremeMessenger;
 using DevExpress.XtraEditors;
 using I_Xtreme.ExtremeClasses;
 using I_Xtreme.Models;
@@ -120,7 +119,6 @@ public class dlgTemplatedSms : XtraForm
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-        var gw       = new SMSGateWay(_service.ConnectionString);
         var failures = new List<string>();
         int sent     = 0;
         string school = _service.GetSchoolName();
@@ -133,7 +131,7 @@ public class dlgTemplatedSms : XtraForm
                 templateText, student.Balance, student.FullName, student.ClassId,
                 date, school, PromisedAmount);
 
-            if (gw.TrySendSMSViaPOST(RecipientPhone, msg, out string err))
+            if (FeeSmsHelper.TrySend(_service.ConnectionString, RecipientPhone, msg, out string err))
             {
                 _service.LogManualReminderSent(RecipientPhone, student.StudentNumber, date, reminderType);
                 sent++;

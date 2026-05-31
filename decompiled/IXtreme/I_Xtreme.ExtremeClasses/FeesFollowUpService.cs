@@ -4,7 +4,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using AlienAge.Connectivity;
-using AlienAge.ExtremeMessenger;
 using I_Xtreme.Models;
 
 namespace I_Xtreme.ExtremeClasses;
@@ -777,13 +776,12 @@ WHERE lp.rn = 1
 
     public SmsReminderResult ExecuteSendReminders(List<ReminderItem> approved)
     {
-        var gw     = new SMSGateWay(connectionString);
         var result = new SmsReminderResult();
         using var conn = new SqlConnection(connectionString);
         conn.Open();
         foreach (var item in approved)
         {
-            if (gw.TrySendSMSViaPOST(item.Phone, item.Message, out string err))
+            if (FeeSmsHelper.TrySend(connectionString, item.Phone, item.Message, out string err))
             {
                 LogReminderSent(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
                 switch (item.ReminderType)
