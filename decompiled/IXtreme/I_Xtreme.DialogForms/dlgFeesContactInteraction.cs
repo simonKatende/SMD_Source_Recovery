@@ -19,7 +19,7 @@ public class dlgFeesContactInteraction : XtraForm
 
     // ── Info panel (structured header) ────────────────────────────────────────
     private Panel        _infoPanel;
-    private Label        _lblGuardianName, _lblContacts, _lblBalance, _lblBalanceRight;
+    private Label        _lblGuardianName, _lblContacts, _lblBalance, _lblBalanceRight, _lblTier;
 
     // ── Students grid ─────────────────────────────────────────────────────────
     private DevExpress.XtraGrid.GridControl gridStudents;
@@ -151,15 +151,26 @@ public class dlgFeesContactInteraction : XtraForm
             AutoSize  = true,
             Anchor    = AnchorStyles.Top | AnchorStyles.Right,
         };
+        // Priority tier badge — right-anchored below balance
+        this._lblTier = new Label
+        {
+            Font      = new Font("Tahoma", 9, FontStyle.Bold),
+            AutoSize  = true,
+            Padding   = new Padding(6, 2, 6, 2),
+            Anchor    = AnchorStyles.Top | AnchorStyles.Right,
+        };
         this._infoPanel.Controls.AddRange(new Control[]
         {
-            _lblGuardianName, _lblContacts, _lblBalance, _lblBalanceRight,
+            _lblGuardianName, _lblContacts, _lblBalance, _lblBalanceRight, _lblTier,
         });
         this._infoPanel.Resize += (s, e) =>
         {
             if (_lblBalanceRight != null)
                 _lblBalanceRight.Location = new Point(
                     _infoPanel.ClientSize.Width - _lblBalanceRight.Width - 12, 20);
+            if (_lblTier != null)
+                _lblTier.Location = new Point(
+                    _infoPanel.ClientSize.Width - _lblTier.Width - 12, 56);
         };
 
         // ── Contact log panel (Bottom) ─────────────────────────────────────────
@@ -329,6 +340,21 @@ public class dlgFeesContactInteraction : XtraForm
         _lblBalanceRight.Location = new Point(
             _infoPanel.ClientSize.Width - _lblBalanceRight.Width - 12, 20);
 
+        // Priority tier badge
+        (string tierText, Color tierBack, Color tierFore) = g.Tier switch
+        {
+            PriorityTier.Critical      => ("Critical",        Color.OrangeRed,                      Color.White),
+            PriorityTier.BrokenPromise => ("Missed Promise",  Color.FromArgb(200, 80, 80),           Color.White),
+            PriorityTier.Stale         => ("Contact Overdue", Color.FromArgb(180, 140, 0),           Color.White),
+            PriorityTier.CallRequired  => ("Call Required",   Color.DarkSlateBlue,                   Color.White),
+            _                          => ("Up to Date",      Color.ForestGreen,                     Color.White),
+        };
+        _lblTier.Text      = tierText;
+        _lblTier.BackColor = tierBack;
+        _lblTier.ForeColor = tierFore;
+        _lblTier.Location  = new Point(
+            _infoPanel.ClientSize.Width - _lblTier.Width - 12, 56);
+
         // Student dropdown for promise logging
         _cboPromiseStudent.Properties.Items.Clear();
         foreach (var st in g.Students)
@@ -420,6 +446,8 @@ public class dlgFeesContactInteraction : XtraForm
         if (colId != null) colId.Visible = false;
         var colGK = gridViewHistory.Columns["GuardianKey"];
         if (colGK != null) colGK.Visible = false;
+        var colSN = gridViewHistory.Columns["StudentNumber"];
+        if (colSN != null) colSN.Visible = false;
 
         void SetH(string f, string c) { var col = gridViewHistory.Columns[f]; if (col != null) col.Caption = c; }
         SetH("ContactDate",   "Date");
@@ -429,6 +457,24 @@ public class dlgFeesContactInteraction : XtraForm
         SetH("LoggedBy",      "Logged By");
         SetH("PromiseDate",   "Promise Date");
         SetH("PromiseAmount", "Promise Amt");
+
+        // Configure the auto-generated StudentName column (already created by DevExpress from the DataTable)
+        var studentCol = gridViewHistory.Columns["StudentName"];
+        if (studentCol != null)
+        {
+            studentCol.Caption = "Student";
+            studentCol.Width   = 150;
+            studentCol.OptionsColumn.AllowEdit = false;
+            var outcomeCol = gridViewHistory.Columns["Outcome"];
+            studentCol.VisibleIndex = outcomeCol != null ? outcomeCol.VisibleIndex + 1 : 3;
+        }
+
+        gridViewHistory.CustomColumnDisplayText += (s, e) =>
+        {
+            if (e.Column.FieldName == "StudentName"
+                && (e.Value == null || e.Value == DBNull.Value || string.IsNullOrEmpty(e.Value.ToString())))
+                e.DisplayText = "All";
+        };
 
         var colAmt = gridViewHistory.Columns["PromiseAmount"];
         if (colAmt != null)
@@ -440,6 +486,7 @@ public class dlgFeesContactInteraction : XtraForm
         gridViewHistory.BestFitColumns();
         var noteCol = gridViewHistory.Columns["Note"];
         if (noteCol != null) noteCol.Width = Math.Min(noteCol.Width, 200);
+        if (studentCol.Width < 150) studentCol.Width = 150;
     }
 
     private void GridViewStudents_CustomColumnDisplayText(object sender,
@@ -608,7 +655,7 @@ public class dlgFeesContactInteraction : XtraForm
             }
             else
             {
-                entry.StudentNumber = Current.Students.Count > 0 ? Current.Students[0].StudentNumber : "";
+                entry.StudentNumber = null;
                 if (_editContactId >= 0)
                 {
                     entry.ContactId = _editContactId;

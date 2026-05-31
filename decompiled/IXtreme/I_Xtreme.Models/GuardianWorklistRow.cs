@@ -13,6 +13,26 @@ public class FeesFollowUpSettings
     public string SmsTemplate2Day  { get; set; } = "";
     public string SmsTemplateDayOf { get; set; } = "";
     public string SmsTemplateOverdue { get; set; } = "";
+
+    // Improvement 1: partial-promise exclusion threshold
+    // Only exclude a guardian with an active promise if that promise covers >= this fraction of TotalBalance.
+    // Default 0.50 = 50%. A promise covering less keeps the guardian on the daily list.
+    public double  PartialPromiseCoverageThreshold { get; set; } = 0.50;
+
+    // Improvement 2: balance-weighted staleness
+    // Guardians whose TotalBalance >= StaleHighBalanceAmount go stale in StaleHighBalanceDays days;
+    // those >= StaleMedBalanceAmount (but below High) go stale in StaleMedBalanceDays days;
+    // everyone else uses the original StaleThresholdDays.
+    public decimal StaleHighBalanceAmount          { get; set; } = 1_000_000m;
+    public int     StaleHighBalanceDays            { get; set; } = 3;
+    public decimal StaleMedBalanceAmount           { get; set; } = 500_000m;
+    public int     StaleMedBalanceDays             { get; set; } = 5;
+
+    // Improvement 3: no-progress escalation
+    // If a guardian has been followed up for > NoProgressEscalationWeeks and has paid
+    // less than NoProgressPaymentThreshold % of what they were billed, force-promote to Critical.
+    public int    NoProgressEscalationWeeks    { get; set; } = 4;
+    public double NoProgressPaymentThreshold   { get; set; } = 30.0;
 }
 
 public class SmsReminderResult
@@ -71,6 +91,7 @@ public class GuardianWorklistRow
     public DateTime?       LatestPromiseDate           { get; set; }
     public decimal?        LatestPromiseAmount         { get; set; }
     public decimal         PaymentsSinceLatestPromise  { get; set; }
+    public DateTime?       FirstContactDate            { get; set; }
 
     public string PaymentStatus =>
         TotalBilled == 0 ? "N/A" :

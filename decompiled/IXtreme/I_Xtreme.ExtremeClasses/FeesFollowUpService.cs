@@ -4,7 +4,6 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using AlienAge.Connectivity;
-using AlienAge.ExtremeMessenger;
 using I_Xtreme.Models;
 
 namespace I_Xtreme.ExtremeClasses;
@@ -24,6 +23,10 @@ public class FeesFollowUpService
     internal const string DefaultOverdue =
         "Dear Parent, your payment of UGX {promised_amount} for {names} ({class}) was due on {date} " +
         "but has not been received. Balance: UGX {balance}. Please pay immediately. - {school}";
+
+    internal const string DefaultGeneral =
+        "Dear Parent, {names} ({class}) has an outstanding balance of UGX {balance}. " +
+        "Please pay or contact the bursar to arrange a payment plan. - {school}";
 
     public FeesFollowUpService()
     {
@@ -93,6 +96,35 @@ public class FeesFollowUpService
             SmsTemplate2Day  = dict.TryGetValue("SmsTemplate2Day",  out var t2)  ? t2  : "",
             SmsTemplateDayOf = dict.TryGetValue("SmsTemplateDayOf", out var tdo) ? tdo : "",
             SmsTemplateOverdue = dict.TryGetValue("SmsTemplateOverdue", out var tov) ? tov : "",
+            PartialPromiseCoverageThreshold =
+                dict.TryGetValue("PartialPromiseCoverageThreshold", out var pp)
+                && double.TryParse(pp, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double ppd)
+                    ? ppd : 0.50,
+            StaleHighBalanceAmount =
+                dict.TryGetValue("StaleHighBalanceAmount", out var sha)
+                && decimal.TryParse(sha, System.Globalization.NumberStyles.Number,
+                                    System.Globalization.CultureInfo.InvariantCulture, out decimal shav)
+                    ? shav : 1_000_000m,
+            StaleHighBalanceDays =
+                dict.TryGetValue("StaleHighBalanceDays", out var shd) && int.TryParse(shd, out int shdi)
+                    ? shdi : 3,
+            StaleMedBalanceAmount =
+                dict.TryGetValue("StaleMedBalanceAmount", out var sma)
+                && decimal.TryParse(sma, System.Globalization.NumberStyles.Number,
+                                    System.Globalization.CultureInfo.InvariantCulture, out decimal smav)
+                    ? smav : 500_000m,
+            StaleMedBalanceDays =
+                dict.TryGetValue("StaleMedBalanceDays", out var smd) && int.TryParse(smd, out int smdi)
+                    ? smdi : 5,
+            NoProgressEscalationWeeks =
+                dict.TryGetValue("NoProgressEscalationWeeks", out var npw) && int.TryParse(npw, out int npwi)
+                    ? npwi : 4,
+            NoProgressPaymentThreshold =
+                dict.TryGetValue("NoProgressPaymentThreshold", out var npt)
+                && double.TryParse(npt, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double nptd)
+                    ? nptd : 30.0,
         };
     }
 
@@ -107,6 +139,18 @@ public class FeesFollowUpService
         Upsert(conn, "SmsTemplate2Day",            s.SmsTemplate2Day ?? "");
         Upsert(conn, "SmsTemplateDayOf",           s.SmsTemplateDayOf ?? "");
         Upsert(conn, "SmsTemplateOverdue", s.SmsTemplateOverdue ?? "");
+        Upsert(conn, "PartialPromiseCoverageThreshold",
+            s.PartialPromiseCoverageThreshold.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "StaleHighBalanceAmount",
+            s.StaleHighBalanceAmount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "StaleHighBalanceDays",  s.StaleHighBalanceDays.ToString());
+        Upsert(conn, "StaleMedBalanceAmount",
+            s.StaleMedBalanceAmount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "StaleMedBalanceDays",   s.StaleMedBalanceDays.ToString());
+        Upsert(conn, "NoProgressEscalationWeeks",
+            s.NoProgressEscalationWeeks.ToString());
+        Upsert(conn, "NoProgressPaymentThreshold",
+            s.NoProgressPaymentThreshold.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private static void Upsert(SqlConnection conn, string key, string value)
@@ -195,9 +239,10 @@ public class FeesFollowUpService
         };
     }
 
-    public List<GuardianWorklistRow> GetGuardianWorklist(string classFilter, decimal minBalance)
+    public List<GuardianWorklistRow> GetGuardianWorklist(string classFilter, decimal minBalance,
+        FeesFollowUpSettings settings = null)
     {
-        var settings    = GetSettings();
+        settings ??= GetSettings();
         DateTime? tStart = settings.TermStartDate;
         DateTime? tEnd   = settings.TermEndDate;
         bool hasTermDates = tStart.HasValue && tEnd.HasValue;
@@ -301,6 +346,11 @@ public class FeesFollowUpService
                      AND fp.DateOfPayment >= lpd.PromiseLoggedAt
                ), 0) AS PaymentsSinceLatestPromise
         FROM LatestPromiseDetail lpd
+    ),
+    EarliestContact AS (
+        SELECT ContactKey, MIN(ContactDate) AS FirstContactDate
+        FROM AllRelevantContacts
+        GROUP BY ContactKey
     )
     SELECT
         sw.StudentNumber, sw.FullName, sw.ClassId,
@@ -312,10 +362,12 @@ public class FeesFollowUpService
         lpd.PromiseDate      AS LatestPromiseDate,
         lpd.PromiseAmount    AS LatestPromiseAmount,
         ISNULL(psp.PaymentsSinceLatestPromise, 0) AS PaymentsSinceLatestPromise
+        ,ec.FirstContactDate
     FROM StudentsWithBalance sw
     LEFT JOIN LatestContactDetail lcd ON lcd.ContactKey = sw.GuardianKey
     LEFT JOIN LatestPromiseDetail  lpd ON lpd.ContactKey = sw.GuardianKey
     LEFT JOIN PaymentsSincePromise psp ON psp.ContactKey = sw.GuardianKey
+    LEFT JOIN EarliestContact     ec  ON ec.ContactKey  = sw.GuardianKey
     ORDER BY sw.GuardianKey, sw.FullName";
 
         var grouped = new Dictionary<string, GuardianWorklistRow>();
@@ -347,6 +399,7 @@ public class FeesFollowUpService
                         LatestPromiseDate          = rdr["LatestPromiseDate"] as DateTime?,
                         LatestPromiseAmount        = rdr["LatestPromiseAmount"] as decimal?,
                         PaymentsSinceLatestPromise = (decimal)rdr["PaymentsSinceLatestPromise"],
+                        FirstContactDate = rdr["FirstContactDate"] as DateTime?,
                     };
                     grouped[gKey] = g;
                 }
@@ -390,8 +443,14 @@ public class FeesFollowUpService
                 ? Math.Round(g.TotalPaid / g.TotalBilled * 100m, 1) : 0m;
             double payProgress = g.TotalBilled > 0 ? (double)(g.TotalPaid / g.TotalBilled) : 0.0;
             g.PacingGap = hasTermDates ? termProgress - payProgress : 0.0;
-            g.Tier = ComputeGuardianTier(g, settings.StaleThresholdDays,
-                                         settings.CriticalPacingGapThreshold, hasTermDates);
+            int effectiveStaleDays = g.TotalBalance >= settings.StaleHighBalanceAmount
+                ? settings.StaleHighBalanceDays
+                : g.TotalBalance >= settings.StaleMedBalanceAmount
+                    ? settings.StaleMedBalanceDays
+                    : settings.StaleThresholdDays;
+            g.Tier = ComputeGuardianTier(g, effectiveStaleDays,
+                settings.CriticalPacingGapThreshold, hasTermDates,
+                settings.NoProgressEscalationWeeks, settings.NoProgressPaymentThreshold);
         }
 
         // Mark Call Required for guardians with any Overdue SMS sent
@@ -429,17 +488,25 @@ public class FeesFollowUpService
 
     public List<GuardianWorklistRow> GetDailyWorklist(decimal minBalance = 0)
     {
-        var all   = GetGuardianWorklist("", minBalance);
+        var settings = GetSettings();
+        var all      = GetGuardianWorklist("", minBalance, settings);
         var today = DateTime.Today;
 
         return all.Where(g =>
         {
-            // Exclude if there is an active future promise (waiting for guardian to fulfil)
-            bool hasActiveFuturePromise =
-                g.LatestPromiseDate.HasValue
+            if (g.LatestPromiseDate.HasValue
                 && g.LatestPromiseDate.Value.Date >= today
-                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0);
-            if (hasActiveFuturePromise) return false;
+                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0))
+            {
+                // Only hide the guardian if their promise is large enough relative to their balance.
+                // A partial promise (covers < threshold) is not enough — keep them on the daily list.
+                decimal promiseAmt    = g.LatestPromiseAmount ?? 0m;
+                double  coverageRatio = g.TotalBalance > 0
+                    ? (double)(promiseAmt / g.TotalBalance)
+                    : 1.0;
+                if (coverageRatio >= settings.PartialPromiseCoverageThreshold)
+                    return false;
+            }
 
             // Exclude if successfully reached today
             return !WasContactedToday(g.GuardianContact);
@@ -493,7 +560,7 @@ public class FeesFollowUpService
         string currentSemester = AlienAge.Semesters.WorkingSemesters.GetWorkingSemester();
         string prevSemester    = GetPreviousSemesterId(currentSemester);
 
-        var all    = GetGuardianWorklist("", 0);
+        var all = GetGuardianWorklist("", 0, settings);
         var totals = GetDashboardTotals(currentSemester, prevSemester);
         var today  = DateTime.Today;
 
@@ -501,11 +568,17 @@ public class FeesFollowUpService
 
         int dailyTotal = all.Count(g =>
         {
-            bool hasActiveFuturePromise =
-                g.LatestPromiseDate.HasValue
+            if (g.LatestPromiseDate.HasValue
                 && g.LatestPromiseDate.Value.Date >= today
-                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0);
-            if (hasActiveFuturePromise) return false;
+                && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0))
+            {
+                decimal promiseAmt    = g.LatestPromiseAmount ?? 0m;
+                double  coverageRatio = g.TotalBalance > 0
+                    ? (double)(promiseAmt / g.TotalBalance)
+                    : 1.0;
+                if (coverageRatio >= settings.PartialPromiseCoverageThreshold)
+                    return false;
+            }
             return !WasContactedToday(g.GuardianContact);
         }) + contactedToday;
 
@@ -601,18 +674,22 @@ CurrentTermPayments AS (
     GROUP BY StudentNumber
 ),
 PrevTermLastBalance AS (
-    SELECT StudentNumber,
-           ISNULL(SUM(CASE WHEN TransactionType = 'Balance B/F' THEN Debit ELSE 0 END), 0) AS BFAmount
-    FROM FeesPayment WHERE SemesterId = @prevSem
-    GROUP BY StudentNumber
+    SELECT StudentNumber, Balance AS BFAmount
+    FROM (
+        SELECT StudentNumber, Balance,
+               ROW_NUMBER() OVER (PARTITION BY StudentNumber ORDER BY PaymentId DESC) AS rn
+        FROM FeesPayment
+        WHERE SemesterId = @prevSem
+    ) t
+    WHERE rn = 1
 )
 SELECT
     lp.StudentNumber,
     lp.GuardianKey,
     lp.PromiseDate,
     ISNULL(lp.PromiseAmount, 0)                                            AS PromisedAmount,
-    s.StudentName,
-    s.Stream                                                               AS ClassId,
+    s.fullName                                                             AS StudentName,
+    s.ClassId,
     ISNULL(ctp.TotalBilled, 0) + ISNULL(ptb.BFAmount, 0)
         - ISNULL(ctp.TotalPaid, 0)                                        AS Balance,
     s.PriorityContact,
@@ -703,13 +780,12 @@ WHERE lp.rn = 1
 
     public SmsReminderResult ExecuteSendReminders(List<ReminderItem> approved)
     {
-        var gw     = new SMSGateWay(connectionString);
         var result = new SmsReminderResult();
         using var conn = new SqlConnection(connectionString);
         conn.Open();
         foreach (var item in approved)
         {
-            if (gw.TrySendSMSViaPOST(item.Phone, item.Message, out string err))
+            if (FeeSmsHelper.TrySend(connectionString, item.Phone, item.Message, out string err))
             {
                 LogReminderSent(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
                 switch (item.ReminderType)
@@ -787,15 +863,24 @@ WHERE lp.rn = 1
     }
 
     private static PriorityTier ComputeGuardianTier(
-        GuardianWorklistRow g, int stalenessDays, double criticalThreshold, bool hasTermDates)
+        GuardianWorklistRow g, int stalenessDays, double criticalThreshold, bool hasTermDates,
+        int noProgressWeeks, double noProgressThreshold)
     {
         if (hasTermDates && g.PacingGap >= criticalThreshold)
             return PriorityTier.Critical;
 
+        if (noProgressWeeks > 0 && g.FirstContactDate.HasValue)
+        {
+            double weeksFollowedUp = (DateTime.Today - g.FirstContactDate.Value.Date).TotalDays / 7.0;
+            if (weeksFollowedUp > noProgressWeeks && (double)g.PaymentPercent < noProgressThreshold)
+                return PriorityTier.Critical;
+        }
+
         if (g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date < DateTime.Today)
         {
             decimal promised = g.LatestPromiseAmount ?? (g.TotalBalance + g.PaymentsSinceLatestPromise);
-            if (g.PaymentsSinceLatestPromise < promised)
+            // Allow 5% tolerance — a 95%+ payment is treated as fulfilled to absorb rounding differences.
+            if (g.PaymentsSinceLatestPromise < promised * 0.95m)
                 return PriorityTier.BrokenPromise;
         }
 
@@ -1021,11 +1106,15 @@ WHERE lp.rn = 1
         var dt = new DataTable();
         using var conn = new SqlConnection(connectionString);
         using var da = new SqlDataAdapter($@"
-        SELECT ContactId, ContactDate, Channel, Outcome, Note, LoggedBy, PromiseDate, PromiseAmount, GuardianKey
-        FROM tbl_FeesContactLog
-        WHERE GuardianKey = @guardianKey
-           OR (GuardianKey IS NULL AND StudentNumber IN ({inList}))
-        ORDER BY ContactDate DESC", conn);
+        SELECT cl.ContactId, cl.ContactDate, cl.Channel, cl.Outcome, cl.Note, cl.LoggedBy,
+               cl.PromiseDate, cl.PromiseAmount, cl.GuardianKey,
+               cl.StudentNumber,
+               s.fullName AS StudentName
+        FROM tbl_FeesContactLog cl
+        LEFT JOIN tbl_Stud s ON s.StudentNumber = cl.StudentNumber
+        WHERE cl.GuardianKey = @guardianKey
+           OR (cl.GuardianKey IS NULL AND cl.StudentNumber IN ({inList}))
+        ORDER BY cl.ContactDate DESC", conn);
 
         da.SelectCommand.Parameters.Add("@guardianKey", SqlDbType.VarChar, 20).Value = guardianKey;
         for (int i = 0; i < nums.Count; i++)

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
-using AlienAge.ExtremeMessenger;
 using DevExpress.XtraEditors;
 using I_Xtreme.ExtremeClasses;
 using I_Xtreme.Models;
@@ -27,8 +26,8 @@ public class dlgTemplatedSms : XtraForm
     // Output
     public string SentSummary { get; private set; }
 
-    private readonly string[] _templateKeys  = { "3-Day Reminder", "Day-Of Reminder", "Overdue Reminder", "Freeform" };
-    private readonly string[] _templateTypes = { "3DayBefore",     "DayOf",           "Overdue",          null };
+    private readonly string[] _templateKeys  = { "3-Day Reminder", "Day-Of Reminder", "Overdue Reminder", "General Reminder", "Freeform" };
+    private readonly string[] _templateTypes = { "3DayBefore",     "DayOf",           "Overdue",          "General",          null };
 
     public dlgTemplatedSms() { InitializeComponent(); }
 
@@ -39,8 +38,10 @@ public class dlgTemplatedSms : XtraForm
         string names = string.Join(", ", (Students ?? new List<StudentSummary>())
             .Select(s => $"{s.FullName} ({s.ClassId})"));
         _lblStudents.Text = $"Students: {names}";
-        _cboTemplate.SelectedIndex = 0;
-        ApplyTemplate(0);
+        // Pre-select General Reminder when guardian has no promise on record
+        int defaultIdx = (PromisedAmount == 0 && PromiseDate == null) ? 3 : 0;
+        _cboTemplate.SelectedIndex = defaultIdx;
+        ApplyTemplate(defaultIdx);
     }
 
     private void InitializeComponent()
@@ -105,6 +106,7 @@ public class dlgTemplatedSms : XtraForm
             "3DayBefore" => !string.IsNullOrWhiteSpace(settings.SmsTemplate2Day)    ? settings.SmsTemplate2Day    : FeesFollowUpService.DefaultPreDue,
             "DayOf"      => !string.IsNullOrWhiteSpace(settings.SmsTemplateDayOf)   ? settings.SmsTemplateDayOf   : FeesFollowUpService.DefaultDayOf,
             "Overdue"    => !string.IsNullOrWhiteSpace(settings.SmsTemplateOverdue) ? settings.SmsTemplateOverdue : FeesFollowUpService.DefaultOverdue,
+            "General"    => FeesFollowUpService.DefaultGeneral,
             _            => ""
         };
         _memoMessage.Text = FeesFollowUpService.RenderTemplate(
@@ -120,7 +122,6 @@ public class dlgTemplatedSms : XtraForm
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-        var gw       = new SMSGateWay(_service.ConnectionString);
         var failures = new List<string>();
         int sent     = 0;
         string school = _service.GetSchoolName();
@@ -133,7 +134,7 @@ public class dlgTemplatedSms : XtraForm
                 templateText, student.Balance, student.FullName, student.ClassId,
                 date, school, PromisedAmount);
 
-            if (gw.TrySendSMSViaPOST(RecipientPhone, msg, out string err))
+            if (FeeSmsHelper.TrySend(_service.ConnectionString, RecipientPhone, msg, out string err))
             {
                 _service.LogManualReminderSent(RecipientPhone, student.StudentNumber, date, reminderType);
                 sent++;
@@ -148,8 +149,12 @@ public class dlgTemplatedSms : XtraForm
             XtraMessageBox.Show($"Sent: {sent}. Failed:\n" + string.Join("\n", failures),
                 "SMS -- Partial Send", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
-        SentSummary  = $"Template SMS sent to {sent} student(s)";
-        DialogResult = DialogResult.OK;
-        Close();
+        if (sent > 0)
+        {
+            SentSummary  = $"Template SMS sent to {sent} student(s)";
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        // If sent == 0, failures already shown above -- dialog stays open
     }
 }
