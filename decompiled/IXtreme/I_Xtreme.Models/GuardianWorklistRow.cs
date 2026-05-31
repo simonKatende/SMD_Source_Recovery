@@ -12,6 +12,7 @@ public class FeesFollowUpSettings
     public double CriticalPacingGapThreshold { get; set; } = 0.50;
     public string SmsTemplate2Day  { get; set; } = "";
     public string SmsTemplateDayOf { get; set; } = "";
+    public string SmsTemplateOverdue { get; set; } = "";
 }
 
 public class SmsReminderResult
@@ -137,4 +138,18 @@ public class DashboardData
     public List<PriorityGroupStats>  ByPriority   { get; set; } = new List<PriorityGroupStats>();
     public List<GuardianWorklistRow> TopByBalance { get; set; } = new List<GuardianWorklistRow>();
     public DateTime AsOf { get; set; } = DateTime.Now;
+}
+
+public class ReminderItem
+{
+    public string   GuardianKey     { get; set; }
+    public string   Phone           { get; set; }   // resolved phone (priority → alt fallback)
+    public string   StudentNumber   { get; set; }
+    public string   StudentName     { get; set; }
+    public string   ClassId         { get; set; }
+    public DateTime PromiseDate     { get; set; }
+    public decimal  PromisedAmount  { get; set; }
+    public decimal  Balance         { get; set; }
+    public string   ReminderType    { get; set; }   // "3DayBefore" | "DayOf" | "Overdue"
+    public string   Message         { get; set; }   // pre-rendered SMS text
 }
