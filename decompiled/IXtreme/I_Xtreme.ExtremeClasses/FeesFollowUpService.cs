@@ -342,6 +342,11 @@ public class FeesFollowUpService
                      AND fp.DateOfPayment >= lpd.PromiseLoggedAt
                ), 0) AS PaymentsSinceLatestPromise
         FROM LatestPromiseDetail lpd
+    ),
+    EarliestContact AS (
+        SELECT ContactKey, MIN(ContactDate) AS FirstContactDate
+        FROM AllRelevantContacts
+        GROUP BY ContactKey
     )
     SELECT
         sw.StudentNumber, sw.FullName, sw.ClassId,
@@ -353,10 +358,12 @@ public class FeesFollowUpService
         lpd.PromiseDate      AS LatestPromiseDate,
         lpd.PromiseAmount    AS LatestPromiseAmount,
         ISNULL(psp.PaymentsSinceLatestPromise, 0) AS PaymentsSinceLatestPromise
+        ,ec.FirstContactDate
     FROM StudentsWithBalance sw
     LEFT JOIN LatestContactDetail lcd ON lcd.ContactKey = sw.GuardianKey
     LEFT JOIN LatestPromiseDetail  lpd ON lpd.ContactKey = sw.GuardianKey
     LEFT JOIN PaymentsSincePromise psp ON psp.ContactKey = sw.GuardianKey
+    LEFT JOIN EarliestContact     ec  ON ec.ContactKey  = sw.GuardianKey
     ORDER BY sw.GuardianKey, sw.FullName";
 
         var grouped = new Dictionary<string, GuardianWorklistRow>();
@@ -388,6 +395,7 @@ public class FeesFollowUpService
                         LatestPromiseDate          = rdr["LatestPromiseDate"] as DateTime?,
                         LatestPromiseAmount        = rdr["LatestPromiseAmount"] as decimal?,
                         PaymentsSinceLatestPromise = (decimal)rdr["PaymentsSinceLatestPromise"],
+                        FirstContactDate = rdr["FirstContactDate"] as DateTime?,
                     };
                     grouped[gKey] = g;
                 }
