@@ -1103,11 +1103,15 @@ WHERE lp.rn = 1
         var dt = new DataTable();
         using var conn = new SqlConnection(connectionString);
         using var da = new SqlDataAdapter($@"
-        SELECT ContactId, ContactDate, Channel, Outcome, Note, LoggedBy, PromiseDate, PromiseAmount, GuardianKey
-        FROM tbl_FeesContactLog
-        WHERE GuardianKey = @guardianKey
-           OR (GuardianKey IS NULL AND StudentNumber IN ({inList}))
-        ORDER BY ContactDate DESC", conn);
+        SELECT cl.ContactId, cl.ContactDate, cl.Channel, cl.Outcome, cl.Note, cl.LoggedBy,
+               cl.PromiseDate, cl.PromiseAmount, cl.GuardianKey,
+               cl.StudentNumber,
+               s.fullName AS StudentName
+        FROM tbl_FeesContactLog cl
+        LEFT JOIN tbl_Stud s ON s.StudentNumber = cl.StudentNumber
+        WHERE cl.GuardianKey = @guardianKey
+           OR (cl.GuardianKey IS NULL AND cl.StudentNumber IN ({inList}))
+        ORDER BY cl.ContactDate DESC", conn);
 
         da.SelectCommand.Parameters.Add("@guardianKey", SqlDbType.VarChar, 20).Value = guardianKey;
         for (int i = 0; i < nums.Count; i++)

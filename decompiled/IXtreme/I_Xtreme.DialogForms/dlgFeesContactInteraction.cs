@@ -420,6 +420,8 @@ public class dlgFeesContactInteraction : XtraForm
         if (colId != null) colId.Visible = false;
         var colGK = gridViewHistory.Columns["GuardianKey"];
         if (colGK != null) colGK.Visible = false;
+        var colSN = gridViewHistory.Columns["StudentNumber"];
+        if (colSN != null) colSN.Visible = false;
 
         void SetH(string f, string c) { var col = gridViewHistory.Columns[f]; if (col != null) col.Caption = c; }
         SetH("ContactDate",   "Date");
@@ -429,6 +431,22 @@ public class dlgFeesContactInteraction : XtraForm
         SetH("LoggedBy",      "Logged By");
         SetH("PromiseDate",   "Promise Date");
         SetH("PromiseAmount", "Promise Amt");
+
+        // Add Student column (shows name for Promised entries, "All" for guardian-level contacts)
+        var studentCol = gridViewHistory.Columns.AddField("StudentName");
+        studentCol.Caption      = "Student";
+        studentCol.Width        = 150;
+        studentCol.OptionsColumn.AllowEdit = false;
+        // Place after Outcome column
+        var outcomeCol = gridViewHistory.Columns["Outcome"];
+        studentCol.VisibleIndex = outcomeCol != null ? outcomeCol.VisibleIndex + 1 : 3;
+
+        gridViewHistory.CustomColumnDisplayText += (s, e) =>
+        {
+            if (e.Column.FieldName == "StudentName"
+                && (e.Value == null || e.Value == DBNull.Value || string.IsNullOrEmpty(e.Value.ToString())))
+                e.DisplayText = "All";
+        };
 
         var colAmt = gridViewHistory.Columns["PromiseAmount"];
         if (colAmt != null)
@@ -440,6 +458,7 @@ public class dlgFeesContactInteraction : XtraForm
         gridViewHistory.BestFitColumns();
         var noteCol = gridViewHistory.Columns["Note"];
         if (noteCol != null) noteCol.Width = Math.Min(noteCol.Width, 200);
+        if (studentCol.Width < 150) studentCol.Width = 150;
     }
 
     private void GridViewStudents_CustomColumnDisplayText(object sender,
@@ -608,7 +627,7 @@ public class dlgFeesContactInteraction : XtraForm
             }
             else
             {
-                entry.StudentNumber = Current.Students.Count > 0 ? Current.Students[0].StudentNumber : "";
+                entry.StudentNumber = null;
                 if (_editContactId >= 0)
                 {
                     entry.ContactId = _editContactId;
