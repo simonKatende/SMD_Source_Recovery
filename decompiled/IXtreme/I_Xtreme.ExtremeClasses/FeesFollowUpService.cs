@@ -338,14 +338,13 @@ public class FeesFollowUpService
     ),
     PaymentsSincePromise AS (
         SELECT lpd.ContactKey,
-               ISNULL((
-                   SELECT SUM(fp.Credit)
-                   FROM FeesPayment fp
-                   JOIN StudentsWithBalance sw2 ON sw2.StudentNumber = fp.StudentNumber
-                   WHERE sw2.GuardianKey = lpd.ContactKey
-                     AND fp.DateOfPayment >= lpd.PromiseLoggedAt
-               ), 0) AS PaymentsSinceLatestPromise
+               ISNULL(SUM(fp.Credit), 0) AS PaymentsSinceLatestPromise
         FROM LatestPromiseDetail lpd
+        JOIN StudentsWithBalance sw2 ON sw2.GuardianKey = lpd.ContactKey
+        JOIN FeesPayment fp
+             ON fp.StudentNumber = sw2.StudentNumber
+            AND fp.DateOfPayment >= lpd.PromiseLoggedAt
+        GROUP BY lpd.ContactKey
     ),
     EarliestContact AS (
         SELECT ContactKey, MIN(ContactDate) AS FirstContactDate
