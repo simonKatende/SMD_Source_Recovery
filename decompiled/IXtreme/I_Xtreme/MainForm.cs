@@ -542,6 +542,8 @@ public class MainForm : RibbonForm
 
 	private DevExpress.XtraBars.BarButtonItem bbiLogInteraction;
 
+	private DevExpress.XtraBars.BarButtonItem bbiViewInteractions;
+
 	private DevExpress.XtraBars.BarButtonItem bbiDailyWorklist;
 
 	private DevExpress.XtraBars.BarButtonItem bbiGuardianWorklist;
@@ -24873,13 +24875,24 @@ public class MainForm : RibbonForm
 		this.bbiLogInteraction.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesPayIn;
 		this.bbiLogInteraction.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesPayIn;
 		this.bbiLogInteraction.ItemClick += (s, e) => OpenLogInteraction();
+		this.bbiViewInteractions = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiViewInteractions.Name    = "bbiViewInteractions";
+		this.bbiViewInteractions.Caption = "View Interactions";
+		this.bbiViewInteractions.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesReport;
+		this.bbiViewInteractions.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesReport;
+		this.bbiViewInteractions.ItemClick += (s, e) =>
+		{
+			using var dlg = new I_Xtreme.DialogForms.dlgInteractionLog();
+			dlg.ShowDialog(this);
+		};
 		this.ribbonPageGroupFeesInteractions = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroupFeesInteractions.Name = "ribbonPageGroupFeesInteractions";
 		this.ribbonPageGroupFeesInteractions.Text = "Interactions";
 		this.ribbonPageGroupFeesInteractions.ItemLinks.Add(this.bbiLogInteraction);
+		this.ribbonPageGroupFeesInteractions.ItemLinks.Add(this.bbiViewInteractions);
 		// Register items with the ribbon manager
 		this.ribbon.Items.AddRange(new DevExpress.XtraBars.BarItem[]
-			{ bbiFeesSettings, bbiSendReminders, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPrint, bbiFeesPreview, bbiFeesExport, bbiLogInteraction });
+			{ bbiFeesSettings, bbiSendReminders, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPrint, bbiFeesPreview, bbiFeesExport, bbiLogInteraction, bbiViewInteractions });
 		// Attach groups in order: Home | Worklists | Interactions | Settings | Printing & Exporting
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesHome);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesWorklists);
