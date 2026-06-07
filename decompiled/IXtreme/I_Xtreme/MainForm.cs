@@ -24882,8 +24882,18 @@ public class MainForm : RibbonForm
 		this.bbiViewInteractions.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesReport;
 		this.bbiViewInteractions.ItemClick += (s, e) =>
 		{
-			using var dlg = new I_Xtreme.DialogForms.dlgInteractionLog();
-			dlg.ShowDialog(this);
+			try
+			{
+				using var dlg = new I_Xtreme.DialogForms.dlgInteractionLog();
+				dlg.ShowDialog(this);
+			}
+			catch (Exception ex)
+			{
+				DevExpress.XtraEditors.XtraMessageBox.Show(
+					$"Could not open the interactions view.\n\n{ex.Message}",
+					"View Interactions", System.Windows.Forms.MessageBoxButtons.OK,
+					System.Windows.Forms.MessageBoxIcon.Warning);
+			}
 		};
 		this.ribbonPageGroupFeesInteractions = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroupFeesInteractions.Name = "ribbonPageGroupFeesInteractions";
