@@ -33,6 +33,12 @@ public class FeesFollowUpSettings
     // less than NoProgressPaymentThreshold % of what they were billed, force-promote to Critical.
     public int    NoProgressEscalationWeeks    { get; set; } = 4;
     public double NoProgressPaymentThreshold   { get; set; } = 30.0;
+
+    // Phase-based shortfall escalation (in addition to pacing-gap rule).
+    // First half of term: expect >= FirstHalfMinPercent paid; second half: >= SecondHalfMinPercent.
+    // Below the phase target AND no active promise => Critical (only when term dates are set).
+    public double FirstHalfMinPercent  { get; set; } = 50.0;
+    public double SecondHalfMinPercent { get; set; } = 80.0;
 }
 
 public class SmsReminderResult

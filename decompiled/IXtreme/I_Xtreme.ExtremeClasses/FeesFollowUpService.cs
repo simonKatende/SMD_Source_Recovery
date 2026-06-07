@@ -125,6 +125,16 @@ public class FeesFollowUpService
                 && double.TryParse(npt, System.Globalization.NumberStyles.Float,
                                    System.Globalization.CultureInfo.InvariantCulture, out double nptd)
                     ? nptd : 30.0,
+            FirstHalfMinPercent =
+                dict.TryGetValue("FirstHalfMinPercent", out var fhRaw)
+                && double.TryParse(fhRaw, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double fhVal)
+                    ? fhVal : 50.0,
+            SecondHalfMinPercent =
+                dict.TryGetValue("SecondHalfMinPercent", out var shRaw)
+                && double.TryParse(shRaw, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double shVal)
+                    ? shVal : 80.0,
         };
     }
 
@@ -151,6 +161,10 @@ public class FeesFollowUpService
             s.NoProgressEscalationWeeks.ToString());
         Upsert(conn, "NoProgressPaymentThreshold",
             s.NoProgressPaymentThreshold.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "FirstHalfMinPercent",
+            s.FirstHalfMinPercent.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "SecondHalfMinPercent",
+            s.SecondHalfMinPercent.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private static void Upsert(SqlConnection conn, string key, string value)
@@ -457,6 +471,16 @@ public class FeesFollowUpService
             termProgress = totalDays > 0 ? Math.Max(0.0, Math.Min(1.0, elapsedDays / totalDays)) : 0.0;
         }
 
+        // Phase target for the payment-shortfall Critical rule (Task 2)
+        double phaseTarget = 0.0;
+        if (hasTermDates)
+        {
+            DateTime midterm = tStart.Value.AddDays((tEnd.Value - tStart.Value).TotalDays / 2.0);
+            phaseTarget = DateTime.Today < midterm
+                ? settings.FirstHalfMinPercent
+                : settings.SecondHalfMinPercent;
+        }
+
         var rows = new List<GuardianWorklistRow>(grouped.Values);
         foreach (var g in rows)
         {
@@ -469,9 +493,12 @@ public class FeesFollowUpService
                 : g.TotalBalance >= settings.StaleMedBalanceAmount
                     ? settings.StaleMedBalanceDays
                     : settings.StaleThresholdDays;
+            bool hasActivePromise = g.LatestPromiseDate.HasValue
+                && g.LatestPromiseDate.Value.Date >= DateTime.Today;
             g.Tier = ComputeGuardianTier(g, effectiveStaleDays,
                 settings.CriticalPacingGapThreshold, hasTermDates,
-                settings.NoProgressEscalationWeeks, settings.NoProgressPaymentThreshold);
+                settings.NoProgressEscalationWeeks, settings.NoProgressPaymentThreshold,
+                phaseTarget, hasActivePromise);
         }
 
         // Mark Call Required for guardians with any Overdue SMS sent (flag loaded with the main query)
@@ -881,9 +908,14 @@ WHERE lp.rn = 1
 
     private static PriorityTier ComputeGuardianTier(
         GuardianWorklistRow g, int stalenessDays, double criticalThreshold, bool hasTermDates,
-        int noProgressWeeks, double noProgressThreshold)
+        int noProgressWeeks, double noProgressThreshold,
+        double phaseTarget, bool hasActivePromise)
     {
         if (hasTermDates && g.PacingGap >= criticalThreshold)
+            return PriorityTier.Critical;
+
+        // Phase-based shortfall: below the term-phase target with no active promise.
+        if (hasTermDates && (double)g.PaymentPercent < phaseTarget && !hasActivePromise)
             return PriorityTier.Critical;
 
         if (noProgressWeeks > 0 && g.FirstContactDate.HasValue)
