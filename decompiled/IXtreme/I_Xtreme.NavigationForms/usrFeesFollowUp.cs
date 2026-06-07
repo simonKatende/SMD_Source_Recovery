@@ -14,6 +14,9 @@ namespace I_Xtreme.NavigationForms;
 public class usrFeesFollowUp : XtraUserControl
 {
     // ── KPI strip ─────────────────────────────────────────────────────────────
+    // Label-slot indices: Row 1 = 0-4 and 11; Row 2 = 5-10. Card 11 ("Collected
+    // This Week") renders last in Row 1 but is allocated index 11 so the existing
+    // Row 2 cards (5-10) keep their numbers. Next free index is 12.
     private readonly Label[] _kpiValues = new Label[12];
     public event Action<string> NavigationRequested;
     private FlowLayoutPanel  _kpiPanel;
