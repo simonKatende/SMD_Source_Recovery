@@ -151,3 +151,7 @@ Sorted ascending — lower number = higher urgency.
 **Term Start / Term End** — boundaries of the current academic term. Required for Pacing Gap. When not set, Pacing Gap is 0 and Critical tier cannot trigger.
 
 **Critical Threshold** — Pacing Gap above which a row becomes Critical. Stored as decimal (0–1), shown as percentage (0–100%). Default: 50%.
+
+**Phase Min Percent (First/Second Half)** — minimum payment percent expected by term phase. A guardian below the current phase's target with no active promise is escalated to Critical, in addition to the Pacing Gap rule. `FirstHalfMinPercent` default 50, `SecondHalfMinPercent` default 80; mid-term is the date midpoint of Term Start..Term End.
+
+**Threshold units — read before adding a new one.** Settings thresholds in `FeesFollowUpSettings` mix two conventions. `CriticalPacingGapThreshold` is a **fraction (0–1)** and is compared against `PacingGap` (also a fraction). `NoProgressPaymentThreshold`, `FirstHalfMinPercent`, and `SecondHalfMinPercent` are **percentages (0–100)** and are compared against `PaymentPercent` (also 0–100). When adding a threshold, match the unit of the value it is compared against; the settings dialog stores percent-convention values as whole numbers (SpinEdit) and fraction-convention values divided by 100.
