@@ -350,6 +350,22 @@ public class FeesFollowUpService
         SELECT ContactKey, MIN(ContactDate) AS FirstContactDate
         FROM AllRelevantContacts
         GROUP BY ContactKey
+    ),
+    ContactedTodayCte AS (
+        -- Mirrors WasContactedToday: a same-day log with a 'reached' outcome
+        SELECT cl.GuardianKey AS ContactKey
+        FROM tbl_FeesContactLog cl
+        WHERE cl.GuardianKey IS NOT NULL
+          AND CAST(cl.ContactDate AS DATE) = CAST(GETDATE() AS DATE)
+          AND cl.Outcome IN ('Contacted', 'Promised', 'Refused')
+        GROUP BY cl.GuardianKey
+    ),
+    CallRequiredCte AS (
+        -- Mirrors HasCallRequiredStudent: any Overdue SMS sent to this guardian
+        SELECT GuardianKey AS ContactKey
+        FROM tbl_SmsReminderLog
+        WHERE ReminderType = 'Overdue' AND GuardianKey IS NOT NULL
+        GROUP BY GuardianKey
     )
     SELECT
         sw.StudentNumber, sw.FullName, sw.ClassId,
@@ -362,11 +378,15 @@ public class FeesFollowUpService
         lpd.PromiseAmount    AS LatestPromiseAmount,
         ISNULL(psp.PaymentsSinceLatestPromise, 0) AS PaymentsSinceLatestPromise
         ,ec.FirstContactDate
+        ,CASE WHEN ct.ContactKey IS NOT NULL THEN 1 ELSE 0 END AS ContactedToday
+        ,CASE WHEN cr.ContactKey IS NOT NULL THEN 1 ELSE 0 END AS CallRequired
     FROM StudentsWithBalance sw
     LEFT JOIN LatestContactDetail lcd ON lcd.ContactKey = sw.GuardianKey
     LEFT JOIN LatestPromiseDetail  lpd ON lpd.ContactKey = sw.GuardianKey
     LEFT JOIN PaymentsSincePromise psp ON psp.ContactKey = sw.GuardianKey
     LEFT JOIN EarliestContact     ec  ON ec.ContactKey  = sw.GuardianKey
+    LEFT JOIN ContactedTodayCte   ct  ON ct.ContactKey  = sw.GuardianKey
+    LEFT JOIN CallRequiredCte     cr  ON cr.ContactKey  = sw.GuardianKey
     ORDER BY sw.GuardianKey, sw.FullName";
 
         var grouped = new Dictionary<string, GuardianWorklistRow>();
@@ -399,6 +419,8 @@ public class FeesFollowUpService
                         LatestPromiseAmount        = rdr["LatestPromiseAmount"] as decimal?,
                         PaymentsSinceLatestPromise = (decimal)rdr["PaymentsSinceLatestPromise"],
                         FirstContactDate = rdr["FirstContactDate"] as DateTime?,
+                        ContactedToday = Convert.ToInt32(rdr["ContactedToday"]) == 1,
+                        CallRequired   = Convert.ToInt32(rdr["CallRequired"])   == 1,
                     };
                     grouped[gKey] = g;
                 }
@@ -452,14 +474,10 @@ public class FeesFollowUpService
                 settings.NoProgressEscalationWeeks, settings.NoProgressPaymentThreshold);
         }
 
-        // Mark Call Required for guardians with any Overdue SMS sent
-        using (var crConn = new SqlConnection(connectionString))
-        {
-            crConn.Open();
-            foreach (var row in rows)
-                if (HasCallRequiredStudent(crConn, row.GuardianContact))
-                    row.Tier = PriorityTier.CallRequired;
-        }
+        // Mark Call Required for guardians with any Overdue SMS sent (flag loaded with the main query)
+        foreach (var row in rows)
+            if (row.CallRequired)
+                row.Tier = PriorityTier.CallRequired;
 
         rows.Sort((a, b) =>
         {
@@ -508,7 +526,7 @@ public class FeesFollowUpService
             }
 
             // Exclude if successfully reached today
-            return !WasContactedToday(g.GuardianContact);
+            return !g.ContactedToday;
         })
         .OrderBy(g => (int)g.Tier)
         .ThenByDescending(g => g.TotalBalance)
@@ -563,7 +581,7 @@ public class FeesFollowUpService
         var totals = GetDashboardTotals(currentSemester, prevSemester);
         var today  = DateTime.Today;
 
-        int contactedToday = all.Count(g => WasContactedToday(g.GuardianContact));
+        int contactedToday = all.Count(g => g.ContactedToday);
 
         int dailyTotal = all.Count(g =>
         {
@@ -578,7 +596,7 @@ public class FeesFollowUpService
                 if (coverageRatio >= settings.PartialPromiseCoverageThreshold)
                     return false;
             }
-            return !WasContactedToday(g.GuardianContact);
+            return !g.ContactedToday;
         }) + contactedToday;
 
         int belowPacingCount = all.Count(g => g.PacingGap > 0);

@@ -93,6 +93,10 @@ public class GuardianWorklistRow
     public decimal         PaymentsSinceLatestPromise  { get; set; }
     public DateTime?       FirstContactDate            { get; set; }
 
+    // Folded into the main query (Task 1) to avoid per-guardian round-trips.
+    public bool ContactedToday { get; set; }   // any 'Contacted'/'Promised'/'Refused' log today
+    public bool CallRequired   { get; set; }   // any Overdue SMS sent (tbl_SmsReminderLog)
+
     public string PaymentStatus =>
         TotalBilled == 0 ? "N/A" :
         TotalPaid >= TotalBilled ? "Fully Paid" :
