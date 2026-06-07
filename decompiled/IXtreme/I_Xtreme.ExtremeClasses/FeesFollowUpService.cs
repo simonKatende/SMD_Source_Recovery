@@ -125,6 +125,16 @@ public class FeesFollowUpService
                 && double.TryParse(npt, System.Globalization.NumberStyles.Float,
                                    System.Globalization.CultureInfo.InvariantCulture, out double nptd)
                     ? nptd : 30.0,
+            FirstHalfMinPercent =
+                dict.TryGetValue("FirstHalfMinPercent", out var fhRaw)
+                && double.TryParse(fhRaw, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double fhVal)
+                    ? fhVal : 50.0,
+            SecondHalfMinPercent =
+                dict.TryGetValue("SecondHalfMinPercent", out var shRaw)
+                && double.TryParse(shRaw, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double shVal)
+                    ? shVal : 80.0,
         };
     }
 
@@ -151,6 +161,10 @@ public class FeesFollowUpService
             s.NoProgressEscalationWeeks.ToString());
         Upsert(conn, "NoProgressPaymentThreshold",
             s.NoProgressPaymentThreshold.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "FirstHalfMinPercent",
+            s.FirstHalfMinPercent.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "SecondHalfMinPercent",
+            s.SecondHalfMinPercent.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
     }
 
     private static void Upsert(SqlConnection conn, string key, string value)
@@ -184,6 +198,7 @@ public class FeesFollowUpService
         public decimal TotalPaid;
         public int     NilBalance;
         public int     ZeroPaid;
+        public decimal CollectedThisWeek;
     }
 
     // Mirrors the tracking sheet formula for all students in the current semester —
@@ -218,6 +233,9 @@ public class FeesFollowUpService
         ISNULL(SUM(CASE WHEN ctp.TotalPaid = 0
                          AND ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) > 0
                         THEN 1 ELSE 0 END), 0)                               AS ZeroPaid
+        ,(SELECT ISNULL(SUM(Credit), 0) FROM FeesPayment
+          WHERE SemesterId = @currentSemester AND Credit > 0
+            AND DateOfPayment >= @weekStart)                                AS CollectedThisWeek
     FROM tbl_Stud s
     INNER JOIN CurrentTermPayments ctp ON ctp.StudentNumber = s.StudentNumber
     LEFT  JOIN PrevTermLastBalance  ptb ON ptb.StudentNumber = s.StudentNumber";
@@ -227,15 +245,18 @@ public class FeesFollowUpService
         using var cmd = new SqlCommand(sql, conn);
         cmd.Parameters.Add("@currentSemester", SqlDbType.VarChar, 50).Value = currentSemester;
         cmd.Parameters.Add("@prevSemester",    SqlDbType.VarChar, 50).Value = (object)prevSemester ?? DBNull.Value;
+        DateTime weekStart = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek); // Sunday on/before today
+        cmd.Parameters.Add("@weekStart", SqlDbType.Date).Value = weekStart;
         using var rdr = cmd.ExecuteReader();
         if (!rdr.Read()) return new DashboardTotals();
         return new DashboardTotals
         {
-            TotalEnrolled = Convert.ToInt32(rdr["TotalEnrolled"]),
-            TotalPayable  = Convert.ToDecimal(rdr["TotalPayable"]),
-            TotalPaid     = Convert.ToDecimal(rdr["TotalPaid"]),
-            NilBalance    = Convert.ToInt32(rdr["NilBalance"]),
-            ZeroPaid      = Convert.ToInt32(rdr["ZeroPaid"]),
+            TotalEnrolled     = Convert.ToInt32(rdr["TotalEnrolled"]),
+            TotalPayable      = Convert.ToDecimal(rdr["TotalPayable"]),
+            TotalPaid         = Convert.ToDecimal(rdr["TotalPaid"]),
+            NilBalance        = Convert.ToInt32(rdr["NilBalance"]),
+            ZeroPaid          = Convert.ToInt32(rdr["ZeroPaid"]),
+            CollectedThisWeek = Convert.ToDecimal(rdr["CollectedThisWeek"]),
         };
     }
 
@@ -350,6 +371,22 @@ public class FeesFollowUpService
         SELECT ContactKey, MIN(ContactDate) AS FirstContactDate
         FROM AllRelevantContacts
         GROUP BY ContactKey
+    ),
+    ContactedTodayCte AS (
+        -- Mirrors WasContactedToday: a same-day log with a 'reached' outcome
+        SELECT cl.GuardianKey AS ContactKey
+        FROM tbl_FeesContactLog cl
+        WHERE cl.GuardianKey IS NOT NULL
+          AND CAST(cl.ContactDate AS DATE) = CAST(GETDATE() AS DATE)
+          AND cl.Outcome IN ('Contacted', 'Promised', 'Refused')
+        GROUP BY cl.GuardianKey
+    ),
+    CallRequiredCte AS (
+        -- Mirrors HasCallRequiredStudent: any Overdue SMS sent to this guardian
+        SELECT GuardianKey AS ContactKey
+        FROM tbl_SmsReminderLog
+        WHERE ReminderType = 'Overdue' AND GuardianKey IS NOT NULL
+        GROUP BY GuardianKey
     )
     SELECT
         sw.StudentNumber, sw.FullName, sw.ClassId,
@@ -362,11 +399,15 @@ public class FeesFollowUpService
         lpd.PromiseAmount    AS LatestPromiseAmount,
         ISNULL(psp.PaymentsSinceLatestPromise, 0) AS PaymentsSinceLatestPromise
         ,ec.FirstContactDate
+        ,CASE WHEN ct.ContactKey IS NOT NULL THEN 1 ELSE 0 END AS ContactedToday
+        ,CASE WHEN cr.ContactKey IS NOT NULL THEN 1 ELSE 0 END AS CallRequired
     FROM StudentsWithBalance sw
     LEFT JOIN LatestContactDetail lcd ON lcd.ContactKey = sw.GuardianKey
     LEFT JOIN LatestPromiseDetail  lpd ON lpd.ContactKey = sw.GuardianKey
     LEFT JOIN PaymentsSincePromise psp ON psp.ContactKey = sw.GuardianKey
     LEFT JOIN EarliestContact     ec  ON ec.ContactKey  = sw.GuardianKey
+    LEFT JOIN ContactedTodayCte   ct  ON ct.ContactKey  = sw.GuardianKey
+    LEFT JOIN CallRequiredCte     cr  ON cr.ContactKey  = sw.GuardianKey
     ORDER BY sw.GuardianKey, sw.FullName";
 
         var grouped = new Dictionary<string, GuardianWorklistRow>();
@@ -399,6 +440,8 @@ public class FeesFollowUpService
                         LatestPromiseAmount        = rdr["LatestPromiseAmount"] as decimal?,
                         PaymentsSinceLatestPromise = (decimal)rdr["PaymentsSinceLatestPromise"],
                         FirstContactDate = rdr["FirstContactDate"] as DateTime?,
+                        ContactedToday = Convert.ToInt32(rdr["ContactedToday"]) == 1,
+                        CallRequired   = Convert.ToInt32(rdr["CallRequired"])   == 1,
                     };
                     grouped[gKey] = g;
                 }
@@ -435,6 +478,16 @@ public class FeesFollowUpService
             termProgress = totalDays > 0 ? Math.Max(0.0, Math.Min(1.0, elapsedDays / totalDays)) : 0.0;
         }
 
+        // Phase target for the payment-shortfall Critical rule (Task 2)
+        double phaseTarget = 0.0;
+        if (hasTermDates)
+        {
+            DateTime midterm = tStart.Value.AddDays((tEnd.Value - tStart.Value).TotalDays / 2.0);
+            phaseTarget = DateTime.Today < midterm
+                ? settings.FirstHalfMinPercent
+                : settings.SecondHalfMinPercent;
+        }
+
         var rows = new List<GuardianWorklistRow>(grouped.Values);
         foreach (var g in rows)
         {
@@ -447,19 +500,18 @@ public class FeesFollowUpService
                 : g.TotalBalance >= settings.StaleMedBalanceAmount
                     ? settings.StaleMedBalanceDays
                     : settings.StaleThresholdDays;
+            bool hasActivePromise = g.LatestPromiseDate.HasValue
+                && g.LatestPromiseDate.Value.Date >= DateTime.Today;
             g.Tier = ComputeGuardianTier(g, effectiveStaleDays,
                 settings.CriticalPacingGapThreshold, hasTermDates,
-                settings.NoProgressEscalationWeeks, settings.NoProgressPaymentThreshold);
+                settings.NoProgressEscalationWeeks, settings.NoProgressPaymentThreshold,
+                phaseTarget, hasActivePromise);
         }
 
-        // Mark Call Required for guardians with any Overdue SMS sent
-        using (var crConn = new SqlConnection(connectionString))
-        {
-            crConn.Open();
-            foreach (var row in rows)
-                if (HasCallRequiredStudent(crConn, row.GuardianContact))
-                    row.Tier = PriorityTier.CallRequired;
-        }
+        // Mark Call Required for guardians with any Overdue SMS sent (flag loaded with the main query)
+        foreach (var row in rows)
+            if (row.CallRequired)
+                row.Tier = PriorityTier.CallRequired;
 
         rows.Sort((a, b) =>
         {
@@ -508,7 +560,7 @@ public class FeesFollowUpService
             }
 
             // Exclude if successfully reached today
-            return !WasContactedToday(g.GuardianContact);
+            return !g.ContactedToday;
         })
         .OrderBy(g => (int)g.Tier)
         .ThenByDescending(g => g.TotalBalance)
@@ -563,7 +615,7 @@ public class FeesFollowUpService
         var totals = GetDashboardTotals(currentSemester, prevSemester);
         var today  = DateTime.Today;
 
-        int contactedToday = all.Count(g => WasContactedToday(g.GuardianContact));
+        int contactedToday = all.Count(g => g.ContactedToday);
 
         int dailyTotal = all.Count(g =>
         {
@@ -578,7 +630,7 @@ public class FeesFollowUpService
                 if (coverageRatio >= settings.PartialPromiseCoverageThreshold)
                     return false;
             }
-            return !WasContactedToday(g.GuardianContact);
+            return !g.ContactedToday;
         }) + contactedToday;
 
         int belowPacingCount = all.Count(g => g.PacingGap > 0);
@@ -602,6 +654,7 @@ public class FeesFollowUpService
             TotalOutstanding          = all.Sum(g => g.TotalBalance),  // positive balances only
             TotalPayable              = totals.TotalPayable,            // all students, matches tracking sheet
             TotalCollected            = totals.TotalPaid,               // all students
+            CollectedThisWeek         = totals.CollectedThisWeek,
             TotalGuardiansWithBalance = all.Count,
             DailyListTotal            = dailyTotal,
             DailyListContacted        = contactedToday,
@@ -863,9 +916,14 @@ WHERE lp.rn = 1
 
     private static PriorityTier ComputeGuardianTier(
         GuardianWorklistRow g, int stalenessDays, double criticalThreshold, bool hasTermDates,
-        int noProgressWeeks, double noProgressThreshold)
+        int noProgressWeeks, double noProgressThreshold,
+        double phaseTarget, bool hasActivePromise)
     {
         if (hasTermDates && g.PacingGap >= criticalThreshold)
+            return PriorityTier.Critical;
+
+        // Phase-based shortfall: below the term-phase target with no active promise.
+        if (hasTermDates && (double)g.PaymentPercent < phaseTarget && !hasActivePromise)
             return PriorityTier.Critical;
 
         if (noProgressWeeks > 0 && g.FirstContactDate.HasValue)
@@ -1119,6 +1177,39 @@ WHERE lp.rn = 1
         for (int i = 0; i < nums.Count; i++)
             da.SelectCommand.Parameters.Add($"@sn{i}", SqlDbType.VarChar, 50).Value = nums[i];
 
+        da.Fill(dt);
+        return dt;
+    }
+
+    /// <summary>
+    /// All interactions logged within [fromInclusive, toInclusive] (whole days),
+    /// joined to the student name. Ordered newest first. Read-only review feed.
+    /// </summary>
+    public DataTable GetInteractionsByDateRange(DateTime fromInclusive, DateTime toInclusive)
+    {
+        var dt = new DataTable();
+        using var conn = new SqlConnection(connectionString);
+        using var da = new SqlDataAdapter(@"
+        SELECT cl.ContactId,
+               cl.ContactDate,
+               s.fullName AS StudentName,
+               CASE WHEN LTRIM(RTRIM(ISNULL(s.GuardianRelation,''))) = ''
+                    THEN ISNULL(s.Guardian,'')
+                    ELSE ISNULL(s.Guardian,'') + ' (' + s.GuardianRelation + ')'
+               END AS GuardianDisplay,
+               cl.Channel,
+               cl.Outcome,
+               cl.Note,
+               cl.PromiseDate,
+               cl.PromiseAmount,
+               cl.LoggedBy
+        FROM tbl_FeesContactLog cl
+        LEFT JOIN tbl_Stud s ON s.StudentNumber = cl.StudentNumber
+        WHERE cl.ContactDate >= @from AND cl.ContactDate < @toExclusive
+        ORDER BY cl.ContactDate DESC", conn);
+        da.SelectCommand.Parameters.Add("@from", SqlDbType.DateTime).Value = fromInclusive.Date;
+        da.SelectCommand.Parameters.Add("@toExclusive", SqlDbType.DateTime).Value =
+            toInclusive.Date.AddDays(1);
         da.Fill(dt);
         return dt;
     }

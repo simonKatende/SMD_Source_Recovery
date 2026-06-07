@@ -14,7 +14,10 @@ namespace I_Xtreme.NavigationForms;
 public class usrFeesFollowUp : XtraUserControl
 {
     // ── KPI strip ─────────────────────────────────────────────────────────────
-    private readonly Label[] _kpiValues = new Label[11];
+    // Label-slot indices: Row 1 = 0-4 and 11; Row 2 = 5-10. Card 11 ("Collected
+    // This Week") renders last in Row 1 but is allocated index 11 so the existing
+    // Row 2 cards (5-10) keep their numbers. Next free index is 12.
+    private readonly Label[] _kpiValues = new Label[12];
     public event Action<string> NavigationRequested;
     private FlowLayoutPanel  _kpiPanel;
 
@@ -141,6 +144,7 @@ public class usrFeesFollowUp : XtraUserControl
         _kpiPanel.Controls.Add(BuildKpiCard(2, "Total Outstanding (UGX)", Color.DarkRed));
         _kpiPanel.Controls.Add(BuildKpiCard(3, "Collection Rate (%)",     Color.SeaGreen));
         _kpiPanel.Controls.Add(BuildKpiCard(4, "Total Enrolled",          Color.DimGray));
+        _kpiPanel.Controls.Add(BuildKpiCard(11, "Collected This Week (UGX)", Color.SeaGreen));
         // Row 2: follow-up activity (some tiles are clickable)
         _kpiPanel.Controls.Add(BuildKpiCard(5,  "Cleared (Nil Balance)",  Color.ForestGreen));
         _kpiPanel.Controls.Add(BuildKpiCard(6,  "Guardians w/ Balance",   Color.DarkBlue,
@@ -229,6 +233,7 @@ public class usrFeesFollowUp : XtraUserControl
         _kpiValues[2].Text  = $"{data.TotalOutstanding:N0}";
         _kpiValues[3].Text  = $"{data.CollectionRate:F1}%";
         _kpiValues[4].Text  = $"{data.TotalEnrolled}";
+        _kpiValues[11].Text = $"{data.CollectedThisWeek:N0}";
         // Row 2: follow-up activity
         _kpiValues[5].Text  = $"{data.NilBalanceStudents}";
         _kpiValues[6].Text  = $"{data.TotalGuardiansWithBalance}";

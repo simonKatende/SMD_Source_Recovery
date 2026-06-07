@@ -21,6 +21,7 @@ public class FollowUpSettings : XtraForm
     private SpinEdit spnHighBalAmt, spnHighBalDays;
     private SpinEdit spnMedBalAmt,  spnMedBalDays;
     private SpinEdit spnEscWeeks,   spnEscThreshold;
+    private SpinEdit spnFirstHalfPct, spnSecondHalfPct;
     private SimpleButton btnOK, btnCancel, btnResetTemplates;
 
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
@@ -44,6 +45,8 @@ public class FollowUpSettings : XtraForm
         spnMedBalDays.Value      = s.StaleMedBalanceDays;
         spnEscWeeks.Value        = s.NoProgressEscalationWeeks;
         spnEscThreshold.Value    = (decimal)s.NoProgressPaymentThreshold;
+        spnFirstHalfPct.Value  = (decimal)s.FirstHalfMinPercent;
+        spnSecondHalfPct.Value = (decimal)s.SecondHalfMinPercent;
         memo2Day.Text    = !string.IsNullOrWhiteSpace(s.SmsTemplate2Day)    ? s.SmsTemplate2Day    : Default2Day;
         memoDayOf.Text   = !string.IsNullOrWhiteSpace(s.SmsTemplateDayOf)   ? s.SmsTemplateDayOf   : DefaultDayOf;
         memoOverdue.Text = !string.IsNullOrWhiteSpace(s.SmsTemplateOverdue) ? s.SmsTemplateOverdue : DefaultOverdue;
@@ -148,35 +151,55 @@ public class FollowUpSettings : XtraForm
         this.spnEscThreshold.Properties.MinValue     = 0;
         this.spnEscThreshold.Properties.MaxValue     = 100;
 
+        // Row 11: First-half min payment %
+        var lblFirstHalf = new LabelControl
+            { Text = "First half of term: expect paid >= (%):",
+              Location = new System.Drawing.Point(12, 366) };
+        this.spnFirstHalfPct = new SpinEdit
+            { Location = new System.Drawing.Point(340, 362), Width = 80 };
+        this.spnFirstHalfPct.Properties.IsFloatValue = false;
+        this.spnFirstHalfPct.Properties.MinValue     = 0;
+        this.spnFirstHalfPct.Properties.MaxValue     = 100;
+
+        // Row 12: Second-half min payment %
+        var lblSecondHalf = new LabelControl
+            { Text = "Second half of term: expect paid >= (%):",
+              Location = new System.Drawing.Point(12, 398) };
+        this.spnSecondHalfPct = new SpinEdit
+            { Location = new System.Drawing.Point(340, 394), Width = 80 };
+        this.spnSecondHalfPct.Properties.IsFloatValue = false;
+        this.spnSecondHalfPct.Properties.MinValue     = 0;
+        this.spnSecondHalfPct.Properties.MaxValue     = 100;
+
         // Row 5: 2-day reminder template
         var lbl2Day = new LabelControl
-            { Text = "2-day reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 360), AutoSize = true };
-        this.memo2Day = new MemoEdit { Location = new System.Drawing.Point(12, 378), Size = new System.Drawing.Size(580, 60) };
+            { Text = "2-day reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 432), AutoSize = true };
+        this.memo2Day = new MemoEdit { Location = new System.Drawing.Point(12, 450), Size = new System.Drawing.Size(580, 60) };
         this.memo2Day.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Row 6: Day-of reminder template
         var lblDayOf = new LabelControl
-            { Text = "Day-of reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 446), AutoSize = true };
-        this.memoDayOf = new MemoEdit { Location = new System.Drawing.Point(12, 462), Size = new System.Drawing.Size(580, 60) };
+            { Text = "Day-of reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 518), AutoSize = true };
+        this.memoDayOf = new MemoEdit { Location = new System.Drawing.Point(12, 534), Size = new System.Drawing.Size(580, 60) };
         this.memoDayOf.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Row 7: Overdue reminder template
         var lblOverdue = new LabelControl
         {
             Text     = "Overdue reminder template ({promised_amount},{balance},{names},{class},{date},{school}):",
-            Location = new System.Drawing.Point(12, 530),
+            Location = new System.Drawing.Point(12, 602),
             AutoSize = true,
         };
-        this.memoOverdue = new MemoEdit { Location = new System.Drawing.Point(12, 546), Size = new System.Drawing.Size(580, 60) };
+        this.memoOverdue = new MemoEdit { Location = new System.Drawing.Point(12, 618), Size = new System.Drawing.Size(580, 60) };
         this.memoOverdue.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Buttons
         this.btnResetTemplates = new SimpleButton
-            { Text = "Reset Templates", Location = new System.Drawing.Point(12, 620), Width = 120 };
+            { Text = "Reset Templates", Location = new System.Drawing.Point(12, 692), Width = 120 };
         this.btnOK = new SimpleButton
-            { Text = "OK", Location = new System.Drawing.Point(430, 620), Width = 75 };
+            { Text = "OK", Location = new System.Drawing.Point(430, 692), Width = 75 };
         this.btnCancel = new SimpleButton
-            { Text = "Cancel", Location = new System.Drawing.Point(514, 620), Width = 75 };
+            { Text = "Cancel", Location = new System.Drawing.Point(514, 692), Width = 75 };
 
         this.btnOK.Click += (s, e) =>
         {
@@ -208,6 +231,8 @@ public class FollowUpSettings : XtraForm
                 StaleMedBalanceDays             = (int)spnMedBalDays.Value,
                 NoProgressEscalationWeeks       = (int)spnEscWeeks.Value,
                 NoProgressPaymentThreshold      = (double)spnEscThreshold.Value,
+                FirstHalfMinPercent  = (double)spnFirstHalfPct.Value,
+                SecondHalfMinPercent = (double)spnSecondHalfPct.Value,
             });
             base.DialogResult = DialogResult.OK;
             Dispose();
@@ -220,7 +245,7 @@ public class FollowUpSettings : XtraForm
             memoOverdue.Text = DefaultOverdue;
         };
 
-        this.ClientSize = new System.Drawing.Size(608, 652);
+        this.ClientSize = new System.Drawing.Size(608, 724);
         this.Controls.AddRange(new Control[]
         {
             lblStaleness, spnStaleness,
@@ -233,6 +258,8 @@ public class FollowUpSettings : XtraForm
             lblMedAmt,   spnMedBalAmt,  lblMedMid,  spnMedBalDays,  lblMedEnd,
             lblEscWeeks, spnEscWeeks,
             lblEscThreshold, spnEscThreshold,
+            lblFirstHalf,  spnFirstHalfPct,
+            lblSecondHalf, spnSecondHalfPct,
             lbl2Day,      memo2Day,
             lblDayOf,     memoDayOf,
             lblOverdue,   memoOverdue,

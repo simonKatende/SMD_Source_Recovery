@@ -33,6 +33,12 @@ public class FeesFollowUpSettings
     // less than NoProgressPaymentThreshold % of what they were billed, force-promote to Critical.
     public int    NoProgressEscalationWeeks    { get; set; } = 4;
     public double NoProgressPaymentThreshold   { get; set; } = 30.0;
+
+    // Phase-based shortfall escalation (in addition to pacing-gap rule).
+    // First half of term: expect >= FirstHalfMinPercent paid; second half: >= SecondHalfMinPercent.
+    // Below the phase target AND no active promise => Critical (only when term dates are set).
+    public double FirstHalfMinPercent  { get; set; } = 50.0;
+    public double SecondHalfMinPercent { get; set; } = 80.0;
 }
 
 public class SmsReminderResult
@@ -93,6 +99,10 @@ public class GuardianWorklistRow
     public decimal         PaymentsSinceLatestPromise  { get; set; }
     public DateTime?       FirstContactDate            { get; set; }
 
+    // Folded into the main query (Task 1) to avoid per-guardian round-trips.
+    public bool ContactedToday { get; set; }   // any 'Contacted'/'Promised'/'Refused' log today
+    public bool CallRequired   { get; set; }   // any Overdue SMS sent (tbl_SmsReminderLog)
+
     public string PaymentStatus =>
         TotalBilled == 0 ? "N/A" :
         TotalPaid >= TotalBilled ? "Fully Paid" :
@@ -141,6 +151,7 @@ public class DashboardData
     public decimal TotalOutstanding           { get; set; }
     public decimal TotalPayable               { get; set; }
     public decimal TotalCollected             { get; set; }
+    public decimal CollectedThisWeek         { get; set; }
     public decimal CollectionRate             => TotalPayable == 0 ? 0 : TotalCollected / TotalPayable * 100m;
     public int     TotalGuardiansWithBalance  { get; set; }
     public int     DailyListTotal             { get; set; }
