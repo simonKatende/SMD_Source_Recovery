@@ -1181,6 +1181,39 @@ WHERE lp.rn = 1
         return dt;
     }
 
+    /// <summary>
+    /// All interactions logged within [fromInclusive, toInclusive] (whole days),
+    /// joined to the student name. Ordered newest first. Read-only review feed.
+    /// </summary>
+    public DataTable GetInteractionsByDateRange(DateTime fromInclusive, DateTime toInclusive)
+    {
+        var dt = new DataTable();
+        using var conn = new SqlConnection(connectionString);
+        using var da = new SqlDataAdapter(@"
+        SELECT cl.ContactId,
+               cl.ContactDate,
+               s.fullName AS StudentName,
+               CASE WHEN LTRIM(RTRIM(ISNULL(s.GuardianRelation,''))) = ''
+                    THEN ISNULL(s.Guardian,'')
+                    ELSE ISNULL(s.Guardian,'') + ' (' + s.GuardianRelation + ')'
+               END AS GuardianDisplay,
+               cl.Channel,
+               cl.Outcome,
+               cl.Note,
+               cl.PromiseDate,
+               cl.PromiseAmount,
+               cl.LoggedBy
+        FROM tbl_FeesContactLog cl
+        LEFT JOIN tbl_Stud s ON s.StudentNumber = cl.StudentNumber
+        WHERE cl.ContactDate >= @from AND cl.ContactDate < @toExclusive
+        ORDER BY cl.ContactDate DESC", conn);
+        da.SelectCommand.Parameters.Add("@from", SqlDbType.DateTime).Value = fromInclusive.Date;
+        da.SelectCommand.Parameters.Add("@toExclusive", SqlDbType.DateTime).Value =
+            toInclusive.Date.AddDays(1);
+        da.Fill(dt);
+        return dt;
+    }
+
     public DataTable GetRecentPayments(string studentNumber, int topN = 2, string semester = null)
     {
         var dt = new DataTable();
