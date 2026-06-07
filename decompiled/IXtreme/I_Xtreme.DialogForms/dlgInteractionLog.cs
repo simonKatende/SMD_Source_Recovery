@@ -66,8 +66,8 @@ public class dlgInteractionLog : XtraForm
         colPa.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
         colPa.DisplayFormat.FormatString = "N0";
         AddCol("LoggedBy",     "Logged By", 100);
-        // Hide the technical key column if present
-        var idCol = AddCol("ContactId", "Id", 0);
+        // Technical key column — kept for reference but not shown (width irrelevant when hidden)
+        var idCol = AddCol("ContactId", "Id", 60);
         idCol.Visible = false;
 
         this.ClientSize = new System.Drawing.Size(884, 516);
@@ -124,7 +124,6 @@ public class dlgInteractionLog : XtraForm
                 return;
             }
             grid.DataSource = _service.GetInteractionsByDateRange(from, to);
-            view.RefreshData();
         }
         catch (Exception ex)
         {
