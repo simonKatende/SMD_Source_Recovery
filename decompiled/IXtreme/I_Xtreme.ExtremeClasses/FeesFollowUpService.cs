@@ -198,6 +198,7 @@ public class FeesFollowUpService
         public decimal TotalPaid;
         public int     NilBalance;
         public int     ZeroPaid;
+        public decimal CollectedThisWeek;
     }
 
     // Mirrors the tracking sheet formula for all students in the current semester —
@@ -232,6 +233,9 @@ public class FeesFollowUpService
         ISNULL(SUM(CASE WHEN ctp.TotalPaid = 0
                          AND ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) > 0
                         THEN 1 ELSE 0 END), 0)                               AS ZeroPaid
+        ,(SELECT ISNULL(SUM(Credit), 0) FROM FeesPayment
+          WHERE SemesterId = @currentSemester AND Credit > 0
+            AND DateOfPayment >= @weekStart)                                AS CollectedThisWeek
     FROM tbl_Stud s
     INNER JOIN CurrentTermPayments ctp ON ctp.StudentNumber = s.StudentNumber
     LEFT  JOIN PrevTermLastBalance  ptb ON ptb.StudentNumber = s.StudentNumber";
@@ -241,15 +245,18 @@ public class FeesFollowUpService
         using var cmd = new SqlCommand(sql, conn);
         cmd.Parameters.Add("@currentSemester", SqlDbType.VarChar, 50).Value = currentSemester;
         cmd.Parameters.Add("@prevSemester",    SqlDbType.VarChar, 50).Value = (object)prevSemester ?? DBNull.Value;
+        DateTime weekStart = DateTime.Today.AddDays(-(int)DateTime.Today.DayOfWeek); // Sunday on/before today
+        cmd.Parameters.Add("@weekStart", SqlDbType.Date).Value = weekStart;
         using var rdr = cmd.ExecuteReader();
         if (!rdr.Read()) return new DashboardTotals();
         return new DashboardTotals
         {
-            TotalEnrolled = Convert.ToInt32(rdr["TotalEnrolled"]),
-            TotalPayable  = Convert.ToDecimal(rdr["TotalPayable"]),
-            TotalPaid     = Convert.ToDecimal(rdr["TotalPaid"]),
-            NilBalance    = Convert.ToInt32(rdr["NilBalance"]),
-            ZeroPaid      = Convert.ToInt32(rdr["ZeroPaid"]),
+            TotalEnrolled     = Convert.ToInt32(rdr["TotalEnrolled"]),
+            TotalPayable      = Convert.ToDecimal(rdr["TotalPayable"]),
+            TotalPaid         = Convert.ToDecimal(rdr["TotalPaid"]),
+            NilBalance        = Convert.ToInt32(rdr["NilBalance"]),
+            ZeroPaid          = Convert.ToInt32(rdr["ZeroPaid"]),
+            CollectedThisWeek = Convert.ToDecimal(rdr["CollectedThisWeek"]),
         };
     }
 
@@ -647,6 +654,7 @@ public class FeesFollowUpService
             TotalOutstanding          = all.Sum(g => g.TotalBalance),  // positive balances only
             TotalPayable              = totals.TotalPayable,            // all students, matches tracking sheet
             TotalCollected            = totals.TotalPaid,               // all students
+            CollectedThisWeek         = totals.CollectedThisWeek,
             TotalGuardiansWithBalance = all.Count,
             DailyListTotal            = dailyTotal,
             DailyListContacted        = contactedToday,
