@@ -32,6 +32,19 @@ public static class SmsReminderLogic
     public static string FormatAmount(decimal value)
         => value.ToString("#,##0", CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// True when an SMS-gateway response indicates success. egosms /plain returns the literal
+    /// "OK"; some gateway variants return a positive integer (batch id / count). Anything else
+    /// (empty, "0", an error string) is a failure.
+    /// </summary>
+    public static bool IsGatewaySuccessResponse(string response)
+    {
+        if (string.IsNullOrWhiteSpace(response)) return false;
+        string r = response.Trim();
+        if (r.Equals("OK", StringComparison.OrdinalIgnoreCase)) return true;
+        return int.TryParse(r, out int code) && code > 0;
+    }
+
     /// <summary>Balance reminder targets: Critical or Broken Promise, owing, with no active promise.</summary>
     public static bool IsBalanceReminderEligible(PriorityTier tier, decimal balance, bool hasActivePromise)
         => balance > 0m && !hasActivePromise

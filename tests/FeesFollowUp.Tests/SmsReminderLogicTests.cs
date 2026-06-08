@@ -100,4 +100,18 @@ public class SmsReminderLogicTests
         var outp = SmsReminderLogic.ConsolidatePromiseReminders(input);
         Assert.Equal(2, outp.Count);
     }
+
+    [Theory]
+    [InlineData("OK", true)]
+    [InlineData("ok", true)]
+    [InlineData(" OK ", true)]
+    [InlineData("1", true)]
+    [InlineData("250", true)]
+    [InlineData("0", false)]
+    [InlineData("Failed", false)]
+    [InlineData("Insufficient balance", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void IsGatewaySuccessResponse_matches_OK_or_positive_int(string response, bool expected)
+        => Assert.Equal(expected, SmsReminderLogic.IsGatewaySuccessResponse(response));
 }

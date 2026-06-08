@@ -81,8 +81,8 @@ internal static class FeeSmsHelper
             SaveLog(connectionString, phone, response ?? "", message);
         }
 
-        // egosms returns a positive integer on success (message count / batch ID)
-        if (int.TryParse(response, out int code) && code > 0)
+        // egosms /plain returns "OK" on success; some variants return a positive integer.
+        if (SmsReminderLogic.IsGatewaySuccessResponse(response))
         {
             errorMessage = null;
             return true;
