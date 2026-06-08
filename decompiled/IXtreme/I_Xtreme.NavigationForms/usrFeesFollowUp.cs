@@ -292,7 +292,9 @@ public class usrFeesFollowUp : XtraUserControl
     {
         if (!e.IsGetData || e.Column.FieldName != "TierDisplay") return;
         var row = _viewTop5.GetRow(e.ListSourceRowIndex) as GuardianWorklistRow;
-        e.Value = TierDisplayName(row?.Tier ?? PriorityTier.Current);
+        string text = TierDisplayName(row?.Tier ?? PriorityTier.Current);
+        if (row != null && row.CallRequired) text += " + Call";
+        e.Value = text;
     }
 
     // ── Grid row styles ───────────────────────────────────────────────────────
@@ -311,6 +313,13 @@ public class usrFeesFollowUp : XtraUserControl
         var row = _viewTop5.GetRow(e.RowHandle) as GuardianWorklistRow;
         if (row == null) return;
         ApplyTierStyle(e, row.Tier);
+        // CallRequired is a flag orthogonal to the risk tier — colour it from the flag (takes precedence).
+        if (row.CallRequired)
+        {
+            e.Appearance.BackColor = Color.DarkSlateBlue;
+            e.Appearance.ForeColor = Color.White;
+            e.HighPriority = true;
+        }
     }
 
     private static void ApplyTierStyle(DevExpress.XtraGrid.Views.Grid.RowStyleEventArgs e, PriorityTier tier)
