@@ -895,6 +895,22 @@ WHERE lp.rn = 1
         {
             try
             {
+                // Concurrency guard: re-check the log immediately before sending so a second user
+                // who sent moments ago doesn't cause a duplicate SMS.
+                if (item.ReminderType == "General")
+                {
+                    if (AlreadySentReminder(conn, item.GuardianKey, null, DateTime.Today, "General"))
+                        continue;
+                }
+                else
+                {
+                    bool allComponentsSent =
+                        item.Components != null && item.Components.Count > 0
+                            ? item.Components.All(c => AlreadySentReminder(conn, item.GuardianKey, c.StudentNumber, c.PromiseDate, item.ReminderType))
+                            : AlreadySentReminder(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
+                    if (allComponentsSent) continue;
+                }
+
                 if (FeeSmsHelper.TrySend(connectionString, item.Phone, item.Message, out string err))
                 {
                     if (item.ReminderType == "General")
