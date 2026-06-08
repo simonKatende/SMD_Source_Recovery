@@ -39,6 +39,10 @@ public class FeesFollowUpSettings
     public double CriticalShortfallPoints { get; set; } = 25.0;  // pts behind required line => Critical
     public int    CallRequiredWindowDays  { get; set; } = 14;    // Overdue SMS recency window
     public int    PromiseResurfaceDays    { get; set; } = 14;    // days before term end to stop hiding promises
+
+    // Send Reminder improvements (2026-06-08).
+    public int    GeneralReminderCooldownDays { get; set; } = 7;     // min days between balance reminders to a guardian
+    public string SmsTemplateGeneral          { get; set; } = "";    // balance-reminder template (falls back to DefaultGeneral)
 }
 
 public class SmsReminderResult
@@ -46,9 +50,11 @@ public class SmsReminderResult
     public bool AlreadyRanToday { get; set; }
     public int  TwoDayCount     { get; set; }
     public int  DayOfCount      { get; set; }
+    public int  OverdueCount    { get; set; }
+    public int  GeneralCount    { get; set; }
     public List<string> Failures { get; set; } = new List<string>();
     public bool HasFailures => Failures.Count > 0;
-    public int  TotalSent   => TwoDayCount + DayOfCount;
+    public int  TotalSent   => TwoDayCount + DayOfCount + OverdueCount + GeneralCount;
 }
 
 public class StudentSummary
@@ -206,4 +212,13 @@ public class ReminderItem
     public decimal  Balance         { get; set; }
     public string   ReminderType    { get; set; }   // "3DayBefore" | "DayOf" | "Overdue"
     public string   Message         { get; set; }   // pre-rendered SMS text
+
+    // Per-student rows underlying a consolidated promise reminder (empty for General).
+    public List<ReminderComponent> Components { get; set; } = new List<ReminderComponent>();
+}
+
+public class ReminderComponent
+{
+    public string   StudentNumber { get; set; }
+    public DateTime PromiseDate   { get; set; }
 }

@@ -164,6 +164,20 @@ Sorted ascending — lower number = higher urgency.
 
 **Promise Resurface Days** — within this many days of term end, partially-covered promises are no longer hidden from the daily list, so the uncovered remainder gets worked before the deadline. Default 14.
 
+**General Reminder Cooldown Days** — minimum days between balance reminders to the same
+guardian, so running "Send Balance Reminders" daily texts each at-risk guardian at most once
+per window. Default 7. Logged as `ReminderType = 'General'` in `tbl_SmsReminderLog`
+(cooldown measured against `SentAt`).
+
+**Balance Reminder** — an SMS to an at-risk guardian (tier Critical or Broken Promise, owing,
+no active promise) who has *not* made a promise. Separate "Send Balance Reminders" ribbon
+action; renders `SmsTemplateGeneral` (falls back to the built-in general template). Distinct
+from promise reminders (3-day / day-of / overdue), which are anchored to a promise date.
+
+**Reminder consolidation** — promise reminders are sent one SMS per guardian per
+reminder-type occurrence (e.g. three children all "due today" → one message with the family
+total), while per-student de-dup logging is preserved.
+
 **Critical Threshold (`CriticalPacingGapThreshold`)** — retired from tier logic in the 2026-06-08 overhaul. The model field and its `tbl_FollowUpSettings` persistence remain (dormant) for backward compatibility; it no longer affects prioritisation and the settings dialog no longer exposes it. `PacingGap` is still computed and shown in the grid.
 
 **Threshold units — read before adding a new one.** Settings thresholds in `FeesFollowUpSettings` mix conventions. `CollectionGoal` (and the dormant `CriticalPacingGapThreshold`) are **fractions (0–1)**. `CriticalShortfallPoints` and `NoProgressPaymentThreshold` are **percentage points (0–100)**, compared against `Shortfall`/`PaymentPercent` (also 0–100). `CallRequiredWindowDays` and `PromiseResurfaceDays` are **day counts**. When adding a threshold, match the unit of the value it is compared against; the settings dialog stores percent-convention values as whole numbers (SpinEdit) and fraction-convention values divided by 100 (e.g. Collection Goal shown as 98, saved as 0.98).

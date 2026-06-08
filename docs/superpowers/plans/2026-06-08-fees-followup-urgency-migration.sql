@@ -10,6 +10,9 @@ IF NOT EXISTS (SELECT 1 FROM tbl_FollowUpSettings WHERE SettingKey = 'CallRequir
     INSERT INTO tbl_FollowUpSettings (SettingKey, SettingValue) VALUES ('CallRequiredWindowDays', '14');
 IF NOT EXISTS (SELECT 1 FROM tbl_FollowUpSettings WHERE SettingKey = 'PromiseResurfaceDays')
     INSERT INTO tbl_FollowUpSettings (SettingKey, SettingValue) VALUES ('PromiseResurfaceDays', '14');
+IF NOT EXISTS (SELECT 1 FROM tbl_FollowUpSettings WHERE SettingKey = 'GeneralReminderCooldownDays')
+    INSERT INTO tbl_FollowUpSettings (SettingKey, SettingValue) VALUES ('GeneralReminderCooldownDays', '7');
+-- SmsTemplateGeneral is left unset so the app falls back to the built-in DefaultGeneral text.
 
 -- 2. Retired keys (FirstHalfMinPercent / SecondHalfMinPercent) are now dead; safe to remove.
 DELETE FROM tbl_FollowUpSettings WHERE SettingKey IN ('FirstHalfMinPercent', 'SecondHalfMinPercent');

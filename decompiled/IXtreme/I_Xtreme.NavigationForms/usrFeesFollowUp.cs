@@ -385,6 +385,24 @@ public class usrFeesFollowUp : XtraUserControl
         }
     }
 
+    public void SendBalanceReminders()
+    {
+        try
+        {
+            using var dlg = new I_Xtreme.DialogForms.dlgSendRemindersPreview(
+                I_Xtreme.DialogForms.dlgSendRemindersPreview.ReminderMode.Balance);
+            if (dlg.ShowDialog(this) == System.Windows.Forms.DialogResult.OK)
+                LoadDashboard();
+        }
+        catch (Exception ex)
+        {
+            DevExpress.XtraEditors.XtraMessageBox.Show(
+                $"Could not open balance reminders.\n\n{ex.Message}",
+                "Send Balance Reminders", System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Warning);
+        }
+    }
+
     // Stubs kept for legacy ribbon items that reference these
     public void PrintPreviewWorklist() { }
     public void PrintWorklist()        { }

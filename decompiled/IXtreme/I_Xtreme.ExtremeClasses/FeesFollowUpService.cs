@@ -141,6 +141,10 @@ public class FeesFollowUpService
             PromiseResurfaceDays =
                 dict.TryGetValue("PromiseResurfaceDays", out var prd) && int.TryParse(prd, out int prdi)
                     ? prdi : 14,
+            GeneralReminderCooldownDays =
+                dict.TryGetValue("GeneralReminderCooldownDays", out var grc) && int.TryParse(grc, out int grci)
+                    ? grci : 7,
+            SmsTemplateGeneral = dict.TryGetValue("SmsTemplateGeneral", out var stg) ? stg : "",
         };
     }
 
@@ -179,6 +183,8 @@ public class FeesFollowUpService
             s.CriticalShortfallPoints.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
         Upsert(conn, "CallRequiredWindowDays", s.CallRequiredWindowDays.ToString());
         Upsert(conn, "PromiseResurfaceDays",   s.PromiseResurfaceDays.ToString());
+        Upsert(conn, "GeneralReminderCooldownDays", s.GeneralReminderCooldownDays.ToString());
+        Upsert(conn, "SmsTemplateGeneral",          s.SmsTemplateGeneral ?? "");
     }
 
     private static void Upsert(SqlConnection conn, string key, string value)
@@ -726,6 +732,14 @@ public class FeesFollowUpService
         catch { return ""; }
     }
 
+    private static string PickPromiseTemplate(string type, FeesFollowUpSettings s) => type switch
+    {
+        "3DayBefore" => !string.IsNullOrWhiteSpace(s.SmsTemplate2Day)    ? s.SmsTemplate2Day    : DefaultPreDue,
+        "DayOf"      => !string.IsNullOrWhiteSpace(s.SmsTemplateDayOf)   ? s.SmsTemplateDayOf   : DefaultDayOf,
+        "Overdue"    => !string.IsNullOrWhiteSpace(s.SmsTemplateOverdue) ? s.SmsTemplateOverdue : DefaultOverdue,
+        _            => "",
+    };
+
     private List<ReminderItem> GetStudentsWithActivePromises(
         SqlConnection conn, string school,
         string preDueTemplate, string dayOfTemplate, string overdueTemplate)
@@ -856,10 +870,20 @@ WHERE lp.rn = 1
         conn.Open();
         var all = GetStudentsWithActivePromises(conn, school,
             settings.SmsTemplate2Day, settings.SmsTemplateDayOf, settings.SmsTemplateOverdue);
-        // Filter out already-sent reminders
-        return all.Where(item =>
+
+        // Drop already-sent, per student (idempotency preserved at student grain).
+        var notSent = all.Where(item =>
             !AlreadySentReminder(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType))
             .ToList();
+
+        // One SMS per guardian per reminder-type occurrence; re-render from merged values.
+        var consolidated = SmsReminderLogic.ConsolidatePromiseReminders(notSent);
+        foreach (var item in consolidated)
+            item.Message = ApplySmsTemplate(
+                PickPromiseTemplate(item.ReminderType, settings),
+                item.Balance, item.StudentName, item.ClassId, item.PromiseDate, school, item.PromisedAmount);
+
+        return consolidated;
     }
 
     public SmsReminderResult ExecuteSendReminders(List<ReminderItem> approved)
@@ -869,19 +893,43 @@ WHERE lp.rn = 1
         conn.Open();
         foreach (var item in approved)
         {
-            if (FeeSmsHelper.TrySend(connectionString, item.Phone, item.Message, out string err))
+            try
             {
-                LogReminderSent(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
-                switch (item.ReminderType)
+                if (FeeSmsHelper.TrySend(connectionString, item.Phone, item.Message, out string err))
                 {
-                    case "3DayBefore": result.TwoDayCount++; break;
-                    case "DayOf":      result.DayOfCount++;  break;
-                    case "Overdue":    result.TwoDayCount++; break;
+                    if (item.ReminderType == "General")
+                    {
+                        LogGeneralReminderSent(conn, item.GuardianKey);
+                        result.GeneralCount++;
+                    }
+                    else
+                    {
+                        // Per-student de-dup logging: log every underlying component (or the item
+                        // itself if it was not consolidated).
+                        if (item.Components != null && item.Components.Count > 0)
+                            foreach (var c in item.Components)
+                                LogReminderSent(conn, item.GuardianKey, c.StudentNumber, c.PromiseDate, item.ReminderType);
+                        else
+                            LogReminderSent(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
+
+                        switch (item.ReminderType)
+                        {
+                            case "3DayBefore": result.TwoDayCount++;  break;
+                            case "DayOf":      result.DayOfCount++;   break;
+                            case "Overdue":    result.OverdueCount++; break;
+                        }
+                    }
+                }
+                else
+                {
+                    result.Failures.Add($"{item.ReminderType} to {item.Phone} ({item.StudentName}): {err}");
                 }
             }
-            else
+            catch (Exception ex)
             {
-                result.Failures.Add($"{item.ReminderType} to {item.Phone} ({item.StudentName}): {err}");
+                // The SMS may already have been delivered; record the logging/DB error but keep
+                // processing the rest of the batch instead of aborting mid-send.
+                result.Failures.Add($"{item.ReminderType} to {item.Phone} ({item.StudentName}): post-send logging error: {ex.Message}");
             }
         }
         return result;
@@ -890,8 +938,8 @@ WHERE lp.rn = 1
     private static string ApplySmsTemplate(string template, decimal balance,
         string studentName, string classId, DateTime date, string school, decimal promisedAmount)
         => template
-            .Replace("{promised_amount}", $"{promisedAmount:#,#}")
-            .Replace("{balance}",         $"{balance:#,#}")
+            .Replace("{promised_amount}", SmsReminderLogic.FormatAmount(promisedAmount))
+            .Replace("{balance}",         SmsReminderLogic.FormatAmount(balance))
             .Replace("{names}",           studentName)
             .Replace("{class}",           classId ?? "")
             .Replace("{date}",            date.ToString("dd-MMM-yyyy"))
@@ -944,6 +992,80 @@ WHERE lp.rn = 1
         cmd.Parameters.Add("@pd",   SqlDbType.Date).Value           = promiseDate.Date;
         cmd.Parameters.Add("@type", SqlDbType.VarChar,  20).Value  = type;
         cmd.ExecuteNonQuery();
+    }
+
+    private void LogGeneralReminderSent(SqlConnection conn, string guardianKey)
+    {
+        // PromiseDate is NOT NULL, so a General reminder (which has no promise) stores today as
+        // a placeholder to satisfy the column and the UNIQUE(GuardianKey,PromiseDate,ReminderType)
+        // key. The cooldown in GetGuardiansInGeneralCooldown is measured against SentAt (which
+        // defaults to GETDATE()), never against this placeholder PromiseDate.
+        using var cmd = new SqlCommand(
+            "INSERT INTO tbl_SmsReminderLog (GuardianKey, StudentNumber, PromiseDate, ReminderType) " +
+            "VALUES (@gk, NULL, @pd, 'General')", conn);
+        cmd.Parameters.Add("@gk", SqlDbType.VarChar, 20).Value = guardianKey;
+        cmd.Parameters.Add("@pd", SqlDbType.Date).Value        = DateTime.Today;
+        cmd.ExecuteNonQuery();
+    }
+
+    private HashSet<string> GetGuardiansInGeneralCooldown(int cooldownDays)
+    {
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(
+            @"SELECT DISTINCT GuardianKey FROM tbl_SmsReminderLog
+              WHERE ReminderType = 'General' AND GuardianKey IS NOT NULL
+                AND SentAt >= @cutoff", conn);
+        cmd.Parameters.Add("@cutoff", SqlDbType.DateTime).Value = DateTime.Today.AddDays(-cooldownDays);
+        using var rdr = cmd.ExecuteReader();
+        while (rdr.Read())
+            if (!rdr.IsDBNull(0)) set.Add(rdr.GetString(0));
+        return set;
+    }
+
+    public List<ReminderItem> GetBalanceRemindersPreview()
+    {
+        var settings = GetSettings();
+        string school = GetSchoolName();
+        string template = !string.IsNullOrWhiteSpace(settings.SmsTemplateGeneral)
+            ? settings.SmsTemplateGeneral : DefaultGeneral;
+        var today = DateTime.Today;
+
+        var rows   = GetGuardianWorklist("", 0, settings);
+        var cooled = GetGuardiansInGeneralCooldown(settings.GeneralReminderCooldownDays);
+
+        var items = new List<ReminderItem>();
+        foreach (var g in rows)
+        {
+            bool hasActivePromise = g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date >= today;
+            if (!SmsReminderLogic.IsBalanceReminderEligible(g.Tier, g.TotalBalance, hasActivePromise)) continue;
+            if (cooled.Contains(g.GuardianContact)) continue;
+
+            string phone = SmsReminderLogic.NormalizePhone(g.GuardianContact)
+                        ?? SmsReminderLogic.NormalizePhone(g.Contact2);
+            if (phone == null) continue;   // no callable number
+
+            string names   = string.Join(", ", g.Students.Select(s => s.FullName));
+            string classes = string.Join(", ", g.Students.Select(s => s.ClassId)
+                                 .Where(c => !string.IsNullOrWhiteSpace(c)).Distinct());
+            string msg = ApplySmsTemplate(template, g.TotalBalance, names, classes, today, school, 0m);
+
+            items.Add(new ReminderItem
+            {
+                GuardianKey    = g.GuardianContact,
+                Phone          = phone,
+                StudentName    = names,
+                ClassId        = classes,
+                Balance        = g.TotalBalance,
+                PromisedAmount = 0m,
+                PromiseDate    = today,   // placeholder; a General reminder carries no promise date (StudentNumber stays null too)
+                ReminderType   = "General",
+                Message        = msg,
+                Components     = new List<ReminderComponent>(),
+            });
+        }
+        return items;
     }
 
     public List<WorklistRow> GetWorklist(string classFilter, decimal minBalance)
