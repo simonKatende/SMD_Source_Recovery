@@ -204,19 +204,18 @@ public class usrDailyWorklist : XtraUserControl
         if (row == null) return;
         switch (row.Tier)
         {
-            case PriorityTier.Critical:      e.Appearance.BackColor = Color.OrangeRed;     e.Appearance.ForeColor = Color.White; e.HighPriority = true; break;
-            case PriorityTier.BrokenPromise: e.Appearance.BackColor = Color.LightCoral;   e.HighPriority = true; break;
-            case PriorityTier.Stale:         e.Appearance.BackColor = Color.LightYellow;  e.HighPriority = true; break;
+            case PriorityTier.Critical:      e.Appearance.BackColor = Color.FromArgb(252, 228, 228); e.HighPriority = true; break;
+            case PriorityTier.BrokenPromise: e.Appearance.BackColor = Color.FromArgb(251, 224, 216); e.HighPriority = true; break;
+            case PriorityTier.Stale:         e.Appearance.BackColor = Color.FromArgb(252, 246, 221); e.HighPriority = true; break;
         }
         // CallRequired is a flag orthogonal to the risk tier — colour it from the flag (takes precedence).
         if (row.CallRequired)
         {
-            e.Appearance.BackColor = Color.DarkSlateBlue; e.Appearance.ForeColor = Color.White; e.HighPriority = true;
+            e.Appearance.BackColor = Color.FromArgb(226, 232, 245); e.HighPriority = true;
         }
         if (row.IsUnreachable)
         {
             e.Appearance.ForeColor = Color.Gray;
-            e.Appearance.Font = new Font(_view.Appearance.Row.Font, FontStyle.Italic);
         }
     }
 
