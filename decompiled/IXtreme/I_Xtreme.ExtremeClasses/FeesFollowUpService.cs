@@ -885,12 +885,27 @@ WHERE lp.rn = 1
         {
             if (FeeSmsHelper.TrySend(connectionString, item.Phone, item.Message, out string err))
             {
-                LogReminderSent(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
-                switch (item.ReminderType)
+                if (item.ReminderType == "General")
                 {
-                    case "3DayBefore": result.TwoDayCount++; break;
-                    case "DayOf":      result.DayOfCount++;  break;
-                    case "Overdue":    result.TwoDayCount++; break;
+                    LogGeneralReminderSent(conn, item.GuardianKey);
+                    result.GeneralCount++;
+                }
+                else
+                {
+                    // Per-student de-dup logging: log every underlying component (or the item
+                    // itself if it was not consolidated).
+                    if (item.Components != null && item.Components.Count > 0)
+                        foreach (var c in item.Components)
+                            LogReminderSent(conn, item.GuardianKey, c.StudentNumber, c.PromiseDate, item.ReminderType);
+                    else
+                        LogReminderSent(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
+
+                    switch (item.ReminderType)
+                    {
+                        case "3DayBefore": result.TwoDayCount++;  break;
+                        case "DayOf":      result.DayOfCount++;   break;
+                        case "Overdue":    result.OverdueCount++; break;
+                    }
                 }
             }
             else
@@ -957,6 +972,20 @@ WHERE lp.rn = 1
         cmd.Parameters.Add("@sn",   SqlDbType.NVarChar,  20).Value = (object)studentNumber ?? DBNull.Value;
         cmd.Parameters.Add("@pd",   SqlDbType.Date).Value           = promiseDate.Date;
         cmd.Parameters.Add("@type", SqlDbType.VarChar,  20).Value  = type;
+        cmd.ExecuteNonQuery();
+    }
+
+    private void LogGeneralReminderSent(SqlConnection conn, string guardianKey)
+    {
+        // PromiseDate is NOT NULL, so a General reminder (which has no promise) stores today as
+        // a placeholder to satisfy the column and the UNIQUE(GuardianKey,PromiseDate,ReminderType)
+        // key. The cooldown in GetGuardiansInGeneralCooldown is measured against SentAt (which
+        // defaults to GETDATE()), never against this placeholder PromiseDate.
+        using var cmd = new SqlCommand(
+            "INSERT INTO tbl_SmsReminderLog (GuardianKey, StudentNumber, PromiseDate, ReminderType) " +
+            "VALUES (@gk, NULL, @pd, 'General')", conn);
+        cmd.Parameters.Add("@gk", SqlDbType.VarChar, 20).Value = guardianKey;
+        cmd.Parameters.Add("@pd", SqlDbType.Date).Value        = DateTime.Today;
         cmd.ExecuteNonQuery();
     }
 
