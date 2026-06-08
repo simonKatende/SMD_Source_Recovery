@@ -20,15 +20,21 @@ public class dlgSendRemindersPreview : XtraForm
     private SimpleButton _btnSend, _btnCancel, _btnDelete;
     private LabelControl _lblCount;
 
-    public dlgSendRemindersPreview()
+    public enum ReminderMode { Promise, Balance }
+    private readonly ReminderMode _mode;
+
+    public dlgSendRemindersPreview(ReminderMode mode = ReminderMode.Promise)
     {
+        _mode = mode;
         InitializeComponent();
         LoadPreview();
     }
 
     private void InitializeComponent()
     {
-        this.Text            = "Send Reminders — Preview";
+        this.Text            = _mode == ReminderMode.Balance
+            ? "Send Balance Reminders — Preview"
+            : "Send Reminders — Preview";
         this.Size            = new Size(1050, 620);
         this.StartPosition   = FormStartPosition.CenterParent;
         this.FormBorderStyle = FormBorderStyle.Sizable;
@@ -88,7 +94,9 @@ public class dlgSendRemindersPreview : XtraForm
     {
         try
         {
-            _items = _service.GetRemindersPreview();
+            _items = _mode == ReminderMode.Balance
+                ? _service.GetBalanceRemindersPreview()
+                : _service.GetRemindersPreview();
             _grid.DataSource = _items;
             ConfigureColumns();
             UpdateCount();
@@ -107,12 +115,15 @@ public class dlgSendRemindersPreview : XtraForm
         _columnsConfigured = true;
         _view.Columns.Clear();
 
-        AddCol("StudentName",   "Student",        160);
+        AddCol("StudentName",   _mode == ReminderMode.Balance ? "Students" : "Student", 160);
         AddCol("ClassId",       "Class",            50);
         AddCol("Phone",         "Phone",           120);
-        AddCol("ReminderType",  "Reminder",        100);
-        AddDateCol("PromiseDate", "Promise Date",  100);
-        AddNumCol("PromisedAmount", "Promised (UGX)", 110);
+        if (_mode == ReminderMode.Promise)
+        {
+            AddCol("ReminderType",  "Reminder",        100);
+            AddDateCol("PromiseDate", "Promise Date",  100);
+            AddNumCol("PromisedAmount", "Promised (UGX)", 110);
+        }
         AddNumCol("Balance",    "Balance (UGX)",   110);
         AddCol("Message",       "Message",         360);
 
@@ -192,6 +203,13 @@ public class dlgSendRemindersPreview : XtraForm
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
+        string confirmTitle = _mode == ReminderMode.Balance ? "Send Balance Reminders" : "Send Reminders";
+        int guardianCount = _items.Select(i => i.GuardianKey).Distinct().Count();
+        if (XtraMessageBox.Show(
+                $"Send {_items.Count} SMS to {guardianCount} guardian(s)? This uses SMS credits.",
+                confirmTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            return;
+
         _btnSend.Enabled = false;
         try
         {
@@ -215,6 +233,12 @@ public class dlgSendRemindersPreview : XtraForm
 
     private void UpdateCount()
     {
+        if (_mode == ReminderMode.Balance)
+        {
+            // Balance reminders are all ReminderType "General"; the promise breakdown is meaningless here.
+            _lblCount.Text = $"{_items.Count} balance reminder(s) queued";
+            return;
+        }
         int preDue  = _items.Count(i => i.ReminderType == "3DayBefore");
         int dayOf   = _items.Count(i => i.ReminderType == "DayOf");
         int overdue = _items.Count(i => i.ReminderType == "Overdue");
