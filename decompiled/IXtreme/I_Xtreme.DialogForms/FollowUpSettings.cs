@@ -21,7 +21,7 @@ public class FollowUpSettings : XtraForm
     private SpinEdit spnHighBalAmt, spnHighBalDays;
     private SpinEdit spnMedBalAmt,  spnMedBalDays;
     private SpinEdit spnEscWeeks,   spnEscThreshold;
-    private SpinEdit spnFirstHalfPct, spnSecondHalfPct;
+    private SpinEdit spnCollectionGoal, spnCriticalShortfall, spnCallReqWindow, spnPromiseResurface;
     private SimpleButton btnOK, btnCancel, btnResetTemplates;
 
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
@@ -45,8 +45,10 @@ public class FollowUpSettings : XtraForm
         spnMedBalDays.Value      = s.StaleMedBalanceDays;
         spnEscWeeks.Value        = s.NoProgressEscalationWeeks;
         spnEscThreshold.Value    = (decimal)s.NoProgressPaymentThreshold;
-        spnFirstHalfPct.Value  = (decimal)s.FirstHalfMinPercent;
-        spnSecondHalfPct.Value = (decimal)s.SecondHalfMinPercent;
+        spnCollectionGoal.Value    = (decimal)(s.CollectionGoal * 100.0);
+        spnCriticalShortfall.Value = (decimal)s.CriticalShortfallPoints;
+        spnCallReqWindow.Value     = s.CallRequiredWindowDays;
+        spnPromiseResurface.Value  = s.PromiseResurfaceDays;
         memo2Day.Text    = !string.IsNullOrWhiteSpace(s.SmsTemplate2Day)    ? s.SmsTemplate2Day    : Default2Day;
         memoDayOf.Text   = !string.IsNullOrWhiteSpace(s.SmsTemplateDayOf)   ? s.SmsTemplateDayOf   : DefaultDayOf;
         memoOverdue.Text = !string.IsNullOrWhiteSpace(s.SmsTemplateOverdue) ? s.SmsTemplateOverdue : DefaultOverdue;
@@ -151,25 +153,45 @@ public class FollowUpSettings : XtraForm
         this.spnEscThreshold.Properties.MinValue     = 0;
         this.spnEscThreshold.Properties.MaxValue     = 100;
 
-        // Row 11: First-half min payment %
-        var lblFirstHalf = new LabelControl
-            { Text = "First half of term: expect paid >= (%):",
+        // Row 11: Collection goal
+        var lblGoal = new LabelControl
+            { Text = "Collection goal by term end (%):",
               Location = new System.Drawing.Point(12, 366) };
-        this.spnFirstHalfPct = new SpinEdit
+        this.spnCollectionGoal = new SpinEdit
             { Location = new System.Drawing.Point(340, 362), Width = 80 };
-        this.spnFirstHalfPct.Properties.IsFloatValue = false;
-        this.spnFirstHalfPct.Properties.MinValue     = 0;
-        this.spnFirstHalfPct.Properties.MaxValue     = 100;
+        this.spnCollectionGoal.Properties.IsFloatValue = false;
+        this.spnCollectionGoal.Properties.MinValue     = 0;
+        this.spnCollectionGoal.Properties.MaxValue     = 100;
 
-        // Row 12: Second-half min payment %
-        var lblSecondHalf = new LabelControl
-            { Text = "Second half of term: expect paid >= (%):",
+        // Row 12: Critical shortfall points
+        var lblShortfall = new LabelControl
+            { Text = "Critical when behind required line by (pts):",
               Location = new System.Drawing.Point(12, 398) };
-        this.spnSecondHalfPct = new SpinEdit
+        this.spnCriticalShortfall = new SpinEdit
             { Location = new System.Drawing.Point(340, 394), Width = 80 };
-        this.spnSecondHalfPct.Properties.IsFloatValue = false;
-        this.spnSecondHalfPct.Properties.MinValue     = 0;
-        this.spnSecondHalfPct.Properties.MaxValue     = 100;
+        this.spnCriticalShortfall.Properties.IsFloatValue = false;
+        this.spnCriticalShortfall.Properties.MinValue     = 0;
+        this.spnCriticalShortfall.Properties.MaxValue     = 100;
+
+        // Row 12b: CallRequired window
+        var lblCallReq = new LabelControl
+            { Text = "\"Call Required\" window — overdue SMS within (days):",
+              Location = new System.Drawing.Point(12, 412) };
+        this.spnCallReqWindow = new SpinEdit
+            { Location = new System.Drawing.Point(340, 408), Width = 80 };
+        this.spnCallReqWindow.Properties.IsFloatValue = false;
+        this.spnCallReqWindow.Properties.MinValue     = 1;
+        this.spnCallReqWindow.Properties.MaxValue     = 365;
+
+        // Row 12c: Promise resurface
+        var lblResurface = new LabelControl
+            { Text = "Resurface partial promises within (days of term end):",
+              Location = new System.Drawing.Point(12, 426) };
+        this.spnPromiseResurface = new SpinEdit
+            { Location = new System.Drawing.Point(340, 422), Width = 80 };
+        this.spnPromiseResurface.Properties.IsFloatValue = false;
+        this.spnPromiseResurface.Properties.MinValue     = 0;
+        this.spnPromiseResurface.Properties.MaxValue     = 365;
 
         // Row 5: 2-day reminder template
         var lbl2Day = new LabelControl
@@ -231,8 +253,10 @@ public class FollowUpSettings : XtraForm
                 StaleMedBalanceDays             = (int)spnMedBalDays.Value,
                 NoProgressEscalationWeeks       = (int)spnEscWeeks.Value,
                 NoProgressPaymentThreshold      = (double)spnEscThreshold.Value,
-                FirstHalfMinPercent  = (double)spnFirstHalfPct.Value,
-                SecondHalfMinPercent = (double)spnSecondHalfPct.Value,
+                CollectionGoal          = (double)(spnCollectionGoal.Value / 100m),
+                CriticalShortfallPoints = (double)spnCriticalShortfall.Value,
+                CallRequiredWindowDays  = (int)spnCallReqWindow.Value,
+                PromiseResurfaceDays    = (int)spnPromiseResurface.Value,
             });
             base.DialogResult = DialogResult.OK;
             Dispose();
@@ -258,8 +282,10 @@ public class FollowUpSettings : XtraForm
             lblMedAmt,   spnMedBalAmt,  lblMedMid,  spnMedBalDays,  lblMedEnd,
             lblEscWeeks, spnEscWeeks,
             lblEscThreshold, spnEscThreshold,
-            lblFirstHalf,  spnFirstHalfPct,
-            lblSecondHalf, spnSecondHalfPct,
+            lblGoal,       spnCollectionGoal,
+            lblShortfall,  spnCriticalShortfall,
+            lblCallReq,    spnCallReqWindow,
+            lblResurface,  spnPromiseResurface,
             lbl2Day,      memo2Day,
             lblDayOf,     memoDayOf,
             lblOverdue,   memoOverdue,

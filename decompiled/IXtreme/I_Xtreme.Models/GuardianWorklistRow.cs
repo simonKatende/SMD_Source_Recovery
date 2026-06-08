@@ -34,11 +34,11 @@ public class FeesFollowUpSettings
     public int    NoProgressEscalationWeeks    { get; set; } = 4;
     public double NoProgressPaymentThreshold   { get; set; } = 30.0;
 
-    // Phase-based shortfall escalation (in addition to pacing-gap rule).
-    // First half of term: expect >= FirstHalfMinPercent paid; second half: >= SecondHalfMinPercent.
-    // Below the phase target AND no active promise => Critical (only when term dates are set).
-    public double FirstHalfMinPercent  { get; set; } = 50.0;
-    public double SecondHalfMinPercent { get; set; } = 80.0;
+    // Deadline-aware overhaul (2026-06-08).
+    public double CollectionGoal          { get; set; } = 0.98;  // fraction 0..1, term-end target
+    public double CriticalShortfallPoints { get; set; } = 25.0;  // pts behind required line => Critical
+    public int    CallRequiredWindowDays  { get; set; } = 14;    // Overdue SMS recency window
+    public int    PromiseResurfaceDays    { get; set; } = 14;    // days before term end to stop hiding promises
 }
 
 public class SmsReminderResult
