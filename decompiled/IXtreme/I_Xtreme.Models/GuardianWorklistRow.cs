@@ -115,6 +115,11 @@ public class GuardianWorklistRow
     public bool ContactedToday { get; set; }   // any 'Contacted'/'Promised'/'Refused' log today
     public bool CallRequired   { get; set; }   // any Overdue SMS sent (tbl_SmsReminderLog)
 
+    // Reminder activity this term (folded in by GetGuardianWorklist; read-only display).
+    public int       RemindersSentCount { get; set; }
+    public DateTime? LastReminderDate   { get; set; }
+    public string    LastReminderType   { get; set; }
+
     public string PaymentStatus =>
         TotalBilled == 0 ? "N/A" :
         TotalPaid >= TotalBilled ? "Fully Paid" :
@@ -146,6 +151,9 @@ public class StudentWorklistRow
                 : GuardianContact;
     public DateTime?       LastContactDate { get; set; }
     public ContactOutcome? LastOutcome     { get; set; }
+    public int       RemindersSentCount { get; set; }
+    public DateTime? LastReminderDate   { get; set; }
+    public string    LastReminderType   { get; set; }
     public string PaymentStatus =>
         TotalBilled == 0 ? "N/A" :
         TotalPaid >= TotalBilled ? "Fully Paid" :
