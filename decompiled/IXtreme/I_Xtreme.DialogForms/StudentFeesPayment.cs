@@ -796,6 +796,22 @@ public class StudentFeesPayment : RibbonForm
 		}
 	}
 
+	public StudentFeesPayment(string FormMode, bool viewOnly)
+		: this(FormMode)
+	{
+		if (viewOnly)
+		{
+			// View-only ledger: bursar can browse the student's fees, but recording lives in Accounts.
+			this.Text = "Student Ledger (view only)";
+			btnProcessPayment.Enabled = false;
+			barButtonItem9.Enabled  = false;   // Bill
+			barButtonItem8.Enabled  = false;   // Edit
+			barButtonItem10.Enabled = false;
+			barButtonItem11.Enabled = false;
+			barButtonItem13.Enabled = false;
+		}
+	}
+
 	public StudentFeesPayment()
 	{
 	}
