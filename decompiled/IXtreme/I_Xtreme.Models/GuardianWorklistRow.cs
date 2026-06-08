@@ -91,6 +91,12 @@ public class GuardianWorklistRow
     public decimal PaymentPercent { get; set; }
     public double  PacingGap     { get; set; }
     public PriorityTier Tier     { get; set; }
+    public double UrgencyScore   { get; set; }   // master ranking signal (FeesUrgency.UrgencyScore)
+
+    // F9: true when the guardian has no callable phone (NOCONTACT key or blank contact).
+    public bool IsUnreachable =>
+        string.IsNullOrWhiteSpace(GuardianContact)
+        || GuardianContact.StartsWith("NOCONTACT-", System.StringComparison.Ordinal);
 
     public DateTime?       LastContactDate             { get; set; }
     public ContactOutcome? LastOutcome                 { get; set; }
@@ -121,6 +127,7 @@ public class StudentWorklistRow
     public decimal Balance         { get; set; }
     public decimal PaymentPercent  { get; set; }
     public PriorityTier Tier       { get; set; }
+    public double UrgencyScore     { get; set; }   // inherited from guardian for ranking
     public string GuardianKey      { get; set; }   // PriorityContact — used to look up guardian
     public string GuardianContact  { get; set; }
     public string GuardianName     { get; set; }
@@ -153,6 +160,19 @@ public class DashboardData
     public decimal TotalCollected             { get; set; }
     public decimal CollectedThisWeek         { get; set; }
     public decimal CollectionRate             => TotalPayable == 0 ? 0 : TotalCollected / TotalPayable * 100m;
+    public bool    TermDatesConfigured        { get; set; }
+    public double  TermProgress               { get; set; }   // 0..1, clamped
+    public decimal CollectionGoalPercent      { get; set; }   // e.g. 98
+    public double  RequiredRateToday          => CollectionGoalPercent == 0 || TermProgress == 0
+                                                    ? 0.0
+                                                    : (double)CollectionGoalPercent * TermProgress;
+    public double  ProjectedCollectionRate    => TermProgress <= 0
+                                                    ? 0.0
+                                                    : System.Math.Min(100.0, (double)CollectionRate / TermProgress);
+    public decimal AmountBehindPace           => TermProgress <= 0
+                                                    ? 0m
+                                                    : System.Math.Max(0m,
+                                                        (decimal)(RequiredRateToday / 100.0) * TotalPayable - TotalCollected);
     public int     TotalGuardiansWithBalance  { get; set; }
     public int     DailyListTotal             { get; set; }
     public int     DailyListContacted         { get; set; }
