@@ -554,14 +554,18 @@ public class FeesFollowUpService
         var all      = GetGuardianWorklist("", minBalance, settings);
         var today = DateTime.Today;
 
+        // F6: within PromiseResurfaceDays of term end, stop hiding partially-covered
+        // promises so the uncovered remainder gets worked before the deadline.
+        bool nearDeadline = settings.TermEndDate.HasValue
+            && (settings.TermEndDate.Value.Date - today).TotalDays <= settings.PromiseResurfaceDays;
+
         return all.Where(g =>
         {
-            if (g.LatestPromiseDate.HasValue
+            if (!nearDeadline
+                && g.LatestPromiseDate.HasValue
                 && g.LatestPromiseDate.Value.Date >= today
                 && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0))
             {
-                // Only hide the guardian if their promise is large enough relative to their balance.
-                // A partial promise (covers < threshold) is not enough — keep them on the daily list.
                 decimal promiseAmt    = g.LatestPromiseAmount ?? 0m;
                 double  coverageRatio = g.TotalBalance > 0
                     ? (double)(promiseAmt / g.TotalBalance)
@@ -573,7 +577,7 @@ public class FeesFollowUpService
             // Exclude if successfully reached today
             return !g.ContactedToday;
         })
-        .OrderBy(g => (int)g.Tier)
+        .OrderByDescending(g => g.UrgencyScore)   // F4: same ranking as the guardian list
         .ThenByDescending(g => g.TotalBalance)
         .ToList();
     }
@@ -599,6 +603,7 @@ public class FeesFollowUpService
                     Balance          = s.Balance,
                     PaymentPercent   = s.PaymentPercent,
                     Tier             = g.Tier,
+                    UrgencyScore     = g.UrgencyScore,
                     GuardianKey      = g.GuardianContact,
                     GuardianContact  = g.GuardianContact,
                     GuardianName     = g.GuardianName,
@@ -610,7 +615,7 @@ public class FeesFollowUpService
         }
 
         return result
-            .OrderBy(s => (int)s.Tier)
+            .OrderByDescending(s => s.UrgencyScore)
             .ThenBy(s => s.ClassId)
             .ThenBy(s => s.FullName)
             .ToList();
@@ -628,9 +633,13 @@ public class FeesFollowUpService
 
         int contactedToday = all.Count(g => g.ContactedToday);
 
+        bool nearDeadline = settings.TermEndDate.HasValue
+            && (settings.TermEndDate.Value.Date - today).TotalDays <= settings.PromiseResurfaceDays;
+
         int dailyTotal = all.Count(g =>
         {
-            if (g.LatestPromiseDate.HasValue
+            if (!nearDeadline
+                && g.LatestPromiseDate.HasValue
                 && g.LatestPromiseDate.Value.Date >= today
                 && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0))
             {
