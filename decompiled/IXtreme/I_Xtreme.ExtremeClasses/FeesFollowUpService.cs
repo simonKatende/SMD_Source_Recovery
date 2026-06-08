@@ -630,6 +630,8 @@ public class FeesFollowUpService
         var all = GetGuardianWorklist("", 0, settings);
         var totals = GetDashboardTotals(currentSemester, prevSemester);
         var today  = DateTime.Today;
+        bool termDatesConfigured = settings.TermStartDate.HasValue && settings.TermEndDate.HasValue;
+        double termProgress = FeesUrgency.TermProgress(today, settings.TermStartDate, settings.TermEndDate);
 
         int contactedToday = all.Count(g => g.ContactedToday);
 
@@ -687,6 +689,9 @@ public class FeesFollowUpService
             BelowPacingCount   = belowPacingCount,
             CurrentTermWeek    = termWeek,
             TotalTermWeeks     = totalTermWeeks,
+            TermDatesConfigured   = termDatesConfigured,
+            TermProgress          = termProgress,
+            CollectionGoalPercent = (decimal)(settings.CollectionGoal * 100.0),
             ByPriority = Enum.GetValues(typeof(PriorityTier))
                 .Cast<PriorityTier>()
                 .Select(t => new PriorityGroupStats
