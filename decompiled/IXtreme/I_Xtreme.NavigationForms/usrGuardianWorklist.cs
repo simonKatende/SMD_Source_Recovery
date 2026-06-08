@@ -171,6 +171,8 @@ public class usrGuardianWorklist : XtraUserControl
         AddTierCol("Tier",            "Priority",      120);
         AddDateCol("LastContactDate", "Last Contact",  100);
         AddOutcomeCol("LastOutcome",  "Last Outcome",  120);
+        AddNumCol("RemindersSentCount", "Reminders",    80);
+        AddDateCol("LastReminderDate",  "Last Reminder", 110);
     }
 
     private GridColumn AddCol(string field, string caption, int width)

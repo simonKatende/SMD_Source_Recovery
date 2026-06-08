@@ -159,6 +159,8 @@ public class usrStudentWorklist : XtraUserControl
         AddCol("GuardianContact",     "Contact",        110);
         AddDateCol("LastContactDate", "Last Contact",    95);
         AddOutcomeCol("LastOutcome",  "Last Outcome",   110);
+        AddNumCol("RemindersSentCount", "Reminders",     80);
+        AddDateCol("LastReminderDate",  "Last Reminder", 110);
     }
 
     private GridColumn AddCol(string field, string caption, int width)
