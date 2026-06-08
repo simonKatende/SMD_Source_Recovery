@@ -17,9 +17,10 @@ public class usrFeesFollowUp : XtraUserControl
     // Label-slot indices: Row 1 = 0-4 and 11; Row 2 = 5-10. Card 11 ("Collected
     // This Week") renders last in Row 1 but is allocated index 11 so the existing
     // Row 2 cards (5-10) keep their numbers. Next free index is 12.
-    private readonly Label[] _kpiValues = new Label[12];
+    private readonly Label[] _kpiValues = new Label[15];
     public event Action<string> NavigationRequested;
     private FlowLayoutPanel  _kpiPanel;
+    private LabelControl _banner;
 
     // ── Priority breakdown grid ───────────────────────────────────────────────
     private GridControl _gridPriority;
@@ -133,7 +134,7 @@ public class usrFeesFollowUp : XtraUserControl
         _kpiPanel = new FlowLayoutPanel
         {
             Dock          = DockStyle.Top,
-            Height        = 200,
+            Height        = 300,
             FlowDirection = FlowDirection.LeftToRight,
             WrapContents  = true,
             AutoScroll    = false,
@@ -155,6 +156,10 @@ public class usrFeesFollowUp : XtraUserControl
         _kpiPanel.Controls.Add(BuildKpiCard(9,  "Zero Paid",              Color.OrangeRed,
             () => NavigationRequested?.Invoke("student_zeropaid")));
         _kpiPanel.Controls.Add(BuildKpiCard(10, "Term Week",              Color.SlateBlue));
+        // Row 3: on-track-for-goal (F8)
+        _kpiPanel.Controls.Add(BuildKpiCard(12, "Required Today (%)",      Color.SlateGray));
+        _kpiPanel.Controls.Add(BuildKpiCard(13, "Projected Collection (%)", Color.SeaGreen));
+        _kpiPanel.Controls.Add(BuildKpiCard(14, "Behind Pace (UGX)",       Color.DarkRed));
 
         // Add controls — bottom-docked first, then top-docked in reverse visual order
         this.Controls.Add(lblTop5);
@@ -162,6 +167,18 @@ public class usrFeesFollowUp : XtraUserControl
         this.Controls.Add(lblPriority);
         this.Controls.Add(_gridPriority);
         this.Controls.Add(_kpiPanel);
+
+        _banner = new LabelControl
+        {
+            Dock      = DockStyle.Top,
+            Visible   = false,
+            AutoSizeMode = LabelAutoSizeMode.None,
+            Height    = 24,
+            Text      = "Term start/end not set — deadline-based prioritisation is off. Set them in Follow-up Settings.",
+        };
+        _banner.Appearance.BackColor = Color.LightGoldenrodYellow;
+        _banner.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;
+        this.Controls.Add(_banner);
 
         this.Load += usrFeesFollowUp_Load;
         this.ResumeLayout(false);
@@ -241,6 +258,11 @@ public class usrFeesFollowUp : XtraUserControl
         _kpiValues[8].Text  = $"{data.BrokenPromiseCount}";
         _kpiValues[9].Text  = $"{data.ZeroPaidStudents}";
         _kpiValues[10].Text = data.TermWeekDisplay;
+        // Row 3: on-track-for-goal (—" when term dates are not configured)
+        _kpiValues[12].Text = data.TermDatesConfigured ? $"{data.RequiredRateToday:F1}%"       : "—";
+        _kpiValues[13].Text = data.TermDatesConfigured ? $"{data.ProjectedCollectionRate:F1}%" : "—";
+        _kpiValues[14].Text = data.TermDatesConfigured ? $"{data.AmountBehindPace:N0}"         : "—";
+        _banner.Visible = !data.TermDatesConfigured;
     }
 
     private void UpdatePriorityBreakdown(DashboardData data)

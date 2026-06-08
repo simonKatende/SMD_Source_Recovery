@@ -158,7 +158,6 @@ public class FeesFollowUpService
         Upsert(conn, "StalenessThresholdDays",     s.StaleThresholdDays.ToString());
         Upsert(conn, "TermStartDate",              s.TermStartDate?.ToString("yyyy-MM-dd") ?? "");
         Upsert(conn, "TermEndDate",                s.TermEndDate?.ToString("yyyy-MM-dd") ?? "");
-        Upsert(conn, "CriticalPacingGapThreshold", s.CriticalPacingGapThreshold.ToString("R"));
         Upsert(conn, "SmsTemplate2Day",            s.SmsTemplate2Day ?? "");
         Upsert(conn, "SmsTemplateDayOf",           s.SmsTemplateDayOf ?? "");
         Upsert(conn, "SmsTemplateOverdue", s.SmsTemplateOverdue ?? "");
