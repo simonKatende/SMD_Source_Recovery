@@ -44,11 +44,20 @@ internal static class FeeSmsHelper
             ? "https://www.egosms.co/api/v1/plain/?"
             : (url.EndsWith("?") ? url : url + "?");
 
-        string requestUri = $"{baseUrl}number={phone}" +
-                            $"&message={message}" +
-                            $"&username={username}" +
-                            $"&password={password}" +
-                            $"&sender={sender}";
+        // Normalize the recipient to a Ugandan MSISDN; skip invalid numbers before hitting the gateway.
+        string normalized = SmsReminderLogic.NormalizePhone(phone);
+        if (normalized == null)
+        {
+            errorMessage = $"Invalid phone number: {phone}";
+            return false;
+        }
+
+        // URL-encode every value so '&', '#', '=', '+' in names/school/message can't corrupt the query.
+        string requestUri = $"{baseUrl}number={Uri.EscapeDataString(normalized)}" +
+                            $"&message={Uri.EscapeDataString(message ?? string.Empty)}" +
+                            $"&username={Uri.EscapeDataString(username)}" +
+                            $"&password={Uri.EscapeDataString(password)}" +
+                            $"&sender={Uri.EscapeDataString(sender ?? string.Empty)}";
 
         string response = null;
         try
