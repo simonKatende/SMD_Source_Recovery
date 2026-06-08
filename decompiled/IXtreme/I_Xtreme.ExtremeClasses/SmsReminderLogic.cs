@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using I_Xtreme.Models;
 
@@ -34,4 +36,38 @@ public static class SmsReminderLogic
     public static bool IsBalanceReminderEligible(PriorityTier tier, decimal balance, bool hasActivePromise)
         => balance > 0m && !hasActivePromise
            && (tier == PriorityTier.Critical || tier == PriorityTier.BrokenPromise);
+
+    /// <summary>
+    /// Collapse per-student promise reminders into one item per (GuardianKey, ReminderType).
+    /// Names/classes are joined in input order, balance/promised summed, PromiseDate = earliest,
+    /// and every underlying (StudentNumber, PromiseDate) is retained in Components for per-student
+    /// de-dup logging. Message is left null for the caller to render from the merged values.
+    /// </summary>
+    public static List<ReminderItem> ConsolidatePromiseReminders(IEnumerable<ReminderItem> perStudent)
+    {
+        var result = new List<ReminderItem>();
+        foreach (var grp in perStudent.GroupBy(r => new { r.GuardianKey, r.ReminderType }))
+        {
+            var items = grp.ToList();
+            var first = items.OrderBy(i => i.PromiseDate).First();
+            result.Add(new ReminderItem
+            {
+                GuardianKey    = grp.Key.GuardianKey,
+                ReminderType   = grp.Key.ReminderType,
+                Phone          = first.Phone,
+                StudentNumber  = first.StudentNumber,
+                StudentName    = string.Join(", ", items.Select(i => i.StudentName)
+                                     .Where(n => !string.IsNullOrWhiteSpace(n))),
+                ClassId        = string.Join(", ", items.Select(i => i.ClassId)
+                                     .Where(c => !string.IsNullOrWhiteSpace(c))),
+                Balance        = items.Sum(i => i.Balance),
+                PromisedAmount = items.Sum(i => i.PromisedAmount),
+                PromiseDate    = items.Min(i => i.PromiseDate),
+                Message        = null,
+                Components     = items.Select(i => new ReminderComponent
+                                 { StudentNumber = i.StudentNumber, PromiseDate = i.PromiseDate }).ToList(),
+            });
+        }
+        return result;
+    }
 }
