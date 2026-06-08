@@ -893,34 +893,43 @@ WHERE lp.rn = 1
         conn.Open();
         foreach (var item in approved)
         {
-            if (FeeSmsHelper.TrySend(connectionString, item.Phone, item.Message, out string err))
+            try
             {
-                if (item.ReminderType == "General")
+                if (FeeSmsHelper.TrySend(connectionString, item.Phone, item.Message, out string err))
                 {
-                    LogGeneralReminderSent(conn, item.GuardianKey);
-                    result.GeneralCount++;
+                    if (item.ReminderType == "General")
+                    {
+                        LogGeneralReminderSent(conn, item.GuardianKey);
+                        result.GeneralCount++;
+                    }
+                    else
+                    {
+                        // Per-student de-dup logging: log every underlying component (or the item
+                        // itself if it was not consolidated).
+                        if (item.Components != null && item.Components.Count > 0)
+                            foreach (var c in item.Components)
+                                LogReminderSent(conn, item.GuardianKey, c.StudentNumber, c.PromiseDate, item.ReminderType);
+                        else
+                            LogReminderSent(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
+
+                        switch (item.ReminderType)
+                        {
+                            case "3DayBefore": result.TwoDayCount++;  break;
+                            case "DayOf":      result.DayOfCount++;   break;
+                            case "Overdue":    result.OverdueCount++; break;
+                        }
+                    }
                 }
                 else
                 {
-                    // Per-student de-dup logging: log every underlying component (or the item
-                    // itself if it was not consolidated).
-                    if (item.Components != null && item.Components.Count > 0)
-                        foreach (var c in item.Components)
-                            LogReminderSent(conn, item.GuardianKey, c.StudentNumber, c.PromiseDate, item.ReminderType);
-                    else
-                        LogReminderSent(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
-
-                    switch (item.ReminderType)
-                    {
-                        case "3DayBefore": result.TwoDayCount++;  break;
-                        case "DayOf":      result.DayOfCount++;   break;
-                        case "Overdue":    result.OverdueCount++; break;
-                    }
+                    result.Failures.Add($"{item.ReminderType} to {item.Phone} ({item.StudentName}): {err}");
                 }
             }
-            else
+            catch (Exception ex)
             {
-                result.Failures.Add($"{item.ReminderType} to {item.Phone} ({item.StudentName}): {err}");
+                // The SMS may already have been delivered; record the logging/DB error but keep
+                // processing the rest of the batch instead of aborting mid-send.
+                result.Failures.Add($"{item.ReminderType} to {item.Phone} ({item.StudentName}): post-send logging error: {ex.Message}");
             }
         }
         return result;
