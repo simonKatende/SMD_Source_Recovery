@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>11.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>FeesFollowUp.Tests</AssemblyName>
+    <RootNamespace>FeesFollowUp.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <!-- Source-link the dependency-free POCOs + the pure logic under test.
+       These files use only System + I_Xtreme.Models types, so they compile
+       here without DevExpress or System.Data.SqlClient. -->
+  <ItemGroup>
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\WorklistRow.cs"          Link="Models\WorklistRow.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\GuardianWorklistRow.cs"  Link="Models\GuardianWorklistRow.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\FeesContactLog.cs"       Link="Models\FeesContactLog.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\FeesUrgency.cs"  Link="Logic\FeesUrgency.cs" />
+  </ItemGroup>
+
+</Project>

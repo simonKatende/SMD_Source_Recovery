@@ -125,17 +125,30 @@ public class FeesFollowUpService
                 && double.TryParse(npt, System.Globalization.NumberStyles.Float,
                                    System.Globalization.CultureInfo.InvariantCulture, out double nptd)
                     ? nptd : 30.0,
-            FirstHalfMinPercent =
-                dict.TryGetValue("FirstHalfMinPercent", out var fhRaw)
-                && double.TryParse(fhRaw, System.Globalization.NumberStyles.Float,
-                                   System.Globalization.CultureInfo.InvariantCulture, out double fhVal)
-                    ? fhVal : 50.0,
-            SecondHalfMinPercent =
-                dict.TryGetValue("SecondHalfMinPercent", out var shRaw)
-                && double.TryParse(shRaw, System.Globalization.NumberStyles.Float,
-                                   System.Globalization.CultureInfo.InvariantCulture, out double shVal)
-                    ? shVal : 80.0,
+            CollectionGoal =
+                dict.TryGetValue("CollectionGoal", out var cg)
+                && double.TryParse(cg, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double cgv)
+                    ? cgv : 0.98,
+            CriticalShortfallPoints =
+                dict.TryGetValue("CriticalShortfallPoints", out var csp)
+                && double.TryParse(csp, System.Globalization.NumberStyles.Float,
+                                   System.Globalization.CultureInfo.InvariantCulture, out double cspv)
+                    ? cspv : 25.0,
+            CallRequiredWindowDays =
+                dict.TryGetValue("CallRequiredWindowDays", out var crw) && int.TryParse(crw, out int crwi)
+                    ? crwi : 14,
+            PromiseResurfaceDays =
+                dict.TryGetValue("PromiseResurfaceDays", out var prd) && int.TryParse(prd, out int prdi)
+                    ? prdi : 14,
         };
+    }
+
+    /// <summary>Cheap check for the worklist banner: are both term dates configured?</summary>
+    public bool AreTermDatesConfigured()
+    {
+        var s = GetSettings();
+        return s.TermStartDate.HasValue && s.TermEndDate.HasValue;
     }
 
     public void SaveSettings(FeesFollowUpSettings s)
@@ -145,7 +158,6 @@ public class FeesFollowUpService
         Upsert(conn, "StalenessThresholdDays",     s.StaleThresholdDays.ToString());
         Upsert(conn, "TermStartDate",              s.TermStartDate?.ToString("yyyy-MM-dd") ?? "");
         Upsert(conn, "TermEndDate",                s.TermEndDate?.ToString("yyyy-MM-dd") ?? "");
-        Upsert(conn, "CriticalPacingGapThreshold", s.CriticalPacingGapThreshold.ToString("R"));
         Upsert(conn, "SmsTemplate2Day",            s.SmsTemplate2Day ?? "");
         Upsert(conn, "SmsTemplateDayOf",           s.SmsTemplateDayOf ?? "");
         Upsert(conn, "SmsTemplateOverdue", s.SmsTemplateOverdue ?? "");
@@ -161,10 +173,12 @@ public class FeesFollowUpService
             s.NoProgressEscalationWeeks.ToString());
         Upsert(conn, "NoProgressPaymentThreshold",
             s.NoProgressPaymentThreshold.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
-        Upsert(conn, "FirstHalfMinPercent",
-            s.FirstHalfMinPercent.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
-        Upsert(conn, "SecondHalfMinPercent",
-            s.SecondHalfMinPercent.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "CollectionGoal",
+            s.CollectionGoal.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "CriticalShortfallPoints",
+            s.CriticalShortfallPoints.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+        Upsert(conn, "CallRequiredWindowDays", s.CallRequiredWindowDays.ToString());
+        Upsert(conn, "PromiseResurfaceDays",   s.PromiseResurfaceDays.ToString());
     }
 
     private static void Upsert(SqlConnection conn, string key, string value)
@@ -382,10 +396,11 @@ public class FeesFollowUpService
         GROUP BY cl.GuardianKey
     ),
     CallRequiredCte AS (
-        -- Mirrors HasCallRequiredStudent: any Overdue SMS sent to this guardian
+        -- F3: only a *recent* Overdue SMS counts, so the flag decays instead of sticking forever.
         SELECT GuardianKey AS ContactKey
         FROM tbl_SmsReminderLog
         WHERE ReminderType = 'Overdue' AND GuardianKey IS NOT NULL
+          AND SentAt >= @callRequiredCutoff
         GROUP BY GuardianKey
     )
     SELECT
@@ -420,6 +435,8 @@ public class FeesFollowUpService
             cmd.Parameters.Add("@classFilter",     SqlDbType.VarChar, 50).Value = classFilter ?? "";
             cmd.Parameters.Add("@currentSemester", SqlDbType.VarChar, 50).Value = currentSemester;
             cmd.Parameters.Add("@prevSemester",    SqlDbType.VarChar, 50).Value = (object)prevSemester ?? DBNull.Value;
+            cmd.Parameters.Add("@callRequiredCutoff", SqlDbType.DateTime).Value =
+                DateTime.Today.AddDays(-settings.CallRequiredWindowDays);
 
             using var rdr = cmd.ExecuteReader();
             while (rdr.Read())
@@ -469,24 +486,10 @@ public class FeesFollowUpService
             }
         }
 
-        // Compute pacing gap and tier
-        double termProgress = 0.0;
-        if (hasTermDates)
-        {
-            double totalDays   = (tEnd.Value - tStart.Value).TotalDays;
-            double elapsedDays = (DateTime.Today - tStart.Value).TotalDays;
-            termProgress = totalDays > 0 ? Math.Max(0.0, Math.Min(1.0, elapsedDays / totalDays)) : 0.0;
-        }
-
-        // Phase target for the payment-shortfall Critical rule (Task 2)
-        double phaseTarget = 0.0;
-        if (hasTermDates)
-        {
-            DateTime midterm = tStart.Value.AddDays((tEnd.Value - tStart.Value).TotalDays / 2.0);
-            phaseTarget = DateTime.Today < midterm
-                ? settings.FirstHalfMinPercent
-                : settings.SecondHalfMinPercent;
-        }
+        // Deadline-aware required-payment line (F1).
+        DateTime today = DateTime.Today;
+        double termProgress = FeesUrgency.TermProgress(today, tStart, tEnd);
+        double requiredPct  = hasTermDates ? FeesUrgency.RequiredPct(settings.CollectionGoal, termProgress) : 0.0;
 
         var rows = new List<GuardianWorklistRow>(grouped.Values);
         foreach (var g in rows)
@@ -494,31 +497,45 @@ public class FeesFollowUpService
             g.PaymentPercent = g.TotalBilled > 0
                 ? Math.Round(g.TotalPaid / g.TotalBilled * 100m, 1) : 0m;
             double payProgress = g.TotalBilled > 0 ? (double)(g.TotalPaid / g.TotalBilled) : 0.0;
-            g.PacingGap = hasTermDates ? termProgress - payProgress : 0.0;
+            g.PacingGap = hasTermDates ? termProgress - payProgress : 0.0;  // retained for display
+            double shortfall = hasTermDates ? FeesUrgency.Shortfall(requiredPct, g.PaymentPercent) : 0.0;
+
             int effectiveStaleDays = g.TotalBalance >= settings.StaleHighBalanceAmount
                 ? settings.StaleHighBalanceDays
                 : g.TotalBalance >= settings.StaleMedBalanceAmount
                     ? settings.StaleMedBalanceDays
                     : settings.StaleThresholdDays;
+
             bool hasActivePromise = g.LatestPromiseDate.HasValue
-                && g.LatestPromiseDate.Value.Date >= DateTime.Today;
-            g.Tier = ComputeGuardianTier(g, effectiveStaleDays,
-                settings.CriticalPacingGapThreshold, hasTermDates,
-                settings.NoProgressEscalationWeeks, settings.NoProgressPaymentThreshold,
-                phaseTarget, hasActivePromise);
+                && g.LatestPromiseDate.Value.Date >= today;
+            bool hasCoveringActivePromise = hasActivePromise
+                && g.TotalBalance > 0
+                && (double)((g.LatestPromiseAmount ?? 0m) / g.TotalBalance) >= settings.PartialPromiseCoverageThreshold;
+
+            g.Tier = FeesUrgency.ComputeTier(g, today, hasTermDates,
+                shortfall, settings.CriticalShortfallPoints, hasActivePromise,
+                effectiveStaleDays, settings.NoProgressEscalationWeeks, settings.NoProgressPaymentThreshold);
+
+            bool failedLastOutcome = g.LastOutcome.HasValue
+                && FeesUrgency.FailedOutcomes.Contains(g.LastOutcome.Value);
+            g.UrgencyScore = FeesUrgency.UrgencyScore(
+                g.TotalBalance, shortfall,
+                brokenPromise: g.Tier == PriorityTier.BrokenPromise,
+                failedLastOutcome: failedLastOutcome,
+                callRequired: g.CallRequired,
+                hasCoveringActivePromise: hasCoveringActivePromise);
         }
 
-        // Mark Call Required for guardians with any Overdue SMS sent (flag loaded with the main query)
+        // Tag Call Required for row colour only; ranking is by UrgencyScore.
         foreach (var row in rows)
             if (row.CallRequired)
                 row.Tier = PriorityTier.CallRequired;
 
+        // F4: single money-at-risk ranking for every list.
         rows.Sort((a, b) =>
         {
-            int t = a.Tier.CompareTo(b.Tier);
-            if (t != 0) return t;
-            int p = b.PacingGap.CompareTo(a.PacingGap);   // higher gap = more urgent
-            return p != 0 ? p : b.TotalBalance.CompareTo(a.TotalBalance);
+            int u = b.UrgencyScore.CompareTo(a.UrgencyScore);   // higher score = chase sooner
+            return u != 0 ? u : b.TotalBalance.CompareTo(a.TotalBalance);
         });
         return rows;
     }
@@ -543,14 +560,18 @@ public class FeesFollowUpService
         var all      = GetGuardianWorklist("", minBalance, settings);
         var today = DateTime.Today;
 
+        // F6: within PromiseResurfaceDays of term end, stop hiding partially-covered
+        // promises so the uncovered remainder gets worked before the deadline.
+        bool nearDeadline = settings.TermEndDate.HasValue
+            && (settings.TermEndDate.Value.Date - today).TotalDays <= settings.PromiseResurfaceDays;
+
         return all.Where(g =>
         {
-            if (g.LatestPromiseDate.HasValue
+            if (!nearDeadline
+                && g.LatestPromiseDate.HasValue
                 && g.LatestPromiseDate.Value.Date >= today
                 && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0))
             {
-                // Only hide the guardian if their promise is large enough relative to their balance.
-                // A partial promise (covers < threshold) is not enough — keep them on the daily list.
                 decimal promiseAmt    = g.LatestPromiseAmount ?? 0m;
                 double  coverageRatio = g.TotalBalance > 0
                     ? (double)(promiseAmt / g.TotalBalance)
@@ -562,7 +583,7 @@ public class FeesFollowUpService
             // Exclude if successfully reached today
             return !g.ContactedToday;
         })
-        .OrderBy(g => (int)g.Tier)
+        .OrderByDescending(g => g.UrgencyScore)   // F4: same ranking as the guardian list
         .ThenByDescending(g => g.TotalBalance)
         .ToList();
     }
@@ -588,6 +609,7 @@ public class FeesFollowUpService
                     Balance          = s.Balance,
                     PaymentPercent   = s.PaymentPercent,
                     Tier             = g.Tier,
+                    UrgencyScore     = g.UrgencyScore,
                     GuardianKey      = g.GuardianContact,
                     GuardianContact  = g.GuardianContact,
                     GuardianName     = g.GuardianName,
@@ -599,7 +621,7 @@ public class FeesFollowUpService
         }
 
         return result
-            .OrderBy(s => (int)s.Tier)
+            .OrderByDescending(s => s.UrgencyScore)
             .ThenBy(s => s.ClassId)
             .ThenBy(s => s.FullName)
             .ToList();
@@ -614,12 +636,18 @@ public class FeesFollowUpService
         var all = GetGuardianWorklist("", 0, settings);
         var totals = GetDashboardTotals(currentSemester, prevSemester);
         var today  = DateTime.Today;
+        bool termDatesConfigured = settings.TermStartDate.HasValue && settings.TermEndDate.HasValue;
+        double termProgress = FeesUrgency.TermProgress(today, settings.TermStartDate, settings.TermEndDate);
 
         int contactedToday = all.Count(g => g.ContactedToday);
 
+        bool nearDeadline = settings.TermEndDate.HasValue
+            && (settings.TermEndDate.Value.Date - today).TotalDays <= settings.PromiseResurfaceDays;
+
         int dailyTotal = all.Count(g =>
         {
-            if (g.LatestPromiseDate.HasValue
+            if (!nearDeadline
+                && g.LatestPromiseDate.HasValue
                 && g.LatestPromiseDate.Value.Date >= today
                 && g.PaymentsSinceLatestPromise < (g.LatestPromiseAmount ?? 0))
             {
@@ -667,6 +695,9 @@ public class FeesFollowUpService
             BelowPacingCount   = belowPacingCount,
             CurrentTermWeek    = termWeek,
             TotalTermWeeks     = totalTermWeeks,
+            TermDatesConfigured   = termDatesConfigured,
+            TermProgress          = termProgress,
+            CollectionGoalPercent = (decimal)(settings.CollectionGoal * 100.0),
             ByPriority = Enum.GetValues(typeof(PriorityTier))
                 .Cast<PriorityTier>()
                 .Select(t => new PriorityGroupStats
@@ -914,41 +945,6 @@ WHERE lp.rn = 1
         cmd.ExecuteNonQuery();
     }
 
-    private static PriorityTier ComputeGuardianTier(
-        GuardianWorklistRow g, int stalenessDays, double criticalThreshold, bool hasTermDates,
-        int noProgressWeeks, double noProgressThreshold,
-        double phaseTarget, bool hasActivePromise)
-    {
-        if (hasTermDates && g.PacingGap >= criticalThreshold)
-            return PriorityTier.Critical;
-
-        // Phase-based shortfall: below the term-phase target with no active promise.
-        if (hasTermDates && (double)g.PaymentPercent < phaseTarget && !hasActivePromise)
-            return PriorityTier.Critical;
-
-        if (noProgressWeeks > 0 && g.FirstContactDate.HasValue)
-        {
-            double weeksFollowedUp = (DateTime.Today - g.FirstContactDate.Value.Date).TotalDays / 7.0;
-            if (weeksFollowedUp > noProgressWeeks && (double)g.PaymentPercent < noProgressThreshold)
-                return PriorityTier.Critical;
-        }
-
-        if (g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date < DateTime.Today)
-        {
-            decimal promised = g.LatestPromiseAmount ?? (g.TotalBalance + g.PaymentsSinceLatestPromise);
-            // Allow 5% tolerance — a 95%+ payment is treated as fulfilled to absorb rounding differences.
-            if (g.PaymentsSinceLatestPromise < promised * 0.95m)
-                return PriorityTier.BrokenPromise;
-        }
-
-        if (!g.LastContactDate.HasValue
-            || (DateTime.Today - g.LastContactDate.Value.Date).TotalDays > stalenessDays
-            || (g.LastOutcome.HasValue && FailedOutcomes.Contains(g.LastOutcome.Value)))
-            return PriorityTier.Stale;
-
-        return PriorityTier.Current;
-    }
-
     public List<WorklistRow> GetWorklist(string classFilter, decimal minBalance)
     {
         int staleness = GetStalenessThresholdDays();
@@ -1034,15 +1030,6 @@ WHERE lp.rn = 1
         return Enum.TryParse(raw, out ContactOutcome o) ? o : (ContactOutcome?)null;
     }
 
-    private static readonly System.Collections.Generic.HashSet<ContactOutcome> FailedOutcomes =
-        new System.Collections.Generic.HashSet<ContactOutcome>
-        {
-            ContactOutcome.NoAnswer,
-            ContactOutcome.ContactUnavailable,
-            ContactOutcome.ContactOff,
-            ContactOutcome.Refused,
-        };
-
     private static PriorityTier ComputeTier(WorklistRow r, int stalenessDays)
     {
         // Broken promise: promise date has passed and insufficient payments received
@@ -1055,7 +1042,7 @@ WHERE lp.rn = 1
         // Stale: no contact within threshold, OR last contact was a failed outcome
         if (!r.LastContactDate.HasValue
             || (DateTime.Today - r.LastContactDate.Value.Date).TotalDays > stalenessDays
-            || (r.LastOutcome.HasValue && FailedOutcomes.Contains(r.LastOutcome.Value)))
+            || (r.LastOutcome.HasValue && FeesUrgency.FailedOutcomes.Contains(r.LastOutcome.Value)))
         {
             return PriorityTier.Stale;
         }

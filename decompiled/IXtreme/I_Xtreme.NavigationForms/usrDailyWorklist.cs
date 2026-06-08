@@ -22,6 +22,7 @@ public class usrDailyWorklist : XtraUserControl
     private GridView    _view;
     private TextEdit    _txtSearch;
     private bool        _columnsConfigured;
+    private LabelControl _banner;
 
     public usrDailyWorklist()
     {
@@ -65,6 +66,18 @@ public class usrDailyWorklist : XtraUserControl
         _view.RowStyle   += View_RowStyle;
         _view.DoubleClick += View_DoubleClick;
 
+        _banner = new LabelControl
+        {
+            Dock      = DockStyle.Top,
+            Visible   = false,
+            AutoSizeMode = LabelAutoSizeMode.None,
+            Height    = 24,
+            Text      = "Term start/end not set — deadline-based prioritisation is off. Set them in Follow-up Settings.",
+        };
+        _banner.Appearance.BackColor = Color.LightGoldenrodYellow;
+        _banner.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;
+        this.Controls.Add(_banner);
+
         this.Controls.Add(_grid);
         this.Controls.Add(topPanel);
         this.ResumeLayout(false);
@@ -75,6 +88,7 @@ public class usrDailyWorklist : XtraUserControl
         try
         {
             _allRows = _service.GetDailyWorklist(0);
+            _banner.Visible = !_service.AreTermDatesConfigured();
             _grid.DataSource = _allRows;
             ConfigureColumns();
         }
@@ -97,6 +111,13 @@ public class usrDailyWorklist : XtraUserControl
         _view.CustomUnboundColumnData += (s, e) => { if (e.Column == colNum && e.IsGetData) e.Value = e.ListSourceRowIndex + 1; };
 
         AddCol("GuardianLabel",       "Guardian",      200);
+        _view.CustomColumnDisplayText += (s, e) =>
+        {
+            if (e.Column.FieldName == "GuardianLabel"
+                && _view.GetRow(_view.GetRowHandle(e.ListSourceRowIndex)) is GuardianWorklistRow gr
+                && gr.IsUnreachable)
+                e.DisplayText = (e.Value?.ToString() ?? "") + "  (no phone)";
+        };
         AddCol("GuardianContact",     "Contact",       120);
         AddCol("Contact2",            "Alt Contact",   120);
         AddCol("StudentNames",        "Students",      200);
@@ -184,6 +205,11 @@ public class usrDailyWorklist : XtraUserControl
             case PriorityTier.BrokenPromise: e.Appearance.BackColor = Color.LightCoral;   e.HighPriority = true; break;
             case PriorityTier.Stale:         e.Appearance.BackColor = Color.LightYellow;  e.HighPriority = true; break;
             case PriorityTier.CallRequired:  e.Appearance.BackColor = Color.DarkSlateBlue; e.Appearance.ForeColor = Color.White; e.HighPriority = true; break;
+        }
+        if (row.IsUnreachable)
+        {
+            e.Appearance.ForeColor = Color.Gray;
+            e.Appearance.Font = new Font(_view.Appearance.Row.Font, FontStyle.Italic);
         }
     }
 

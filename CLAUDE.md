@@ -148,10 +148,22 @@ Sorted ascending — lower number = higher urgency.
 
 **Stale Threshold** — days since last contact before a row becomes Stale. Default: 7.
 
-**Term Start / Term End** — boundaries of the current academic term. Required for Pacing Gap. When not set, Pacing Gap is 0 and Critical tier cannot trigger.
+**Term Start / Term End** — boundaries of the current academic term. Required for the Required-Payment Line and the Critical tier. When not set, deadline-based prioritisation is off: shortfall is 0, the Critical tier cannot trigger, and the worklists/dashboard show a warning banner.
 
-**Critical Threshold** — Pacing Gap above which a row becomes Critical. Stored as decimal (0–1), shown as percentage (0–100%). Default: 50%.
+**Collection Goal** — the term-end collection target driving the Required-Payment Line. Stored as a fraction (0–1), shown as a percentage. Default 0.98 (98%).
 
-**Phase Min Percent (First/Second Half)** — minimum payment percent expected by term phase. A guardian below the current phase's target with no active promise is escalated to Critical, in addition to the Pacing Gap rule. `FirstHalfMinPercent` default 50, `SecondHalfMinPercent` default 80; mid-term is the date midpoint of Term Start..Term End.
+**Required-Payment Line** — `CollectionGoal × TermProgress × 100`. The payment percent a guardian is expected to have reached today. Replaces the old flat First/Second-Half phase targets, ramping from ~0% at term start to the goal at term end.
 
-**Threshold units — read before adding a new one.** Settings thresholds in `FeesFollowUpSettings` mix two conventions. `CriticalPacingGapThreshold` is a **fraction (0–1)** and is compared against `PacingGap` (also a fraction). `NoProgressPaymentThreshold`, `FirstHalfMinPercent`, and `SecondHalfMinPercent` are **percentages (0–100)** and are compared against `PaymentPercent` (also 0–100). When adding a threshold, match the unit of the value it is compared against; the settings dialog stores percent-convention values as whole numbers (SpinEdit) and fraction-convention values divided by 100.
+**Shortfall** — `RequiredPct − PaymentPercent`, in percentage points. Positive = behind the line.
+
+**Critical Shortfall Points** — shortfall (pts) at or above which a guardian with no active promise becomes Critical. Default 25. Sole Critical driver alongside the retained no-progress escalation; replaces the pacing-gap and flat-phase Critical rules.
+
+**Urgency Score** — `TotalBalance × (1 + max(0,Shortfall)/50) × behaviour`, where behaviour multiplies by 1.5 (broken promise), 1.3 (failed last outcome), 1.4 (recent Call Required), and 0.4 (covering active promise). The single sort key for every worklist (guardian, daily, student); the priority tier now drives only row colour and dashboard grouping, not ordering. Lives in the pure, unit-tested `FeesUrgency` static class (`I_Xtreme.ExtremeClasses`).
+
+**Call Required Window Days** — only an Overdue SMS sent within this many days flags Call Required; the flag then feeds the Urgency Score (×1.4) rather than pinning the row to a top tier. Default 14. Relies on `tbl_SmsReminderLog.SentAt`.
+
+**Promise Resurface Days** — within this many days of term end, partially-covered promises are no longer hidden from the daily list, so the uncovered remainder gets worked before the deadline. Default 14.
+
+**Critical Threshold (`CriticalPacingGapThreshold`)** — retired from tier logic in the 2026-06-08 overhaul. The model field and its `tbl_FollowUpSettings` persistence remain (dormant) for backward compatibility; it no longer affects prioritisation and the settings dialog no longer exposes it. `PacingGap` is still computed and shown in the grid.
+
+**Threshold units — read before adding a new one.** Settings thresholds in `FeesFollowUpSettings` mix conventions. `CollectionGoal` (and the dormant `CriticalPacingGapThreshold`) are **fractions (0–1)**. `CriticalShortfallPoints` and `NoProgressPaymentThreshold` are **percentage points (0–100)**, compared against `Shortfall`/`PaymentPercent` (also 0–100). `CallRequiredWindowDays` and `PromiseResurfaceDays` are **day counts**. When adding a threshold, match the unit of the value it is compared against; the settings dialog stores percent-convention values as whole numbers (SpinEdit) and fraction-convention values divided by 100 (e.g. Collection Goal shown as 98, saved as 0.98).
