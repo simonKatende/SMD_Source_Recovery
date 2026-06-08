@@ -870,10 +870,20 @@ WHERE lp.rn = 1
         conn.Open();
         var all = GetStudentsWithActivePromises(conn, school,
             settings.SmsTemplate2Day, settings.SmsTemplateDayOf, settings.SmsTemplateOverdue);
-        // Filter out already-sent reminders
-        return all.Where(item =>
+
+        // Drop already-sent, per student (idempotency preserved at student grain).
+        var notSent = all.Where(item =>
             !AlreadySentReminder(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType))
             .ToList();
+
+        // One SMS per guardian per reminder-type occurrence; re-render from merged values.
+        var consolidated = SmsReminderLogic.ConsolidatePromiseReminders(notSent);
+        foreach (var item in consolidated)
+            item.Message = ApplySmsTemplate(
+                PickPromiseTemplate(item.ReminderType, settings),
+                item.Balance, item.StudentName, item.ClassId, item.PromiseDate, school, item.PromisedAmount);
+
+        return consolidated;
     }
 
     public SmsReminderResult ExecuteSendReminders(List<ReminderItem> approved)
