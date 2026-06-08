@@ -27,6 +27,7 @@
     <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\GuardianWorklistRow.cs"  Link="Models\GuardianWorklistRow.cs" />
     <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\FeesContactLog.cs"       Link="Models\FeesContactLog.cs" />
     <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\FeesUrgency.cs"  Link="Logic\FeesUrgency.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\SmsReminderLogic.cs" Link="Logic\SmsReminderLogic.cs" />
   </ItemGroup>
 
 </Project>
