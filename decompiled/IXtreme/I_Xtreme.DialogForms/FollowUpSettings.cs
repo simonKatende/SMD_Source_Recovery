@@ -21,13 +21,16 @@ public class FollowUpSettings : XtraForm
     private SpinEdit spnMedBalAmt,  spnMedBalDays;
     private SpinEdit spnEscWeeks,   spnEscThreshold;
     private SpinEdit spnCollectionGoal, spnCriticalShortfall, spnCallReqWindow, spnPromiseResurface;
+    private SpinEdit spnGeneralCooldown;
+    private MemoEdit memoGeneral;
     private SimpleButton btnOK, btnCancel, btnResetTemplates;
 
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
 
     private const string Default2Day     = "Dear Parent, you promised to pay UGX {promised_amount} for {names} by {date}. Your overall balance is UGX {balance}. Please pay as promised. - {school}";
     private const string DefaultDayOf   = "Dear Parent, today is your promised payment date of UGX {promised_amount} for {names}. Your overall balance is UGX {balance}. Please make your payment today. - {school}";
-    private const string DefaultOverdue = "Dear Parent, your payment of UGX {promised_amount} for {names} ({class}) was due on {date} but has not been received. Balance: UGX {balance}. Please pay immediately. - {school}";
+    private const string DefaultOverdue  = "Dear Parent, your payment of UGX {promised_amount} for {names} ({class}) was due on {date} but has not been received. Balance: UGX {balance}. Please pay immediately. - {school}";
+    private const string DefaultGeneral  = "Dear Parent, {names} ({class}) has an outstanding balance of UGX {balance}. Please pay or contact the bursar to arrange a payment plan. - {school}";
 
     public FollowUpSettings()
     {
@@ -47,6 +50,8 @@ public class FollowUpSettings : XtraForm
         spnCriticalShortfall.Value = (decimal)s.CriticalShortfallPoints;
         spnCallReqWindow.Value     = s.CallRequiredWindowDays;
         spnPromiseResurface.Value  = s.PromiseResurfaceDays;
+        spnGeneralCooldown.Value   = s.GeneralReminderCooldownDays;
+        memoGeneral.Text = !string.IsNullOrWhiteSpace(s.SmsTemplateGeneral) ? s.SmsTemplateGeneral : DefaultGeneral;
         memo2Day.Text    = !string.IsNullOrWhiteSpace(s.SmsTemplate2Day)    ? s.SmsTemplate2Day    : Default2Day;
         memoDayOf.Text   = !string.IsNullOrWhiteSpace(s.SmsTemplateDayOf)   ? s.SmsTemplateDayOf   : DefaultDayOf;
         memoOverdue.Text = !string.IsNullOrWhiteSpace(s.SmsTemplateOverdue) ? s.SmsTemplateOverdue : DefaultOverdue;
@@ -183,35 +188,52 @@ public class FollowUpSettings : XtraForm
         this.spnPromiseResurface.Properties.MinValue     = 0;
         this.spnPromiseResurface.Properties.MaxValue     = 365;
 
-        // Row 5: 2-day reminder template
+        // Row 12d: Balance reminder cooldown
+        var lblCooldown = new LabelControl
+            { Text = "Balance reminder cooldown (days between sends to a guardian):",
+              Location = new System.Drawing.Point(12, 494), AutoSize = true };
+        this.spnGeneralCooldown = new SpinEdit
+            { Location = new System.Drawing.Point(340, 490), Width = 80 };
+        this.spnGeneralCooldown.Properties.IsFloatValue = false;
+        this.spnGeneralCooldown.Properties.MinValue     = 1;
+        this.spnGeneralCooldown.Properties.MaxValue     = 365;
+
+        // Row 5: Pre-due reminder template
         var lbl2Day = new LabelControl
-            { Text = "2-day reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 496), AutoSize = true };
-        this.memo2Day = new MemoEdit { Location = new System.Drawing.Point(12, 514), Size = new System.Drawing.Size(580, 60) };
+            { Text = "Pre-due reminder template — sent 3 days before ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 528), AutoSize = true };
+        this.memo2Day = new MemoEdit { Location = new System.Drawing.Point(12, 546), Size = new System.Drawing.Size(580, 60) };
         this.memo2Day.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Row 6: Day-of reminder template
         var lblDayOf = new LabelControl
-            { Text = "Day-of reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 582), AutoSize = true };
-        this.memoDayOf = new MemoEdit { Location = new System.Drawing.Point(12, 600), Size = new System.Drawing.Size(580, 60) };
+            { Text = "Day-of reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 614), AutoSize = true };
+        this.memoDayOf = new MemoEdit { Location = new System.Drawing.Point(12, 632), Size = new System.Drawing.Size(580, 60) };
         this.memoDayOf.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Row 7: Overdue reminder template
         var lblOverdue = new LabelControl
         {
             Text     = "Overdue reminder template ({promised_amount},{balance},{names},{class},{date},{school}):",
-            Location = new System.Drawing.Point(12, 668),
+            Location = new System.Drawing.Point(12, 700),
             AutoSize = true,
         };
-        this.memoOverdue = new MemoEdit { Location = new System.Drawing.Point(12, 686), Size = new System.Drawing.Size(580, 60) };
+        this.memoOverdue = new MemoEdit { Location = new System.Drawing.Point(12, 718), Size = new System.Drawing.Size(580, 60) };
         this.memoOverdue.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+
+        // Row 8: General balance reminder template
+        var lblGeneral = new LabelControl
+            { Text = "Balance reminder template ({balance},{names},{class},{school}):",
+              Location = new System.Drawing.Point(12, 786), AutoSize = true };
+        this.memoGeneral = new MemoEdit { Location = new System.Drawing.Point(12, 804), Size = new System.Drawing.Size(580, 60) };
+        this.memoGeneral.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Buttons
         this.btnResetTemplates = new SimpleButton
-            { Text = "Reset Templates", Location = new System.Drawing.Point(12, 760), Width = 120 };
+            { Text = "Reset Templates", Location = new System.Drawing.Point(12, 878), Width = 120 };
         this.btnOK = new SimpleButton
-            { Text = "OK", Location = new System.Drawing.Point(430, 760), Width = 75 };
+            { Text = "OK", Location = new System.Drawing.Point(430, 878), Width = 75 };
         this.btnCancel = new SimpleButton
-            { Text = "Cancel", Location = new System.Drawing.Point(514, 760), Width = 75 };
+            { Text = "Cancel", Location = new System.Drawing.Point(514, 878), Width = 75 };
 
         this.btnOK.Click += (s, e) =>
         {
@@ -244,8 +266,10 @@ public class FollowUpSettings : XtraForm
                 NoProgressPaymentThreshold      = (double)spnEscThreshold.Value,
                 CollectionGoal          = (double)(spnCollectionGoal.Value / 100m),
                 CriticalShortfallPoints = (double)spnCriticalShortfall.Value,
-                CallRequiredWindowDays  = (int)spnCallReqWindow.Value,
-                PromiseResurfaceDays    = (int)spnPromiseResurface.Value,
+                CallRequiredWindowDays       = (int)spnCallReqWindow.Value,
+                PromiseResurfaceDays         = (int)spnPromiseResurface.Value,
+                GeneralReminderCooldownDays  = (int)spnGeneralCooldown.Value,
+                SmsTemplateGeneral           = memoGeneral.Text.Trim(),
             });
             base.DialogResult = DialogResult.OK;
             Dispose();
@@ -256,9 +280,10 @@ public class FollowUpSettings : XtraForm
             memo2Day.Text    = Default2Day;
             memoDayOf.Text   = DefaultDayOf;
             memoOverdue.Text = DefaultOverdue;
+            memoGeneral.Text = DefaultGeneral;
         };
 
-        this.ClientSize = new System.Drawing.Size(608, 792);
+        this.ClientSize = new System.Drawing.Size(608, 910);
         this.Controls.AddRange(new Control[]
         {
             lblStaleness, spnStaleness,
@@ -274,9 +299,11 @@ public class FollowUpSettings : XtraForm
             lblShortfall,  spnCriticalShortfall,
             lblCallReq,    spnCallReqWindow,
             lblResurface,  spnPromiseResurface,
+            lblCooldown,   spnGeneralCooldown,
             lbl2Day,      memo2Day,
             lblDayOf,     memoDayOf,
             lblOverdue,   memoOverdue,
+            lblGeneral,   memoGeneral,
             btnResetTemplates, btnOK, btnCancel,
         });
         this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
