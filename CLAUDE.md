@@ -144,6 +144,18 @@ Sorted ascending — lower number = higher urgency.
 
 **Payments Since Promise** — sum of payments received after the latest Promise Date. Used to evaluate whether a promise was honoured.
 
+**Gateway success** — egosms `/plain` returns the literal `OK` on success (some variants return a
+positive integer). `SmsReminderLogic.IsGatewaySuccessResponse` is the single source of truth; a non-OK,
+non-positive response is a failure. Misreading this as a failure previously suppressed all reminder
+logging (so dedup/cooldown never engaged).
+
+**SMS History** — read-only dialog over `tbl_SMSLog` (actual gateway sends: recipient, message, response,
+time), opened from the Interactions ribbon group. Distinct from `tbl_SmsReminderLog`, which is the
+per-student dedup ledger.
+
+**View-only ledger** — opening a student from the Log Interaction dialog shows `StudentFeesPayment` with
+recording disabled; payments are recorded under Accounts → Pay In.
+
 ### Settings
 
 **Stale Threshold** — days since last contact before a row becomes Stale. Default: 7.
@@ -161,6 +173,10 @@ Sorted ascending — lower number = higher urgency.
 **Urgency Score** — `TotalBalance × (1 + max(0,Shortfall)/50) × behaviour`, where behaviour multiplies by 1.5 (broken promise), 1.3 (failed last outcome), 1.4 (recent Call Required), and 0.4 (covering active promise). The single sort key for every worklist (guardian, daily, student); the priority tier now drives only row colour and dashboard grouping, not ordering. Lives in the pure, unit-tested `FeesUrgency` static class (`I_Xtreme.ExtremeClasses`).
 
 **Call Required Window Days** — only an Overdue SMS sent within this many days flags Call Required; the flag then feeds the Urgency Score (×1.4) rather than pinning the row to a top tier. Default 14. Relies on `tbl_SmsReminderLog.SentAt`.
+
+**Reminders Sent (column)** — count of `tbl_SmsReminderLog` rows for the guardian/student within the
+current term (`TermStartDate`..`TermEndDate`; all-time when term dates are unset), shown with the most
+recent reminder date on the guardian and student worklists.
 
 **Promise Resurface Days** — within this many days of term end, partially-covered promises are no longer hidden from the daily list, so the uncovered remainder gets worked before the deadline. Default 14.
 
