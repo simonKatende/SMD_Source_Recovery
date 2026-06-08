@@ -1035,12 +1035,27 @@ WHERE lp.rn = 1
         var rows   = GetGuardianWorklist("", 0, settings);
         var cooled = GetGuardiansInGeneralCooldown(settings.GeneralReminderCooldownDays);
 
+        // Cross-channel guard: never send a balance reminder to a guardian who is already getting a
+        // promise reminder today (e.g. a just-broken promise still in the Overdue window).
+        HashSet<string> promiseGuardians;
+        using (var pconn = new SqlConnection(connectionString))
+        {
+            pconn.Open();
+            promiseGuardians = new HashSet<string>(
+                GetStudentsWithActivePromises(pconn, school,
+                    settings.SmsTemplate2Day, settings.SmsTemplateDayOf, settings.SmsTemplateOverdue)
+                    .Select(i => i.GuardianKey)
+                    .Where(k => !string.IsNullOrEmpty(k)),   // guard against legacy NULL GuardianKey rows
+                StringComparer.Ordinal);
+        }
+
         var items = new List<ReminderItem>();
         foreach (var g in rows)
         {
             bool hasActivePromise = g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date >= today;
             if (!SmsReminderLogic.IsBalanceReminderEligible(g.Tier, g.TotalBalance, hasActivePromise)) continue;
             if (cooled.Contains(g.GuardianContact)) continue;
+            if (promiseGuardians.Contains(g.GuardianContact)) continue;   // in today's promise-reminder queue — skip balance SMS
 
             string phone = SmsReminderLogic.NormalizePhone(g.GuardianContact)
                         ?? SmsReminderLogic.NormalizePhone(g.Contact2);
