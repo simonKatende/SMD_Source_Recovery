@@ -526,10 +526,10 @@ public class FeesFollowUpService
                 hasCoveringActivePromise: hasCoveringActivePromise);
         }
 
-        // Tag Call Required for row colour only; ranking is by UrgencyScore.
-        foreach (var row in rows)
-            if (row.CallRequired)
-                row.Tier = PriorityTier.CallRequired;
+        // CallRequired stays a flag on the row (g.CallRequired) and is NOT folded into
+        // Tier — Tier always reflects the true risk tier so dashboard counts stay accurate.
+        // The UI colours CallRequired rows from the flag, and the 1.4x score multiplier
+        // already lifted their rank.
 
         // F4: single money-at-risk ranking for every list.
         rows.Sort((a, b) =>
@@ -700,6 +700,7 @@ public class FeesFollowUpService
             CollectionGoalPercent = (decimal)(settings.CollectionGoal * 100.0),
             ByPriority = Enum.GetValues(typeof(PriorityTier))
                 .Cast<PriorityTier>()
+                .Where(t => t != PriorityTier.CallRequired)   // CallRequired is a flag, not a risk tier
                 .Select(t => new PriorityGroupStats
                 {
                     Tier          = t,

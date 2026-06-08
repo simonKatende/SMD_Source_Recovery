@@ -157,15 +157,18 @@ public class usrDailyWorklist : XtraUserControl
         _view.CustomColumnDisplayText += (s, e) =>
         {
             if (e.Column != col || !(e.Value is PriorityTier t)) return;
-            e.DisplayText = t switch
+            string text = t switch
             {
                 PriorityTier.Critical      => "Critical",
                 PriorityTier.BrokenPromise => "Missed Promise",
                 PriorityTier.Stale         => "Contact Overdue",
-                PriorityTier.CallRequired  => "Call Required",
                 PriorityTier.Current       => "Up to Date",
                 _                          => e.DisplayText,
             };
+            // Append a marker for the orthogonal CallRequired flag (recent overdue SMS).
+            if (_view.GetRow(_view.GetRowHandle(e.ListSourceRowIndex)) is GuardianWorklistRow gr && gr.CallRequired)
+                text += " + Call";
+            e.DisplayText = text;
         };
     }
 
@@ -204,7 +207,11 @@ public class usrDailyWorklist : XtraUserControl
             case PriorityTier.Critical:      e.Appearance.BackColor = Color.OrangeRed;     e.Appearance.ForeColor = Color.White; e.HighPriority = true; break;
             case PriorityTier.BrokenPromise: e.Appearance.BackColor = Color.LightCoral;   e.HighPriority = true; break;
             case PriorityTier.Stale:         e.Appearance.BackColor = Color.LightYellow;  e.HighPriority = true; break;
-            case PriorityTier.CallRequired:  e.Appearance.BackColor = Color.DarkSlateBlue; e.Appearance.ForeColor = Color.White; e.HighPriority = true; break;
+        }
+        // CallRequired is a flag orthogonal to the risk tier — colour it from the flag (takes precedence).
+        if (row.CallRequired)
+        {
+            e.Appearance.BackColor = Color.DarkSlateBlue; e.Appearance.ForeColor = Color.White; e.HighPriority = true;
         }
         if (row.IsUnreachable)
         {
