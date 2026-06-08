@@ -144,6 +144,13 @@ public class FeesFollowUpService
         };
     }
 
+    /// <summary>Cheap check for the worklist banner: are both term dates configured?</summary>
+    public bool AreTermDatesConfigured()
+    {
+        var s = GetSettings();
+        return s.TermStartDate.HasValue && s.TermEndDate.HasValue;
+    }
+
     public void SaveSettings(FeesFollowUpSettings s)
     {
         using var conn = new SqlConnection(connectionString);
