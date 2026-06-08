@@ -390,10 +390,11 @@ public class FeesFollowUpService
         GROUP BY cl.GuardianKey
     ),
     CallRequiredCte AS (
-        -- Mirrors HasCallRequiredStudent: any Overdue SMS sent to this guardian
+        -- F3: only a *recent* Overdue SMS counts, so the flag decays instead of sticking forever.
         SELECT GuardianKey AS ContactKey
         FROM tbl_SmsReminderLog
         WHERE ReminderType = 'Overdue' AND GuardianKey IS NOT NULL
+          AND SentAt >= @callRequiredCutoff
         GROUP BY GuardianKey
     )
     SELECT
@@ -428,6 +429,8 @@ public class FeesFollowUpService
             cmd.Parameters.Add("@classFilter",     SqlDbType.VarChar, 50).Value = classFilter ?? "";
             cmd.Parameters.Add("@currentSemester", SqlDbType.VarChar, 50).Value = currentSemester;
             cmd.Parameters.Add("@prevSemester",    SqlDbType.VarChar, 50).Value = (object)prevSemester ?? DBNull.Value;
+            cmd.Parameters.Add("@callRequiredCutoff", SqlDbType.DateTime).Value =
+                DateTime.Today.AddDays(-settings.CallRequiredWindowDays);
 
             using var rdr = cmd.ExecuteReader();
             while (rdr.Read())
