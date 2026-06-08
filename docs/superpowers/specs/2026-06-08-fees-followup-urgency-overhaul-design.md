@@ -209,3 +209,13 @@ plan.
 - `ProjectedCollectionRate` is naive linear extrapolation; early-term projections
   are noisy (mitigated by showing it only as a directional KPI).
 - Over-merged shared phones still aggregate as one family.
+- **CallRequired vs risk-tier counting (deferred — needs a design decision).** The
+  worklist still overwrites `Tier = CallRequired` for colour. Because `GetDashboardData`
+  counts `BrokenPromiseCount` and the `ByPriority` breakdown off that same overwritten
+  tier, a guardian who is, say, a Broken Promise *and* recently got an Overdue SMS is
+  counted under CallRequired, not their risk tier — so the dashboard tier counts
+  understate genuine risk. This is pre-existing, not introduced by this overhaul. A correct
+  fix means representing CallRequired as a flag orthogonal to the risk tier across the
+  dashboard and both worklists (CallRequired can co-occur with any risk tier), which is a
+  UX decision worth its own brainstorm. Worklist ranking is unaffected (it sorts by
+  `UrgencyScore`, not tier); only dashboard tier *counts* are skewed.
