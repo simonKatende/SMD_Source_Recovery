@@ -999,6 +999,66 @@ WHERE lp.rn = 1
         cmd.ExecuteNonQuery();
     }
 
+    private HashSet<string> GetGuardiansInGeneralCooldown(int cooldownDays)
+    {
+        var set = new HashSet<string>(StringComparer.Ordinal);
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(
+            @"SELECT DISTINCT GuardianKey FROM tbl_SmsReminderLog
+              WHERE ReminderType = 'General' AND GuardianKey IS NOT NULL
+                AND SentAt >= @cutoff", conn);
+        cmd.Parameters.Add("@cutoff", SqlDbType.DateTime).Value = DateTime.Today.AddDays(-cooldownDays);
+        using var rdr = cmd.ExecuteReader();
+        while (rdr.Read())
+            if (!rdr.IsDBNull(0)) set.Add(rdr.GetString(0));
+        return set;
+    }
+
+    public List<ReminderItem> GetBalanceRemindersPreview()
+    {
+        var settings = GetSettings();
+        string school = GetSchoolName();
+        string template = !string.IsNullOrWhiteSpace(settings.SmsTemplateGeneral)
+            ? settings.SmsTemplateGeneral : DefaultGeneral;
+        var today = DateTime.Today;
+
+        var rows   = GetGuardianWorklist("", 0, settings);
+        var cooled = GetGuardiansInGeneralCooldown(settings.GeneralReminderCooldownDays);
+
+        var items = new List<ReminderItem>();
+        foreach (var g in rows)
+        {
+            bool hasActivePromise = g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date >= today;
+            if (!SmsReminderLogic.IsBalanceReminderEligible(g.Tier, g.TotalBalance, hasActivePromise)) continue;
+            if (cooled.Contains(g.GuardianContact)) continue;
+
+            string phone = SmsReminderLogic.NormalizePhone(g.GuardianContact)
+                        ?? SmsReminderLogic.NormalizePhone(g.Contact2);
+            if (phone == null) continue;   // no callable number
+
+            string names   = string.Join(", ", g.Students.Select(s => s.FullName));
+            string classes = string.Join(", ", g.Students.Select(s => s.ClassId)
+                                 .Where(c => !string.IsNullOrWhiteSpace(c)).Distinct());
+            string msg = ApplySmsTemplate(template, g.TotalBalance, names, classes, today, school, 0m);
+
+            items.Add(new ReminderItem
+            {
+                GuardianKey    = g.GuardianContact,
+                Phone          = phone,
+                StudentName    = names,
+                ClassId        = classes,
+                Balance        = g.TotalBalance,
+                PromisedAmount = 0m,
+                PromiseDate    = today,   // placeholder; a General reminder carries no promise date (StudentNumber stays null too)
+                ReminderType   = "General",
+                Message        = msg,
+                Components     = new List<ReminderComponent>(),
+            });
+        }
+        return items;
+    }
+
     public List<WorklistRow> GetWorklist(string classFilter, decimal minBalance)
     {
         int staleness = GetStalenessThresholdDays();
