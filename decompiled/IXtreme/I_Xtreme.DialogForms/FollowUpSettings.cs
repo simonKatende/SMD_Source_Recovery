@@ -13,7 +13,6 @@ public class FollowUpSettings : XtraForm
     private SpinEdit  spnStaleness;
     private DateEdit  dteTermStart;
     private DateEdit  dteTermEnd;
-    private SpinEdit  spnCriticalThreshold;
     private MemoEdit  memo2Day;
     private MemoEdit  memoDayOf;
     private MemoEdit  memoOverdue;
@@ -37,7 +36,6 @@ public class FollowUpSettings : XtraForm
         spnStaleness.Value         = s.StaleThresholdDays;
         dteTermStart.EditValue     = (object)s.TermStartDate ?? DBNull.Value;
         dteTermEnd.EditValue       = (object)s.TermEndDate   ?? DBNull.Value;
-        spnCriticalThreshold.Value = (decimal)(s.CriticalPacingGapThreshold * 100);
         spnPartialCoverage.Value = (decimal)(s.PartialPromiseCoverageThreshold * 100);
         spnHighBalAmt.Value      = (decimal)s.StaleHighBalanceAmount;
         spnHighBalDays.Value     = s.StaleHighBalanceDays;
@@ -73,14 +71,6 @@ public class FollowUpSettings : XtraForm
         var lblTermEnd = new LabelControl
             { Text = "Term end date:", Location = new System.Drawing.Point(12, 90) };
         this.dteTermEnd = new DateEdit { Location = new System.Drawing.Point(210, 86), Width = 120 };
-
-        // Row 4: Critical threshold
-        var lblCritical = new LabelControl
-            { Text = "Critical tier: pacing gap >= (%):", Location = new System.Drawing.Point(12, 126) };
-        this.spnCriticalThreshold = new SpinEdit { Location = new System.Drawing.Point(210, 122), Width = 80 };
-        this.spnCriticalThreshold.Properties.IsFloatValue = false;
-        this.spnCriticalThreshold.Properties.MinValue     = 0;
-        this.spnCriticalThreshold.Properties.MaxValue     = 100;
 
         // Row 5: Partial promise coverage
         var lblPartial = new LabelControl
@@ -176,9 +166,9 @@ public class FollowUpSettings : XtraForm
         // Row 12b: CallRequired window
         var lblCallReq = new LabelControl
             { Text = "\"Call Required\" window — overdue SMS within (days):",
-              Location = new System.Drawing.Point(12, 412) };
+              Location = new System.Drawing.Point(12, 430) };
         this.spnCallReqWindow = new SpinEdit
-            { Location = new System.Drawing.Point(340, 408), Width = 80 };
+            { Location = new System.Drawing.Point(340, 426), Width = 80 };
         this.spnCallReqWindow.Properties.IsFloatValue = false;
         this.spnCallReqWindow.Properties.MinValue     = 1;
         this.spnCallReqWindow.Properties.MaxValue     = 365;
@@ -186,42 +176,42 @@ public class FollowUpSettings : XtraForm
         // Row 12c: Promise resurface
         var lblResurface = new LabelControl
             { Text = "Resurface partial promises within (days of term end):",
-              Location = new System.Drawing.Point(12, 426) };
+              Location = new System.Drawing.Point(12, 462) };
         this.spnPromiseResurface = new SpinEdit
-            { Location = new System.Drawing.Point(340, 422), Width = 80 };
+            { Location = new System.Drawing.Point(340, 458), Width = 80 };
         this.spnPromiseResurface.Properties.IsFloatValue = false;
         this.spnPromiseResurface.Properties.MinValue     = 0;
         this.spnPromiseResurface.Properties.MaxValue     = 365;
 
         // Row 5: 2-day reminder template
         var lbl2Day = new LabelControl
-            { Text = "2-day reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 432), AutoSize = true };
-        this.memo2Day = new MemoEdit { Location = new System.Drawing.Point(12, 450), Size = new System.Drawing.Size(580, 60) };
+            { Text = "2-day reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 496), AutoSize = true };
+        this.memo2Day = new MemoEdit { Location = new System.Drawing.Point(12, 514), Size = new System.Drawing.Size(580, 60) };
         this.memo2Day.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Row 6: Day-of reminder template
         var lblDayOf = new LabelControl
-            { Text = "Day-of reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 518), AutoSize = true };
-        this.memoDayOf = new MemoEdit { Location = new System.Drawing.Point(12, 534), Size = new System.Drawing.Size(580, 60) };
+            { Text = "Day-of reminder template ({promised_amount},{balance},{names},{class},{date},{school}):", Location = new System.Drawing.Point(12, 582), AutoSize = true };
+        this.memoDayOf = new MemoEdit { Location = new System.Drawing.Point(12, 600), Size = new System.Drawing.Size(580, 60) };
         this.memoDayOf.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Row 7: Overdue reminder template
         var lblOverdue = new LabelControl
         {
             Text     = "Overdue reminder template ({promised_amount},{balance},{names},{class},{date},{school}):",
-            Location = new System.Drawing.Point(12, 602),
+            Location = new System.Drawing.Point(12, 668),
             AutoSize = true,
         };
-        this.memoOverdue = new MemoEdit { Location = new System.Drawing.Point(12, 618), Size = new System.Drawing.Size(580, 60) };
+        this.memoOverdue = new MemoEdit { Location = new System.Drawing.Point(12, 686), Size = new System.Drawing.Size(580, 60) };
         this.memoOverdue.Properties.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
 
         // Buttons
         this.btnResetTemplates = new SimpleButton
-            { Text = "Reset Templates", Location = new System.Drawing.Point(12, 692), Width = 120 };
+            { Text = "Reset Templates", Location = new System.Drawing.Point(12, 760), Width = 120 };
         this.btnOK = new SimpleButton
-            { Text = "OK", Location = new System.Drawing.Point(430, 692), Width = 75 };
+            { Text = "OK", Location = new System.Drawing.Point(430, 760), Width = 75 };
         this.btnCancel = new SimpleButton
-            { Text = "Cancel", Location = new System.Drawing.Point(514, 692), Width = 75 };
+            { Text = "Cancel", Location = new System.Drawing.Point(514, 760), Width = 75 };
 
         this.btnOK.Click += (s, e) =>
         {
@@ -242,7 +232,6 @@ public class FollowUpSettings : XtraForm
                 StaleThresholdDays         = (int)spnStaleness.Value,
                 TermStartDate              = termStart,
                 TermEndDate                = termEnd,
-                CriticalPacingGapThreshold = (double)(spnCriticalThreshold.Value / 100m),
                 SmsTemplate2Day            = memo2Day.Text.Trim(),
                 SmsTemplateDayOf           = memoDayOf.Text.Trim(),
                 SmsTemplateOverdue         = memoOverdue.Text.Trim(),
@@ -269,13 +258,12 @@ public class FollowUpSettings : XtraForm
             memoOverdue.Text = DefaultOverdue;
         };
 
-        this.ClientSize = new System.Drawing.Size(608, 724);
+        this.ClientSize = new System.Drawing.Size(608, 792);
         this.Controls.AddRange(new Control[]
         {
             lblStaleness, spnStaleness,
             lblTermStart, dteTermStart,
             lblTermEnd,   dteTermEnd,
-            lblCritical,  spnCriticalThreshold,
             lblPartial,  spnPartialCoverage,
             lblTierHeader,
             lblHighAmt,  spnHighBalAmt, lblHighMid, spnHighBalDays, lblHighEnd,
