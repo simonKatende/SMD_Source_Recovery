@@ -141,6 +141,10 @@ public class FeesFollowUpService
             PromiseResurfaceDays =
                 dict.TryGetValue("PromiseResurfaceDays", out var prd) && int.TryParse(prd, out int prdi)
                     ? prdi : 14,
+            GeneralReminderCooldownDays =
+                dict.TryGetValue("GeneralReminderCooldownDays", out var grc) && int.TryParse(grc, out int grci)
+                    ? grci : 7,
+            SmsTemplateGeneral = dict.TryGetValue("SmsTemplateGeneral", out var stg) ? stg : "",
         };
     }
 
@@ -179,6 +183,8 @@ public class FeesFollowUpService
             s.CriticalShortfallPoints.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
         Upsert(conn, "CallRequiredWindowDays", s.CallRequiredWindowDays.ToString());
         Upsert(conn, "PromiseResurfaceDays",   s.PromiseResurfaceDays.ToString());
+        Upsert(conn, "GeneralReminderCooldownDays", s.GeneralReminderCooldownDays.ToString());
+        Upsert(conn, "SmsTemplateGeneral",          s.SmsTemplateGeneral ?? "");
     }
 
     private static void Upsert(SqlConnection conn, string key, string value)
@@ -726,6 +732,14 @@ public class FeesFollowUpService
         catch { return ""; }
     }
 
+    private static string PickPromiseTemplate(string type, FeesFollowUpSettings s) => type switch
+    {
+        "3DayBefore" => !string.IsNullOrWhiteSpace(s.SmsTemplate2Day)    ? s.SmsTemplate2Day    : DefaultPreDue,
+        "DayOf"      => !string.IsNullOrWhiteSpace(s.SmsTemplateDayOf)   ? s.SmsTemplateDayOf   : DefaultDayOf,
+        "Overdue"    => !string.IsNullOrWhiteSpace(s.SmsTemplateOverdue) ? s.SmsTemplateOverdue : DefaultOverdue,
+        _            => "",
+    };
+
     private List<ReminderItem> GetStudentsWithActivePromises(
         SqlConnection conn, string school,
         string preDueTemplate, string dayOfTemplate, string overdueTemplate)
@@ -890,8 +904,8 @@ WHERE lp.rn = 1
     private static string ApplySmsTemplate(string template, decimal balance,
         string studentName, string classId, DateTime date, string school, decimal promisedAmount)
         => template
-            .Replace("{promised_amount}", $"{promisedAmount:#,#}")
-            .Replace("{balance}",         $"{balance:#,#}")
+            .Replace("{promised_amount}", SmsReminderLogic.FormatAmount(promisedAmount))
+            .Replace("{balance}",         SmsReminderLogic.FormatAmount(balance))
             .Replace("{names}",           studentName)
             .Replace("{class}",           classId ?? "")
             .Replace("{date}",            date.ToString("dd-MMM-yyyy"))
