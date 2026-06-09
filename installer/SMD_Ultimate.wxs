@@ -1,0 +1,412 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" Codepage="1252" Language="1033" Manufacturer="Alien Age" Name="School Management Dynamics" UpgradeCode="{EC64F0B7-5DFA-4C97-A101-2952E9A43D82}" Version="25.1.9.5">
+        <Package Comments="AlienAge is a Registered Trade Mark of Alien Age Limited" Compressed="yes" Description="School Management Dynamics" InstallerVersion="200" Languages="1033" Manufacturer="Alien Age" Platform="x86" />
+        <Condition Message="You need to be an administrator to install this product.">Privileged</Condition>
+        <Condition Message="This application requires WindowXP SP3/Windows Server 2003/Windows Vista/Windows Vista SP1/Windows Server 2008/Windows7/8/8.1/10 or Later Versions">(VersionNT = 501 AND  ServicePackLevel = 3) OR VersionNT = 502 OR VersionNT = 600 OR (VersionNT = 600 AND ServicePackLevel = 1) OR (VersionNT = 600 AND MsiNTProductType = 3) OR VersionNT = 601 OR VersionNT = 602 OR VersionNT = 603</Condition>
+        <CustomAction Id="LaunchBatchFile" FileKey="RegisterSDK86" ExeCommand="" Return="asyncNoWait" Execute="deferred" Impersonate="no" />
+        <CustomAction Id="LaunchSDKinstall32" FileKey="SDKinstall32" ExeCommand="" Return="asyncNoWait" Execute="deferred" Impersonate="no" />
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFilesFolder">
+                <Directory Id="COMPANYFOLDER" Name="Alien Age" ShortName="e443waqn">
+                    <Directory Id="INSTALLFOLDER" Name="School Management Dynamics" ShortName="xt6mn95k">
+                        <Component Id="ProductComponent" Guid="{0D1A0F3C-A18D-509B-9381-AA7573224237}">
+                            <File Id="IXtreme.exe" Name="IXtreme.exe" KeyPath="yes" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\IXtreme.exe" />
+                        </Component>
+                        <Component Id="SMDShortcut" Guid="{2A8D9F3C-238F-5BF0-AA86-A092B37314F7}">
+                            <RegistryValue Id="RegValue0" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="SMD" Value="1" Type="integer" KeyPath="yes" />
+                            <RemoveFolder Id="RemFolder0" Directory="INSTALLFOLDER" On="both" />
+                            <Shortcut Id="desktopSc" Directory="DesktopFolder" Name="School Management Dynamics" ShortName="i_w2nihb" Arguments="/x [ProductCode]" Icon="IXtreme.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                        </Component>
+                        <Component Id="IslamicTheologyC" Guid="{40164221-3974-56D3-A074-176DB8D01E52}">
+                            <File Id="IslamicTheology.exe" Name="ArabicTheology.exe" KeyPath="yes" ShortName="mzxufyqw.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\IslamicTheology.exe" />
+                        </Component>
+                        <Component Id="TheologyShortcut" Guid="{CE9777E6-D98D-5E9B-A0D3-F3B92727C3B2}">
+                            <RegistryValue Id="RegValue_0" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="IslamicTheology" Value="1" Type="integer" KeyPath="yes" />
+                            <RemoveFolder Id="RemFolder_0" Directory="INSTALLFOLDER" On="both" />
+                            <Shortcut Id="desktopit" Directory="DesktopFolder" Name="Islamic Theology" ShortName="v5w99u-1" Arguments="/x [ProductCode]" Icon="ArabicTheology.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                        </Component>
+                        <Component Id="ServerTools" Guid="{861EBEDC-BC8C-56EC-B43A-ADFFE29AE409}">
+                            <File Id="Server_Tools.exe" Name="Server Tools.exe" KeyPath="yes" ShortName="-0pl0lz2.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\Server_Tools.exe" />
+                        </Component>
+                        <Component Id="ServerToolsDesktopShortcut" Guid="{C0E998C9-4E96-50CC-9CEF-0A7A72D65C2F}">
+                            <RegistryValue Id="RegValue1" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="ServerTools" Value="1" Type="integer" KeyPath="yes" />
+                            <RemoveFolder Id="RemFolder1" Directory="INSTALLFOLDER" On="both" />
+                            <Shortcut Id="ServerToolsSC" Directory="DesktopFolder" Name="Server Tools" ShortName="xts57mrq" Arguments="/x [ProductCode]" Icon="ServerTools.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                        </Component>
+                        <Component Id="LibraryManagement" Guid="{E0C09155-992B-54C5-819E-07CA407CD2D5}">
+                            <File Id="LibraryManagement.exe" Name="LibraryManagement.exe" KeyPath="yes" ShortName="m3o8flpv.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\LibraryManagement.exe" />
+                        </Component>
+                        <Component Id="LibraryManagementDesktopShortcut" Guid="{8C0440A0-4D06-5D64-AAF6-D9A34FF1D84D}">
+                            <RegistryValue Id="RegValue2" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="SMDLibrary" Value="1" Type="integer" KeyPath="yes" />
+                            <RemoveFolder Id="RemFolder2" Directory="INSTALLFOLDER" On="both" />
+                            <Shortcut Id="LibrarySC" Directory="DesktopFolder" Name="Library Management" ShortName="u5r3unb1" Arguments="/x [ProductCode]" Icon="LibraryManagement.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                        </Component>
+                        <Component Id="EnterMarks" Guid="{B8C32549-CF5C-5CE6-8758-39A0D898BACD}">
+                            <File Id="MarksEntry.exe" Name="MarksEntry.exe" KeyPath="yes" ShortName="r0mnk85c.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\MarksEntry.exe" />
+                        </Component>
+                        <Component Id="EnterMarksDesktopShortcut" Guid="{2750A24A-A3A3-5078-BA07-C2FCF48E706B}">
+                            <RegistryValue Id="RegValue3" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="TeachersGateway" Value="1" Type="integer" KeyPath="yes" />
+                            <RemoveFolder Id="RemFolder3" Directory="INSTALLFOLDER" On="both" />
+                            <Shortcut Id="TGSC" Directory="DesktopFolder" Name="Teacher Gateway" ShortName="woqhxtvu" Arguments="/x [ProductCode]" Icon="MarksEntry.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                        </Component>
+                        <Component Id="XtremeMessenger" Guid="{A239E736-183E-5B0C-A506-D63597E88198}">
+                            <File Id="ExtremeMessenger.exe" Name="ExtremeMessenger.exe" KeyPath="yes" ShortName="ahu3fwpg.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ExtremeMessenger.exe" />
+                        </Component>
+                        <Component Id="MessengerShortcut" Guid="{C21698DF-9D61-5DEE-8E69-40B73938E464}">
+                            <RegistryValue Id="RegValue4" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="iXtremeMessenger" Value="1" Type="integer" KeyPath="yes" />
+                            <RemoveFolder Id="RemFolder4" Directory="INSTALLFOLDER" On="both" />
+                            <Shortcut Id="_EdesktopSc" Directory="DesktopFolder" Name="SMD Messenger" ShortName="dyfbkehx" Arguments="/x [ProductCode]" Icon="ExtremeMessenger.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                        </Component>
+                        <Component Id="RegistryEntries" Guid="{26496DFB-7237-5CAC-8568-810BCEE70A7B}">
+                            <RegistryKey Id="_Keys" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\_Keys" Root="HKCU" />
+                            <RegistryKey Id="ALevelRatios" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\A Level Ratios" Root="HKCU" />
+                            <RegistryKey Id="OLevelRatios" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\O Level Ratios" Root="HKCU" />
+                            <RegistryKey Id="CurrentUser" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Current User" Root="HKCU" />
+                            <RegistryKey Id="Serial" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Keys" Root="HKCU" />
+                            <RegistryKey Id="ALevelCutoff" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\A Level Cutoff" Root="HKCU" />
+                            <RegistryKey Id="OLevelCutoff" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\O Level Cutoff" Root="HKCU" />
+                            <RegistryKey Id="ReceiptPrinting" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Receipt printer" Root="HKCU" />
+                            <RegistryKey Id="AppSkins" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Skins" Root="HKCU" />
+                            <RegistryKey Id="AppSkins1" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Skins" Root="HKCU" />
+                            <RegistryKey Id="AppSkins2" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Skins" Root="HKCU" />
+                            <RegistryKey Id="ReportOrientation" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\ReportOrientation" Root="HKCU" />
+                            <RegistryKey Id="NoneCashFeesPayment" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\None Cash FeesPayment" Root="HKCU" />
+                            <RegistryKey Id="RememberSelections" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Remember Selections" Root="HKCU" />
+                            <RegistryKey Id="ReportHeaders" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Report Headers" Root="HKCU" />
+                            <RegistryKey Id="Banking" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Banking" Root="HKCU" />
+                            <RegistryKey Id="Fonts" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Fonts" Root="HKCU" />
+                            <RegistryKey Id="Headers" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Headers" Root="HKCU" />
+                            <RegistryKey Id="ReportColors" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\Report Colors" Root="HKCU" />
+                            <RegistryKey Id="ReportFeesBalance" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\FeesBalance" Root="HKCU" />
+                            <RegistryKey Id="ConnectionString" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\ConnectionStrings" Root="HKCU" />
+                            <RegistryKey Id="IDCustomization" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Root="HKCU" />
+                            <RegistryValue Id="reg9CA9B03487702274E36F73B38A97D625" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\_Keys" Name="Licence" Value="licence" Type="string" KeyPath="yes" />
+                            <RegistryValue Id="reg07B1A8BA46CA8DB2B402F90B2E283794" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\A Level Ratios" Name="BOT" Value="25" Type="string" />
+                            <RegistryValue Id="reg320EE1EFBB000EA6CB1BABA474D39AB2" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\A Level Ratios" Name="EOT" Value="25" Type="string" />
+                            <RegistryValue Id="regFEDCC8CCC8F2DB54A5EBD1FC0142F9BB" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\A Level Ratios" Name="MOT" Value="25" Type="string" />
+                            <RegistryValue Id="reg802289556D663ABCC3F1C0C70C4EF032" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\A Level Ratios" Name="HoP" Value="25" Type="string" />
+                            <RegistryValue Id="regCB8B5B1BCF73F33BA191B9348CAE4289" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\O Level Ratios" Name="BOT" Value="25" Type="string" />
+                            <RegistryValue Id="reg3A5F65148199E928A218D4661CD1FFC7" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\O Level Ratios" Name="EOT" Value="25" Type="string" />
+                            <RegistryValue Id="reg917EB2EAE65B79551C718CB86207AD53" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\O Level Ratios" Name="MOT" Value="25" Type="string" />
+                            <RegistryValue Id="reg8EC4DE0DFD6CE1D05FE7AAE0798EBBB4" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\O Level Ratios" Name="HoP" Value="25" Type="string" />
+                            <RegistryValue Id="reg3816EE7781C447311CBF77CEECF8E4B3" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Current User" Name="CurrentUser" Value="Not Set" Type="string" />
+                            <RegistryValue Id="reg58E58400B182950645D3FB093539D179" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Keys" Name="Licence" Value="licence" Type="string" />
+                            <RegistryValue Id="reg2605DA2AD58E3BD404F3201B62EC3907" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\A Level Cutoff" Name="ProbationEnd" Value="9" Type="string" />
+                            <RegistryValue Id="reg59C7756F58AE315F3CB8585FBF7BFAFA" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\A Level Cutoff" Name="Repeat" Value="2" Type="string" />
+                            <RegistryValue Id="reg1CA51C5969A056C954192ED44AE25799" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\O Level Cutoff" Name="Promoted" Value="50" Type="string" />
+                            <RegistryValue Id="reg9F8F0DCAF8F2C5C7CCD716F4362FF497" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\O Level Cutoff" Name="ProbationDebut" Value="25" Type="string" />
+                            <RegistryValue Id="reg94494001B45CE80EABF06881742BEF81" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Receipt printer" Name="alwaysPrintReceipt" Value="0" Type="integer" />
+                            <RegistryValue Id="reg64A5661DF25DB9CD63DAB05437AEEE6E" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Receipt printer" Name="PrintingCopies" Value="1" Type="integer" />
+                            <RegistryValue Id="reg564058F4F2D7AA47BDA72FAF1B8F9CF8" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Receipt printer" Name="PrinterName" Value="Microsoft XPS Document Writer" Type="string" />
+                            <RegistryValue Id="regAD2A4CBA98EDF66E92719038B9314044" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Receipt printer" Name="PaperSize" Value="A5 Landscape" Type="string" />
+                            <RegistryValue Id="reg6D542930144627CE44DA11CECA99E052" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Skins" Name="defaultSkin" Value="The Bezier" Type="string" />
+                            <RegistryValue Id="reg148A3B5E47A7E6BB5A809186A2BB393A" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Skins" Name="Library Management" Value="The Bezier" Type="string" />
+                            <RegistryValue Id="reg2C2FDFBA516CECF8BE5BAD08CB40B1DE" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Skins" Name="Teacher Gateway" Value="The Bezier" Type="string" />
+                            <RegistryValue Id="regD07FD4E47E45C1B156D396251E1CE61B" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\ReportOrientation" Name="PotraitOrientation" Value="True" Type="string" />
+                            <RegistryValue Id="regCEC3B59DB0C479AC046E30737882CB1C" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\None Cash FeesPayment" Name="narration" Value="" Type="string" />
+                            <RegistryValue Id="reg21192EDE412B3ECF9667658BD709D208" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Remember Selections" Name="RememberSemester" Value="-1" Type="integer" />
+                            <RegistryValue Id="reg9A494A803098846D594BBB918FA66303" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Remember Selections" Name="SemesterIndex" Value="-1" Type="integer" />
+                            <RegistryValue Id="regDA2FFDB32144B5B540636D07D6285F23" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Remember Selections" Name="Semester" Value="" Type="string" />
+                            <RegistryValue Id="regEE0DF1F3AD3DB125622759D51057E836" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Report Headers" Name="CompanyAddress" Value="" Type="string" />
+                            <RegistryValue Id="reg5E5B8092DFB2DDCEEAC971F322412E46" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Report Headers" Name="CompanyMotto" Value="" Type="string" />
+                            <RegistryValue Id="reg3FD2B2AA99C0B0883FF073C5506664F5" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Report Headers" Name="CompanyName" Value="" Type="string" />
+                            <RegistryValue Id="reg4DF00D72444670BF025D99B0851265D1" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Report Headers" Name="CompanyNetAddress" Value="" Type="string" />
+                            <RegistryValue Id="regBE48AB87158F165F12732744927BC025" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Report Headers" Name="ShortName" Value="" Type="string" />
+                            <RegistryValue Id="reg951AA94707263BE5D68C9C5A2268D731" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Banking" Name="BankCharges" Value="0" Type="string" />
+                            <RegistryValue Id="regDE708E8E2F54857CA7F985D223426127" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Banking" Name="BankIndex" Value="" Type="string" />
+                            <RegistryValue Id="reg2068436923568D53580D35AE8446346F" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Banking" Name="SelectedBank" Value="" Type="string" />
+                            <RegistryValue Id="reg5491C9B0BBE7B0BD81405DAC73BE9CD8" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Banking" Name="RememberBank" Value="-1" Type="integer" />
+                            <RegistryValue Id="reg69FAD0F1806B22D2B88F85B06DEB3968" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Fonts" Name="fontIndex" Value="1" Type="integer" />
+                            <RegistryValue Id="reg2835110DE0B4454D2C17A4B3A10532DE" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Fonts" Name="fontSize" Value="15" Type="string" />
+                            <RegistryValue Id="regE596969D5A3FDB10E0FEC34F8E02E597" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Fonts" Name="HeaderFont" Value="Arial Black" Type="string" />
+                            <RegistryValue Id="reg1E8944B40181FA75B2E46E49104DB2D1" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Fonts" Name="SelectedFontIndex" Value="7" Type="integer" />
+                            <RegistryValue Id="reg3CFEBD9F2179FBBAE7248BC5A98313BF" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Headers" Name="AlignmentIndex" Value="1" Type="integer" />
+                            <RegistryValue Id="regCDE555F22C92A719AFC3AAC8DC56A055" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Headers" Name="HeaderAlignment" Value="Center" Type="string" />
+                            <RegistryValue Id="reg71FC3377414A03943C5252E580207219" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Headers" Name="ShowReportHeader" Value="True" Type="string" />
+                            <RegistryValue Id="reg5354247EBA1159FB1B2877BB82BCE956" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Report Colors" Name="_banner_table_Color" Value="-4194112" Type="string" />
+                            <RegistryValue Id="reg96E4E3BA6BECAD10779F3A56D53BE24B" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Report Colors" Name="_foreColor" Value="-1" Type="string" />
+                            <RegistryValue Id="regBA6DD9D3553F774AE0749F7C86B818FD" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\Report Colors" Name="_headerColor" Value="-8388480" Type="string" />
+                            <RegistryValue Id="regD6084CA61CCB5495CDCFCF65B7756A3B" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\FeesBalance" Name="ShowFeesBalance" Value="0" Type="integer" />
+                            <RegistryValue Id="regA8E01660A404FC66B12E2D86340D70F2" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\ConnectionStrings" Name="Database" Value="IXtreme_Ultimate" Type="string" />
+                            <RegistryValue Id="regFF810C817C505FB2F9DCEB94A32657DB" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\ConnectionStrings" Name="Password" Value="spider4544" Type="string" />
+                            <RegistryValue Id="reg2A90C3236ECDD84324D9DEB1FEA66F6C" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\ConnectionStrings" Name="Port" Value="1433" Type="string" />
+                            <RegistryValue Id="regAE1A7950D7B45A0956B31CFD6347D687" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\ConnectionStrings" Name="Server" Value=".\SqlExpress" Type="string" />
+                            <RegistryValue Id="regFF8C46A17613B94CE1E3E745AA0047CE" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\ConnectionStrings" Name="UID" Value="sa" Type="string" />
+                            <RegistryValue Id="regF49F971AA2C69D5B28A71D57A79512D1" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\ConnectionStrings" Name="authenticate" Value="0" Type="integer" />
+                            <RegistryValue Id="regD5BF71A7093DA5AEC3E7E11D2B4352BA" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="ExpiryDate" Value="" Type="string" />
+                            <RegistryValue Id="reg3851CC01624F71E3D9B853E3B3E62A5A" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="IssueDate" Value="" Type="string" />
+                            <RegistryValue Id="regBACA6E68AC0AE502187084942ECB5DDF" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="HFColor" Value="0" Type="string" />
+                            <RegistryValue Id="regA30821909A8883DEA229E4F4E9C70F23" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="HBColor" Value="0" Type="string" />
+                            <RegistryValue Id="regCBD79D5A0D8CF8CF38FF420CA20DB5F2" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="FCol1" Value="0" Type="string" />
+                            <RegistryValue Id="regC68B02385B0D9A0F63CC9D8763D11167" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="FCol2" Value="0" Type="string" />
+                            <RegistryValue Id="reg7CBFCC002D27C86A5D93AF1F2A25F6AB" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="FCol3" Value="0" Type="string" />
+                            <RegistryValue Id="reg0427477A27D09E779FFC0AA9C50F658D" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="HFont" Value="Algerian" Type="string" />
+                            <RegistryValue Id="regD337364C46B037B6B44AA98BB84AF1D3" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="ShowWM" Value="false" Type="string" />
+                            <RegistryValue Id="reg6F42CFCC52C8BD4ED822012DA0935A9B" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]\IDCustomization" Name="FontSize" Value="14" Type="integer" />
+                        </Component>
+                        <Component Id="BiotimeSDK" Guid="{B4681B89-115C-42A2-AEF6-A0D6CAFB62A7}">
+                            <File Id="RegisterSDK86" Name="Register_SDK_x86.bat" KeyPath="yes" ShortName="29oe1jju.bat" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\RegisterSDK86" />
+                            <File Id="SDKinstall32" Name="SDKinstall32.bat" ShortName="a9p1vibk.bat" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\SDKinstall32" />
+                            <File Id="RegisterSDK64" Name="Register_SDK.bat" ShortName="unejb-2w.bat" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\RegisterSDK64" />
+                            <File Id="DeleteSDK64" Name="Delete_SDK.bat" ShortName="jh2f9pkx.bat" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\DeleteSDK64" />
+                            <File Id="DeleteSDK86" Name="Delete_SDK_x86.bat" ShortName="2sddmuof.bat" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\DeleteSDK86" />
+                            <File Id="SDKUninstall32" Name="SDKUninstall32.bat" ShortName="ins7nkcq.bat" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\SDKUninstall32" />
+                            <File Id="bio_1" Name="BiotimeDevice.dll" ShortName="s0axke2p.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_1" />
+                            <File Id="bio_2" Name="zkemkeeper.dll" ShortName="w_az2qw3.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_2" />
+                            <File Id="bio_3" Name="commpro.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_3" />
+                            <File Id="bio_4" Name="comms.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_4" />
+                            <File Id="bio_5" Name="IOTCAPIs.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_5" />
+                            <File Id="bio_6" Name="libareacode.dll" ShortName="e1kir2u4.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_6" />
+                            <File Id="bio_7" Name="p4p.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_7" />
+                            <File Id="bio_8" Name="p4pcomm.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_8" />
+                            <File Id="bio_9" Name="plcommpro.dll" ShortName="jn3tqecv.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_9" />
+                            <File Id="bio_10" Name="plcomms.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_10" />
+                            <File Id="bio_11" Name="plrscagent.dll" ShortName="5iwaolig.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_11" />
+                            <File Id="bio_12" Name="plrscomm.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_12" />
+                            <File Id="bio_13" Name="pltcpcomm.dll" ShortName="g1ggibz7.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_13" />
+                            <File Id="bio_14" Name="plusbcomm.dll" ShortName="tbwrthdm.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_14" />
+                            <File Id="bio_15" Name="RDTAPIs.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_15" />
+                            <File Id="bio_16" Name="rscagent.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_16" />
+                            <File Id="bio_17" Name="rscomm.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_17" />
+                            <File Id="bio_18" Name="tcpcomm.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_18" />
+                            <File Id="bio_19" Name="usbcomm.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_19" />
+                            <File Id="bio_20" Name="usbstd.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_20" />
+                            <File Id="bio_21" Name="ZKCommuCryptoClient.dll" ShortName="mhfxtaqw.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_21" />
+                            <File Id="bio_22" Name="ZKEMCrypto.dll" ShortName="a7mwywe3.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_22" />
+                            <File Id="bio_23" Name="zkemsdk.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\bio_23" />
+                        </Component>
+                        <Component Id="DevExpress" Guid="{9367CEDD-4743-4B56-AE35-2D617EE7D08C}">
+                            <File Id="d1" Name="DevExpress.Charts.Designer.v23.2.dll" KeyPath="yes" ShortName="pu_v7pxr.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\d1" />
+                            <File Id="d2" Name="DevExpress.Drawing.v23.2.dll" ShortName="krhpvt8x.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\d2" />
+                            <File Id="d3" Name="DevExpress.Drawing.v23.2.Skia.dll" ShortName="mdfz9-aa.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\d3" />
+                            <File Id="ass1" Name="DevExpress.BonusSkins.v23.2.dll" ShortName="k5pdifcd.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass1" />
+                            <File Id="ass2" Name="DevExpress.Charts.v23.2.Core.dll" ShortName="2_vvd0ot.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass2" />
+                            <File Id="ass3" Name="DevExpress.Data.v23.2.dll" ShortName="dbyqwroi.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass3" />
+                            <File Id="ass4" Name="DevExpress.Office.v23.2.Core.dll" ShortName="bexfmkmj.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass4" />
+                            <File Id="ass5" Name="DevExpress.PivotGrid.v23.2.Core.dll" ShortName="lx96dsk0.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass5" />
+                            <File Id="ass6" Name="DevExpress.Printing.v23.2.Core.dll" ShortName="eqhirmfy.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass6" />
+                            <File Id="ass7" Name="DevExpress.XtraCharts.v23.2.Wizard.dll" ShortName="zl8gew5y.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass7" />
+                            <File Id="ass8" Name="DevExpress.RichEdit.v23.2.Core.dll" ShortName="giwt-c_d.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass8" />
+                            <File Id="ass9" Name="DevExpress.Utils.v23.2.dll" ShortName="hjx0q21_.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass9" />
+                            <File Id="ass10" Name="DevExpress.Xpo.v23.2.dll" ShortName="almbiabw.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass10" />
+                            <File Id="ass11" Name="DevExpress.XtraBars.v23.2.dll" ShortName="cehsxkgs.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass11" />
+                            <File Id="ass12" Name="DevExpress.XtraCharts.v23.2.dll" ShortName="6ef2r34i.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass12" />
+                            <File Id="ass13" Name="DevExpress.XtraCharts.v23.2.UI.dll" ShortName="w_cxlhqu.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass13" />
+                            <File Id="ass14" Name="DevExpress.XtraEditors.v23.2.dll" ShortName="1rwtbxrn.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass14" />
+                            <File Id="ass15" Name="DevExpress.XtraGrid.v23.2.dll" ShortName="ke8j3qbl.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass15" />
+                            <File Id="ass16" Name="DevExpress.XtraLayout.v23.2.dll" ShortName="pjlh8oja.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass16" />
+                            <File Id="ass17" Name="DevExpress.XtraNavBar.v23.2.dll" ShortName="6e1vcms2.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass17" />
+                            <File Id="ass18" Name="DevExpress.XtraPivotGrid.v23.2.dll" ShortName="tbak6ksj.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass18" />
+                            <File Id="ass19" Name="DevExpress.XtraPrinting.v23.2.dll" ShortName="kwnphnir.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass19" />
+                            <File Id="ass20" Name="DevExpress.XtraReports.v23.2.dll" ShortName="x-6gfcvk.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass20" />
+                            <File Id="ass21" Name="DevExpress.XtraReports.v23.2.Extensions.dll" ShortName="eb5jaifn.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass21" />
+                            <File Id="ass22" Name="DevExpress.XtraRichEdit.v23.2.dll" ShortName="768tnzrh.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass22" />
+                            <File Id="ass23" Name="DevExpress.XtraTreeList.v23.2.dll" ShortName="b8wxgb6m.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass23" />
+                            <File Id="ass24" Name="DevExpress.XtraVerticalGrid.v23.2.dll" ShortName="yob5qtgl.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass24" />
+                            <File Id="ass25" Name="DevExpress.XtraWizard.v23.2.dll" ShortName="wdoqozed.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass25" />
+                            <File Id="ass26" Name="DevExpress.XtraGauges.v23.2.Core.dll" ShortName="nr05v_fn.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass26" />
+                            <File Id="ass27" Name="DevExpress.XtraGauges.v23.2.Win.dll" ShortName="d7xj5ppw.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass27" />
+                            <File Id="ass28" Name="DevExpress.Pdf.v23.2.Core.dll" ShortName="is_pwh2l.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass28" />
+                            <File Id="dass_37i" Name="DevExpress.Data.Desktop.v23.2.dll" ShortName="rz9jjtyq.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\dass_37i" />
+                            <File Id="dass_38i" Name="DevExpress.DataVisualization.v23.2.Core.dll" ShortName="0waqihev.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\dass_38i" />
+                            <File Id="dass_39i" Name="DevExpress.Images.v23.2.dll" ShortName="niorbqec.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\dass_39i" />
+                            <File Id="dass_310i" Name="DevExpress.Utils.v23.2.UI.dll" ShortName="tpxbljlg.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\dass_310i" />
+                            <File Id="ass_29" Name="DevExpress.Mvvm.v23.2.dll" ShortName="ibtub5ja.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass_29" />
+                            <File Id="ass_30" Name="DevExpress.DataAccess.v23.2.dll" ShortName="_oe4fxd4.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass_30" />
+                            <File Id="ass_31" Name="DevExpress.DataAccess.v23.2.UI.dll" ShortName="hk0ry47u.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass_31" />
+                            <File Id="ass_32" Name="DevExpress.Diagram.v23.2.Core.dll" ShortName="k7cdl95-.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass_32" />
+                            <File Id="ass_33" Name="DevExpress.Docs.v23.2.dll" ShortName="jfqwllkf.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass_33" />
+                            <File Id="ass_34" Name="DevExpress.Snap.v23.2.dll" ShortName="pzgblokw.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass_34" />
+                            <File Id="ass_35" Name="DevExpress.Snap.v23.2.Core.dll" ShortName="494glrtn.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass_35" />
+                            <File Id="ass_36" Name="DevExpress.Snap.v23.2.Extensions.dll" ShortName="fkb1rlpy.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass_36" />
+                            <File Id="dass_36" Name="DevExpress.XtraDialogs.v23.2.dll" ShortName="rkuot8up.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\dass_36" />
+                            <File Id="dass_36i" Name="DevExpress.Dialogs.v23.2.Core.dll" ShortName="vxv8x5ey.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\dass_36i" />
+                            <File Id="sys3" Name="Subjects-List.bin" ShortName="rfcovde7.bin" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys3" />
+                            <File Id="sys4" Name="WorkingSemesters.bin" ShortName="-lh1yunp.bin" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys4" />
+                            <File Id="sys5" Name="AlienAge.Connectivity.v4.dll" ShortName="izni4nkt.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys5" />
+                            <File Id="sys6" Name="EventLogger.dll" ShortName="q6tv8a1a.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys6" />
+                            <File Id="sys7" Name="AlienAge.GradingScales.v4.dll" ShortName="5dbir9gd.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys7" />
+                            <File Id="sys8" Name="AlienAge.Security.v4.dll" ShortName="df8chwhq.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys8" />
+                            <File Id="sys9" Name="AlienAge.Semesters.v4.dll" ShortName="2kbm6tgh.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys9" />
+                            <File Id="sys11" Name="AlienAge.SubjectRegistration.v4.dll" ShortName="0heyrzaw.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys11" />
+                            <File Id="sys12" Name="AlienAge.TermlySettings.v4.dll" ShortName="d4vwjz89.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys12" />
+                            <File Id="sys13" Name="AlienAge.CommonSettings.v4.dll" ShortName="cxvta9zp.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys13" />
+                            <File Id="sys14" Name="AlienAge.ReportDesigner.v4.dll" ShortName="wkp9s-ue.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys14" />
+                            <File Id="sys15" Name="AlienAge.Accounts.v4.dll" ShortName="7galj_z-.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys15" />
+                            <File Id="sys16" Name="AlienAge.ArabicTheology.v4.dll" ShortName="rnx8oocw.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sys16" />
+                            <File Id="cusG16" Name="AlienAge.CustomGrid.v4.dll" ShortName="_fpv-o58.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\cusG16" />
+                            <File Id="cusG17" Name="AlienAge.ReportHeaders.v4.dll" ShortName="bxl5cbh5.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\cusG17" />
+                            <File Id="ef6_1" Name="EntityFramework.dll" ShortName="kvpokryn.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ef6_1" />
+                            <File Id="ef6_2" Name="EntityFramework.SqlServer.dll" ShortName="macp6thw.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ef6_2" />
+                            <File Id="ef6_3" Name="SMDFastLane.dll" ShortName="ryogzaqz.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ef6_3" />
+                            <File Id="ass30" Name="AForge.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass30" />
+                            <File Id="ass31" Name="AForge.Imaging.dll" ShortName="ci7t8d6n.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass31" />
+                            <File Id="ass32" Name="AForge.Math.dll" ShortName="bxmluozh.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass32" />
+                            <File Id="ass33" Name="AForge.Video.DirectShow.dll" ShortName="b8j-tmve.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass33" />
+                            <File Id="ass34" Name="AForge.Video.dll" ShortName="0eoiyiwq.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ass34" />
+                            <File Id="njson" Name="Newtonsoft.Json.dll" ShortName="2gvh4nyc.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\njson" />
+                            <File Id="office1" Name="Microsoft.Office.Interop.Excel.dll" ShortName="vnrnmvol.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\office1" />
+                            <File Id="office2" Name="Microsoft.Vbe.Interop.dll" ShortName="_jniyxp3.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\office2" />
+                            <File Id="office3" Name="office.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\office3" />
+                            <File Id="msg1" Name="AlienAge.ExtremeMessenger.v4.dll" ShortName="e7-cyznz.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\msg1" />
+                            <File Id="GSM1" Name="GSMCommServer.dll" ShortName="figypp_y.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\GSM1" />
+                            <File Id="GSM2" Name="GSMCommShared.dll" ShortName="9l_uswbh.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\GSM2" />
+                            <File Id="GSM3" Name="GSMCommunication.dll" ShortName="eh7klkuv.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\GSM3" />
+                            <File Id="GSM4" Name="PDUConverter.dll" ShortName="joxtswrt.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\GSM4" />
+                            <File Id="datahelper" Name="AlienAge.DataSync.v4.dll" ShortName="_bgws8if.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\datahelper" />
+                        </Component>
+                        <Component Id="SQLMO" Guid="{2DD52307-3C41-41FD-83A0-9E1559465B54}">
+                            <File Id="sql1" Name="Microsoft.SqlServer.ConnectionInfo.dll" KeyPath="yes" ShortName="dnshmw-j.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sql1" />
+                            <File Id="sql2" Name="Microsoft.SqlServer.Management.Sdk.Sfc.dll" ShortName="ct-hyxyn.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sql2" />
+                            <File Id="sql3" Name="Microsoft.SqlServer.Smo.dll" ShortName="zjtkakql.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sql3" />
+                            <File Id="sql4" Name="Microsoft.SqlServer.SmoExtended.dll" ShortName="ys_sbada.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\sql4" />
+                        </Component>
+                        <Component Id="AttendanceService" Guid="{F344E0A9-98EC-4DEC-800A-6B0A3245E493}">
+                            <File Id="ServiceFile" Name="AttendanceTrackerService.exe" KeyPath="yes" ShortName="-jnx4mu9.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ServiceFile" />
+                            <ServiceControl Id="ServiceControl" Name="AttendanceTracker" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+                            <ServiceInstall Id="ServiceInstall" Name="AttendanceTracker" DisplayName="Attendance Tracker Service" Type="ownProcess" Start="auto" ErrorControl="normal" Vital="yes" Account="LocalSystem" Password="[NOT_REQUIRED]" Description="This service is for uploading attendance messages to the online server" />
+                        </Component>
+                        <Component Id="SyncStudents" Guid="{A43A738F-6722-4430-A223-DCA884A0116B}">
+                            <File Id="ServiceFileSync" Name="SyncStudents.exe" KeyPath="yes" ShortName="0npuhakh.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ServiceFileSync" />
+                            <ServiceControl Id="ServiceControlSync" Name="SyncStudents" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+                            <ServiceInstall Id="ServiceInstallSync" Name="SyncStudents" DisplayName="SMD - Upload Students Online" Type="ownProcess" Start="auto" ErrorControl="normal" Vital="yes" Account="LocalSystem" Password="[NOT_REQUIRED]" Description="This service is for uploading students to the online server" />
+                        </Component>
+                        <Component Id="SyncScoresUp" Guid="{B82475C5-F9A6-4EFC-BD8B-06DDB6ABA0B0}">
+                            <File Id="ServiceFileSyncUp" Name="ScoresSyncUp.exe" KeyPath="yes" ShortName="awrlq0ly.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ServiceFileSyncUp" />
+                            <ServiceControl Id="ServiceControlSyncUp" Name="SyncScoresUp" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+                            <ServiceInstall Id="ServiceInstallSyncUp" Name="SyncScoresUp" DisplayName="SMD - Upload Scores" Type="ownProcess" Start="auto" ErrorControl="normal" Vital="yes" Account="LocalSystem" Password="[NOT_REQUIRED]" Description="This service is for uploading scores to the online server" />
+                        </Component>
+                        <Component Id="SyncScoresDown" Guid="{A158675A-8BA1-41A1-93CE-56E909E16F2F}">
+                            <File Id="ServiceFileSyncDown" Name="ScoresSyncDown.exe" KeyPath="yes" ShortName="r1kekmbp.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ServiceFileSyncDown" />
+                            <ServiceControl Id="ServiceControlSyncDown" Name="SyncScoresDown" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+                            <ServiceInstall Id="ServiceInstallSyncDown" Name="SyncScoresDown" DisplayName="SMD - Download Scores" Type="ownProcess" Start="auto" ErrorControl="normal" Vital="yes" Account="LocalSystem" Password="[NOT_REQUIRED]" Description="This service is for managing connectivity to the database" />
+                        </Component>
+                        <Component Id="ParameterHandler" Guid="{EB201EAC-8C7D-47E4-B792-F3C073E7FDC1}">
+                            <File Id="ServiceFileParameterHandler" Name="ParameterHandler.exe" KeyPath="yes" ShortName="26skrfd6.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ServiceFileParameterHandler" />
+                            <ServiceControl Id="ServiceControlParameterHandler" Name="ParameterHandlerService" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
+                            <ServiceInstall Id="ServiceInstallParameterHandler" Name="ParameterHandlerService" DisplayName="SMD - Parameter Handler" Type="ownProcess" Start="auto" ErrorControl="normal" Vital="yes" Account="LocalSystem" Password="[NOT_REQUIRED]" Description="This service is for downloading scores from the online server" />
+                        </Component>
+                        <Directory Id="HELP" Name="Help">
+                            <Component Id="Help_Files" Guid="{E09979B2-E8CE-4783-A5DC-10F664C5DD4A}">
+                                <File Id="HelpFiles" Name="IR_Help.chm" KeyPath="yes" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\HelpFiles" />
+                            </Component>
+                        </Directory>
+                        <Directory Id="table_s" Name="tables">
+                            <Component Id="dataBaseScripts_tables" Guid="{8BD69980-1E0F-5535-8E02-365E5490D006}">
+                                <File Id="CreateDB" Name="IXtremeDB_Tables.sql" KeyPath="yes" ShortName="ste2tqrh.sql" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\CreateDB" />
+                            </Component>
+                            <Component Id="dataBaseScripts_tableUpdate" Guid="{673CC92F-E5A1-578D-8ED7-F5792B1FC5B3}">
+                                <File Id="TableUpdate" Name="TableUpdates.sql" KeyPath="yes" ShortName="tlc8afcj.sql" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\TableUpdate" />
+                            </Component>
+                            <Component Id="dataBaseScripts_stopro" Guid="{7DC70751-C62B-5582-B36C-2E1F68D45412}">
+                                <File Id="storedpro" Name="StoredProcedureUpdate.sql" KeyPath="yes" ShortName="ilyb-jsz.sql" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\storedpro" />
+                            </Component>
+                        </Directory>
+                        <Directory Id="resource_s" Name="resources" ShortName="affs8zkc">
+                            <Component Id="resource_install" Guid="{E5BA8425-7026-5E82-B508-921C9DBE3163}">
+                                <File Id="InstallingSQL" Name="InstallingSQL.rtf" KeyPath="yes" ShortName="c5cztyme.rtf" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\InstallingSQL" />
+                            </Component>
+                            <Component Id="resource_configure" Guid="{D81868CE-4092-5326-855F-CAC953BB9EF5}">
+                                <File Id="ConfigureSQL" Name="ConfigureSQL.rtf" KeyPath="yes" ShortName="xtg-kxfk.rtf" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ConfigureSQL" />
+                            </Component>
+                        </Directory>
+                        <Directory Id="id_resources" Name="id_resources" ShortName="yffdce6m">
+                            <Directory Id="staff" Name="staff">
+                                <Component Id="staff_template" Guid="{2F966B5B-6E9C-48FA-ACB7-DF5771A906B6}">
+                                    <File Id="stafftemplate" Name="staffid_0001.png" KeyPath="yes" ShortName="6nziwpx4.png" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\stafftemplate" />
+                                </Component>
+                            </Directory>
+                            <Directory Id="student" Name="student">
+                                <Component Id="student_template" Guid="{01DDC4C7-C486-4F60-8191-2C2EAA37EF6E}">
+                                    <File Id="studenttemplate" Name="studid_0001.png" KeyPath="yes" ShortName="1nvgf5ir.png" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\studenttemplate" />
+                                </Component>
+                            </Directory>
+                        </Directory>
+                        <Directory Id="ProgramMenuFolder" Name="Programs">
+                            <Directory Id="ProgramMenuDir" Name="School Management Dynamics" ShortName="wgccugnr">
+                                <Component Id="ProgramMenuDir" Guid="{BE172141-0019-5D3D-BEEC-5C62E54F3300}">
+                                    <RegistryValue Id="reg5FB8C4F32576790876A1FAED84D91C6C" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Value="1" Type="integer" KeyPath="yes" />
+                                    <RemoveFolder Id="ProgramMenuDir" Directory="ProgramMenuDir" On="both" />
+                                    <Shortcut Id="UninstallProduct" Directory="ProgramMenuDir" Name="UnInstall Product" ShortName="j7dedi1l" Description="UnInstall Product" Arguments="/x [ProductCode]" Advertise="yes" />
+                                    <Shortcut Id="MenuSMD" Directory="ProgramMenuDir" Name="School Management Dynamics" ShortName="gzwts9j-" Description="School Management Dynamics" Icon="IXtreme.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                                    <Shortcut Id="MenuLb" Directory="ProgramMenuDir" Name="SMD Library" ShortName="zlrrkmwb" Description="Library Management" Icon="LibraryManagement.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                                    <Shortcut Id="MenuTG" Directory="ProgramMenuDir" Name="Teacher Gateway" ShortName="jps_pmdl" Description="Teacher Gateway" Icon="MarksEntry.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                                    <Shortcut Id="MenuIT" Directory="ProgramMenuDir" Name="Islamic Theology" ShortName="7bwh9zbq" Description="Islamic Theology" Icon="ArabicTheology.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                                </Component>
+                            </Directory>
+                        </Directory>
+                        <Directory Id="DesktopFolder" Name="Desktop" />
+                    </Directory>
+                </Directory>
+            </Directory>
+        </Directory>
+        <Feature Id="ProductFeature" ConfigurableDirectory="INSTALLFOLDER" Description="This feature is the Central Management and Control center for the application. At least one computer on your network should have this feature installed" Level="1" Title="School Management Dynamics">
+            <ComponentRef Id="Help_Files" />
+            <ComponentRef Id="staff_template" />
+            <ComponentRef Id="student_template" />
+            <ComponentRef Id="dataBaseScripts_tableUpdate" />
+            <ComponentRef Id="dataBaseScripts_stopro" />
+            <ComponentRef Id="ProgramMenuDir" />
+            <ComponentRef Id="ProductComponent" />
+            <ComponentRef Id="SMDShortcut" />
+            <ComponentRef Id="RegistryEntries" />
+            <ComponentRef Id="BiotimeSDK" />
+            <ComponentRef Id="DevExpress" />
+        </Feature>
+        <Feature Id="LibraryFeature" ConfigurableDirectory="INSTALLFOLDER" Description="Install this feature if this Computer will be used by a Librarian or any person in the Library department" Level="1" Title="Library Module">
+            <ComponentRef Id="LibraryManagement" />
+            <ComponentRef Id="LibraryManagementDesktopShortcut" />
+        </Feature>
+        <Feature Id="MarksEntryFeature" ConfigurableDirectory="INSTALLFOLDER" Description="Install this feature if this Computer will be used by teachers to enter student scores into the system" Level="1" Title="Teachers' Workstation">
+            <ComponentRef Id="EnterMarks" />
+            <ComponentRef Id="EnterMarksDesktopShortcut" />
+        </Feature>
+        <Feature Id="MessengerFeature" ConfigurableDirectory="INSTALLFOLDER" Description="With Messenger you will be able to send SMS notifications to parents and other people groups. i.e. Fees Reminders and Academic Performance Notifications" Level="1" Title="SMD Messenger Module">
+            <ComponentRef Id="XtremeMessenger" />
+            <ComponentRef Id="MessengerShortcut" />
+        </Feature>
+        <Feature Id="Server_Tools" ConfigurableDirectory="INSTALLFOLDER" Description="Install this feature if this Computer will be used as the server" Level="4" Title="Server Tools">
+            <ComponentRef Id="dataBaseScripts_tables" />
+            <ComponentRef Id="resource_install" />
+            <ComponentRef Id="resource_configure" />
+            <ComponentRef Id="ServerTools" />
+            <ComponentRef Id="ServerToolsDesktopShortcut" />
+            <ComponentRef Id="SQLMO" />
+            <ComponentRef Id="SyncStudents" />
+            <ComponentRef Id="SyncScoresUp" />
+            <ComponentRef Id="SyncScoresDown" />
+            <ComponentRef Id="ParameterHandler" />
+        </Feature>
+        <Feature Id="Attendance_Tracker" ConfigurableDirectory="INSTALLFOLDER" Description="This service monitors students' attendance/arrival records and sends them to the remote web server for storage and processing" Level="4" Title="Attendance Tracker Service">
+            <ComponentRef Id="AttendanceService" />
+        </Feature>
+        <Feature Id="Islamic_Theology" ConfigurableDirectory="INSTALLFOLDER" Description="Islamic Theology academic module" Level="4" Title="Islamic Theology">
+            <ComponentRef Id="IslamicTheologyC" />
+            <ComponentRef Id="TheologyShortcut" />
+        </Feature>
+        <Icon Id="IXtreme.exe" SourceFile="C:\SMD_Source_Recovery\installer\payload\Icon\IXtreme.exe" />
+        <Icon Id="LibraryManagement.exe" SourceFile="C:\SMD_Source_Recovery\installer\payload\Icon\LibraryManagement.exe" />
+        <Icon Id="MarksEntry.exe" SourceFile="C:\SMD_Source_Recovery\installer\payload\Icon\MarksEntry.exe" />
+        <Icon Id="ExtremeMessenger.exe" SourceFile="C:\SMD_Source_Recovery\installer\payload\Icon\ExtremeMessenger.exe" />
+        <Icon Id="ServerTools.exe" SourceFile="C:\SMD_Source_Recovery\installer\payload\Icon\ServerTools.exe" />
+        <Icon Id="cpanelIco.exe" SourceFile="C:\SMD_Source_Recovery\installer\payload\Icon\cpanelIco.exe" />
+        <Icon Id="ArabicTheology.exe" SourceFile="C:\SMD_Source_Recovery\installer\payload\Icon\ArabicTheology.exe" />
+        <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." Schedule="afterInstallValidate" />
+        <Media Id="1" Cabinet="SMD_Ult.cab" EmbedCab="yes" />
+        <Property Id="ALLUSERS" Value="1" />
+        <Property Id="ARPPRODUCTICON" Value="cpanelIco.exe" />
+        <Property Id="DISABLEADVTSHORTCUTS" Value="1" />
+        <Property Id="ARPCOMMENTS" Value="School Management Dynamics" />
+        <Property Id="ARPCONTACT" Value="Alien Age [+256752162444]" />
+        <Property Id="ARPHELPLINK" Value="http://www.alienage.info/support/IXtreme_Ultimate" />
+        <Property Id="ARPHELPTELEPHONE" Value="+256752162444/+256392000153" />
+        <Property Id="WIX_DOWNGRADE_DETECTED" Secure="yes" />
+        <Property Id="WIX_UPGRADE_DETECTED" Secure="yes" />
+        <UIRef Id="WixUI_FeatureTree" />
+        <InstallExecuteSequence>
+            <Custom Action="LaunchBatchFile" After="InstallInitialize" />
+            <Custom Action="LaunchSDKinstall32" After="LaunchBatchFile" />
+        </InstallExecuteSequence>
+    </Product>
+</Wix>

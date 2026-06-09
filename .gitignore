@@ -2,6 +2,14 @@
 backup/
 smoke_test/
 
+# Installer: keep the recovered WiX source (installer/*.wxs) + build script,
+# but never commit the extracted third-party payloads, the WiX toolset, or built MSIs.
+installer/payload/
+installer/*.msi
+installer/*.wixobj
+installer/*.wixpdb
+tools/
+
 # Build outputs
 **/bin/
 **/obj/
