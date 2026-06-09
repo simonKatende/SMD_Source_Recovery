@@ -281,7 +281,7 @@ public class FeesFollowUpService
     }
 
     public List<GuardianWorklistRow> GetGuardianWorklist(string classFilter, decimal minBalance,
-        FeesFollowUpSettings settings = null)
+        FeesFollowUpSettings settings = null, bool includeAllEnrolled = false)
     {
         settings ??= GetSettings();
         DateTime? tStart = settings.TermStartDate;
@@ -340,7 +340,7 @@ public class FeesFollowUpService
         FROM tbl_Stud s
         INNER JOIN CurrentTermPayments ctp ON ctp.StudentNumber = s.StudentNumber
         LEFT JOIN  PrevTermLastBalance  ptb ON ptb.StudentNumber = s.StudentNumber
-        WHERE ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) - ctp.TotalPaid > @minBalance
+        WHERE (@includeAll = 1 OR ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) - ctp.TotalPaid > @minBalance)
           AND (@classFilter = '' OR s.ClassId = @classFilter)
     ),
     AllRelevantContacts AS (
@@ -438,6 +438,7 @@ public class FeesFollowUpService
             conn.Open();
             using var cmd = new SqlCommand(sql, conn);
             cmd.Parameters.Add("@minBalance",       SqlDbType.Money).Value      = minBalance;
+            cmd.Parameters.Add("@includeAll",      SqlDbType.Bit).Value        = includeAllEnrolled ? 1 : 0;
             cmd.Parameters.Add("@classFilter",     SqlDbType.VarChar, 50).Value = classFilter ?? "";
             cmd.Parameters.Add("@currentSemester", SqlDbType.VarChar, 50).Value = currentSemester;
             cmd.Parameters.Add("@prevSemester",    SqlDbType.VarChar, 50).Value = (object)prevSemester ?? DBNull.Value;
@@ -500,6 +501,11 @@ public class FeesFollowUpService
         var rows = new List<GuardianWorklistRow>(grouped.Values);
         foreach (var g in rows)
         {
+            // Nil-/credit-balance enrolled families (only present when includeAllEnrolled) are not
+            // action items: clear any lingering Call-Required flag so they render calm and don't get
+            // the urgency multiplier. ComputeTier independently forces them to the Current tier.
+            if (g.TotalBalance <= 0m) g.CallRequired = false;
+
             g.PaymentPercent = g.TotalBilled > 0
                 ? Math.Round(g.TotalPaid / g.TotalBilled * 100m, 1) : 0m;
             double payProgress = g.TotalBilled > 0 ? (double)(g.TotalPaid / g.TotalBilled) : 0.0;
@@ -607,7 +613,9 @@ public class FeesFollowUpService
     public List<StudentWorklistRow> GetStudentWorklist(string classFilter = "", decimal minBalance = 0)
     {
         var studentSettings = GetSettings();
-        var guardianRows = GetGuardianWorklist(classFilter, minBalance, studentSettings);
+        // With no min-balance filter, list every currently-enrolled student (incl. nil/credit
+        // balances); an explicit min-balance still filters to those owing more than it.
+        var guardianRows = GetGuardianWorklist(classFilter, minBalance, studentSettings, includeAllEnrolled: minBalance == 0m);
         var result = new List<StudentWorklistRow>();
 
         foreach (var g in guardianRows)

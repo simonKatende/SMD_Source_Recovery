@@ -118,4 +118,27 @@ public class TierTests
             stalenessDays: 7, noProgressWeeks: 4, noProgressThreshold: 30.0);
         Assert.Equal(PriorityTier.Current, tier);
     }
+
+    [Fact]
+    public void Fully_paid_is_Current_even_with_no_contact()
+    {
+        // Nil-balance enrolled family now appears on the worklists; it must not be flagged Stale.
+        var g = Row(paymentPercent: 100m, balance: 0m);  // no contact ever logged
+        var tier = FeesUrgency.ComputeTier(g, Today, hasTermDates: true,
+            shortfall: 0.0, criticalShortfallPoints: 25.0, hasActivePromise: false,
+            stalenessDays: 7, noProgressWeeks: 4, noProgressThreshold: 30.0);
+        Assert.Equal(PriorityTier.Current, tier);
+    }
+
+    [Fact]
+    public void Overpaid_credit_is_Current_even_when_shortfall_would_be_critical()
+    {
+        // Credit balance (overpaid). The balance guard takes precedence over the Critical rule.
+        var g = Row(paymentPercent: 120m, balance: -50_000m, lastContact: Today.AddDays(-1),
+            lastOutcome: ContactOutcome.Contacted);
+        var tier = FeesUrgency.ComputeTier(g, Today, hasTermDates: true,
+            shortfall: 99.0, criticalShortfallPoints: 25.0, hasActivePromise: false,
+            stalenessDays: 7, noProgressWeeks: 4, noProgressThreshold: 30.0);
+        Assert.Equal(PriorityTier.Current, tier);
+    }
 }
