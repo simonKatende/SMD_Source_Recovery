@@ -814,6 +814,7 @@ public class StudentFeesPayment : RibbonForm
 			barButtonItem10.Enabled = false;
 			barButtonItem11.Enabled = false;
 			barButtonItem13.Enabled = false;
+			barButtonItem15.Enabled = false;   // Award Waiver
 		}
 	}
 
@@ -1417,6 +1418,7 @@ public class StudentFeesPayment : RibbonForm
 
 	private void FinalizePIKPayment()
 	{
+		if (_viewOnly) return;   // view-only ledger records nothing (recording lives in Accounts)
 		string empty = string.Empty;
 		empty = (string.IsNullOrEmpty(txtReceiptNumber.Text) ? Guid.NewGuid().ToString().Substring(0, 6)
 			.ToUpper() : txtReceiptNumber.Text);
@@ -1453,6 +1455,7 @@ public class StudentFeesPayment : RibbonForm
 
 	private void FinalizeFeesPaymentWaiver(double WaiverAmt, string Narration)
 	{
+		if (_viewOnly) return;   // view-only ledger records nothing (recording lives in Accounts)
 		string text = Guid.NewGuid().ToString().Substring(0, 6)
 			.ToUpper();
 		if (dtPayment.Text != string.Empty)
@@ -1475,6 +1478,7 @@ public class StudentFeesPayment : RibbonForm
 
 	private void FinalizeFeesPayment()
 	{
+		if (_viewOnly) return;   // view-only ledger records nothing (recording lives in Accounts)
 		string empty = string.Empty;
 		empty = (string.IsNullOrEmpty(txtReceiptNumber.Text) ? Guid.NewGuid().ToString().Substring(0, 6)
 			.ToUpper() : txtReceiptNumber.Text);
@@ -1861,6 +1865,7 @@ public class StudentFeesPayment : RibbonForm
 			barButtonItem10.Enabled = false;
 			barButtonItem11.Enabled = false;
 			barButtonItem13.Enabled = false;
+			barButtonItem15.Enabled = false;   // Award Waiver
 			return;
 		}
 		if (lblName.Caption != string.Empty || txtAccNo.Text != string.Empty)
