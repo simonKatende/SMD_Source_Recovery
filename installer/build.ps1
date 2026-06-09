@@ -71,9 +71,26 @@ if (-not $SkipIXtremeBuild) {
 }
 Require-File $ixBuilt "IXtreme.exe was not produced by the Release build."
 
-# 4. Swap the freshly-built IXtreme.exe into the payload
-Write-Host "Swapping in updated IXtreme.exe ($((Get-Item $ixBuilt).Length) bytes)..."
-Copy-Item $ixBuilt (Join-Path $payload 'File\IXtreme.exe') -Force
+# 4. Swap the freshly-built IXtreme.exe + its runtime companions into the payload.
+#    The rebuilt IXtreme uses preserialized (binary) resources, so it needs
+#    System.Resources.Extensions + its transitive deps and the binding redirect in
+#    IXtreme.exe.config -- none of which the original installer shipped.
+$ixDir = Split-Path $ixBuilt -Parent
+$runtimeFiles = @(
+    'IXtreme.exe',
+    'IXtreme.exe.config',
+    'System.Resources.Extensions.dll',
+    'System.Memory.dll',
+    'System.Buffers.dll',
+    'System.Numerics.Vectors.dll',
+    'System.Runtime.CompilerServices.Unsafe.dll'
+)
+Write-Host "Swapping in updated IXtreme.exe + runtime companions..."
+foreach ($f in $runtimeFiles) {
+    $src = Join-Path $ixDir $f
+    Require-File $src "Expected build output missing: $f"
+    Copy-Item $src (Join-Path $payload "File\$f") -Force
+}
 
 # 5. Compile + link
 Write-Host "candle..."
