@@ -36,6 +36,16 @@ follow-up / SMS work lives in `decompiled/IXtreme` (namespace `I_Xtreme.*`).
 The other three EXEs and every `AlienAge.*.v4` library are unchanged and are
 carried over byte-for-byte from the original MSI's payload.
 
+The rebuilt `IXtreme.exe` uses preserialized (binary-formatted) `.resx`
+resources, so unlike the original it needs `System.Resources.Extensions` plus
+the binding redirect in `IXtreme.exe.config` at runtime. The original installer
+shipped none of these, so a new component **`IXtremeRuntime`** (in the core
+`ProductFeature`) installs them alongside `IXtreme.exe`:
+`IXtreme.exe.config`, `System.Resources.Extensions.dll`, `System.Memory.dll`,
+`System.Buffers.dll`, `System.Numerics.Vectors.dll`,
+`System.Runtime.CompilerServices.Unsafe.dll`. Without this, IXtreme installs but
+throws when loading any form with binary resources.
+
 Version metadata:
 - `Version` bumped `25.1.9.4` -> `25.1.9.5`
 - `Product Id="*"` (fresh ProductCode each build)

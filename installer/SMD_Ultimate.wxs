@@ -13,6 +13,14 @@
                         <Component Id="ProductComponent" Guid="{0D1A0F3C-A18D-509B-9381-AA7573224237}">
                             <File Id="IXtreme.exe" Name="IXtreme.exe" KeyPath="yes" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\IXtreme.exe" />
                         </Component>
+                        <Component Id="IXtremeRuntime" Guid="{009EA02B-FE62-4B68-BC56-F30E915C33C9}">
+                            <File Id="IXtreme.exe.config" Name="IXtreme.exe.config" KeyPath="yes" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\IXtreme.exe.config" />
+                            <File Id="System.Resources.Extensions.dll" Name="System.Resources.Extensions.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\System.Resources.Extensions.dll" />
+                            <File Id="System.Memory.dll" Name="System.Memory.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\System.Memory.dll" />
+                            <File Id="System.Buffers.dll" Name="System.Buffers.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\System.Buffers.dll" />
+                            <File Id="System.Numerics.Vectors.dll" Name="System.Numerics.Vectors.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\System.Numerics.Vectors.dll" />
+                            <File Id="System.Runtime.CompilerServices.Unsafe.dll" Name="System.Runtime.CompilerServices.Unsafe.dll" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\System.Runtime.CompilerServices.Unsafe.dll" />
+                        </Component>
                         <Component Id="SMDShortcut" Guid="{2A8D9F3C-238F-5BF0-AA86-A092B37314F7}">
                             <RegistryValue Id="RegValue0" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="SMD" Value="1" Type="integer" KeyPath="yes" />
                             <RemoveFolder Id="RemFolder0" Directory="INSTALLFOLDER" On="both" />
@@ -349,6 +357,7 @@
             <ComponentRef Id="dataBaseScripts_stopro" />
             <ComponentRef Id="ProgramMenuDir" />
             <ComponentRef Id="ProductComponent" />
+            <ComponentRef Id="IXtremeRuntime" />
             <ComponentRef Id="SMDShortcut" />
             <ComponentRef Id="RegistryEntries" />
             <ComponentRef Id="BiotimeSDK" />
