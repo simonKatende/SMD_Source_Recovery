@@ -509,7 +509,7 @@ public class dlgFeesContactInteraction : XtraForm
         StudentOptions.SetActiveStudent(student.StudentNumber);
         StudentOptions.SetActiveClass(student.ClassId);
         StudentOptions.SetPaymentMode("SingleStudent");
-        using var dlg = new StudentFeesPayment("SingleStudentPayment");
+        using var dlg = new StudentFeesPayment("SingleStudentPayment", viewOnly: true);
         dlg.ShowDialog(this);
     }
 

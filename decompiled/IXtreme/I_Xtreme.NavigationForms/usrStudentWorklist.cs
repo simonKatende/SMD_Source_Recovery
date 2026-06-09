@@ -159,6 +159,8 @@ public class usrStudentWorklist : XtraUserControl
         AddCol("GuardianContact",     "Contact",        110);
         AddDateCol("LastContactDate", "Last Contact",    95);
         AddOutcomeCol("LastOutcome",  "Last Outcome",   110);
+        AddNumCol("RemindersSentCount", "Reminders",     80);
+        AddDateCol("LastReminderDate",  "Last Reminder", 110);
     }
 
     private GridColumn AddCol(string field, string caption, int width)
@@ -234,10 +236,10 @@ public class usrStudentWorklist : XtraUserControl
         if (row == null) return;
         switch (row.Tier)
         {
-            case PriorityTier.Critical:      e.Appearance.BackColor = Color.OrangeRed;     e.Appearance.ForeColor = Color.White; e.HighPriority = true; break;
-            case PriorityTier.BrokenPromise: e.Appearance.BackColor = Color.LightCoral;   e.HighPriority = true; break;
-            case PriorityTier.Stale:         e.Appearance.BackColor = Color.LightYellow;  e.HighPriority = true; break;
-            case PriorityTier.CallRequired:  e.Appearance.BackColor = Color.DarkSlateBlue; e.Appearance.ForeColor = Color.White; e.HighPriority = true; break;
+            case PriorityTier.Critical:      e.Appearance.BackColor = Color.FromArgb(252, 228, 228); e.HighPriority = true; break;
+            case PriorityTier.BrokenPromise: e.Appearance.BackColor = Color.FromArgb(251, 224, 216); e.HighPriority = true; break;
+            case PriorityTier.Stale:         e.Appearance.BackColor = Color.FromArgb(252, 246, 221); e.HighPriority = true; break;
+            case PriorityTier.CallRequired:  e.Appearance.BackColor = Color.FromArgb(226, 232, 245); e.HighPriority = true; break;
         }
     }
 

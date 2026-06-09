@@ -544,6 +544,8 @@ public class MainForm : RibbonForm
 
 	private DevExpress.XtraBars.BarButtonItem bbiViewInteractions;
 
+	private DevExpress.XtraBars.BarButtonItem bbiSmsHistory;
+
 	private DevExpress.XtraBars.BarButtonItem bbiDailyWorklist;
 
 	private DevExpress.XtraBars.BarButtonItem bbiGuardianWorklist;
@@ -24904,14 +24906,33 @@ public class MainForm : RibbonForm
 					System.Windows.Forms.MessageBoxIcon.Warning);
 			}
 		};
+		this.bbiSmsHistory = new DevExpress.XtraBars.BarButtonItem();
+		this.bbiSmsHistory.Name    = "bbiSmsHistory";
+		this.bbiSmsHistory.Caption = "SMS History";
+		this.bbiSmsHistory.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesReport;
+		this.bbiSmsHistory.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesReport;
+		this.bbiSmsHistory.ItemClick += (s, e) =>
+		{
+			try
+			{
+				using var dlg = new I_Xtreme.DialogForms.dlgSmsHistory(DataConnection.ConnectToDatabase());
+				dlg.ShowDialog(this);
+			}
+			catch (Exception ex)
+			{
+				DevExpress.XtraEditors.XtraMessageBox.Show($"Could not open SMS history.\n\n{ex.Message}",
+					"SMS History", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+			}
+		};
 		this.ribbonPageGroupFeesInteractions = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
 		this.ribbonPageGroupFeesInteractions.Name = "ribbonPageGroupFeesInteractions";
 		this.ribbonPageGroupFeesInteractions.Text = "Interactions";
 		this.ribbonPageGroupFeesInteractions.ItemLinks.Add(this.bbiLogInteraction);
 		this.ribbonPageGroupFeesInteractions.ItemLinks.Add(this.bbiViewInteractions);
+		this.ribbonPageGroupFeesInteractions.ItemLinks.Add(this.bbiSmsHistory);
 		// Register items with the ribbon manager
 		this.ribbon.Items.AddRange(new DevExpress.XtraBars.BarItem[]
-			{ bbiFeesSettings, bbiSendReminders, bbiSendBalanceReminders, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPrint, bbiFeesPreview, bbiFeesExport, bbiLogInteraction, bbiViewInteractions });
+			{ bbiFeesSettings, bbiSendReminders, bbiSendBalanceReminders, bbiDailyWorklist, bbiGuardianWorklist, bbiStudentWorklist, bbiFeesPrint, bbiFeesPreview, bbiFeesExport, bbiLogInteraction, bbiViewInteractions, bbiSmsHistory });
 		// Attach groups in order: Home | Worklists | Interactions | Settings | Printing & Exporting
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesHome);
 		this.ribbonPageFeesFollowUp.Groups.Add(this.ribbonPageGroupFeesWorklists);

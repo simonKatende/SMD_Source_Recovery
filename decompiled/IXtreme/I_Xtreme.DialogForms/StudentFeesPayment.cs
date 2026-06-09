@@ -44,6 +44,8 @@ public class StudentFeesPayment : RibbonForm
 {
 	private readonly string formMode = string.Empty;
 
+	private bool _viewOnly;   // when true, the ledger is read-only (recording lives in Accounts)
+
 	private SqlTransaction __TranS;
 
 	private SqlTransaction _transPrep;
@@ -796,6 +798,26 @@ public class StudentFeesPayment : RibbonForm
 		}
 	}
 
+	public StudentFeesPayment(string FormMode, bool viewOnly)
+		: this(FormMode)
+	{
+		_viewOnly = viewOnly;
+		if (viewOnly)
+		{
+			// View-only ledger: bursar can browse the student's fees, but recording lives in Accounts.
+			// NOTE: timer1_Tick re-enables these per permission on every tick, so it ALSO honours
+			// _viewOnly (see timer1_Tick) — this initial disable just avoids a flash before the first tick.
+			this.Text = "Student Ledger (view only)";
+			btnProcessPayment.Enabled = false;
+			barButtonItem9.Enabled  = false;   // Bill
+			barButtonItem8.Enabled  = false;   // Edit
+			barButtonItem10.Enabled = false;
+			barButtonItem11.Enabled = false;
+			barButtonItem13.Enabled = false;
+			barButtonItem15.Enabled = false;   // Award Waiver
+		}
+	}
+
 	public StudentFeesPayment()
 	{
 	}
@@ -1396,6 +1418,7 @@ public class StudentFeesPayment : RibbonForm
 
 	private void FinalizePIKPayment()
 	{
+		if (_viewOnly) return;   // view-only ledger records nothing (recording lives in Accounts)
 		string empty = string.Empty;
 		empty = (string.IsNullOrEmpty(txtReceiptNumber.Text) ? Guid.NewGuid().ToString().Substring(0, 6)
 			.ToUpper() : txtReceiptNumber.Text);
@@ -1432,6 +1455,7 @@ public class StudentFeesPayment : RibbonForm
 
 	private void FinalizeFeesPaymentWaiver(double WaiverAmt, string Narration)
 	{
+		if (_viewOnly) return;   // view-only ledger records nothing (recording lives in Accounts)
 		string text = Guid.NewGuid().ToString().Substring(0, 6)
 			.ToUpper();
 		if (dtPayment.Text != string.Empty)
@@ -1454,6 +1478,7 @@ public class StudentFeesPayment : RibbonForm
 
 	private void FinalizeFeesPayment()
 	{
+		if (_viewOnly) return;   // view-only ledger records nothing (recording lives in Accounts)
 		string empty = string.Empty;
 		empty = (string.IsNullOrEmpty(txtReceiptNumber.Text) ? Guid.NewGuid().ToString().Substring(0, 6)
 			.ToUpper() : txtReceiptNumber.Text);
@@ -1507,6 +1532,7 @@ public class StudentFeesPayment : RibbonForm
 
 	private void btnProcessPayment_Click(object sender, EventArgs e)
 	{
+		if (_viewOnly) return;   // belt-and-suspenders: never commit from a view-only ledger
 		if (!LicenceStatus.IsTrialExpired)
 		{
 			if (toggleSwitch1.IsOn)
@@ -1828,6 +1854,20 @@ public class StudentFeesPayment : RibbonForm
 
 	private void timer1_Tick(object sender, EventArgs e)
 	{
+		if (_viewOnly)
+		{
+			// View-only ledger: keep all commit/edit/bill actions disabled regardless of permissions,
+			// overriding the per-permission re-enable below (which would otherwise reopen the
+			// payment path that NREs from this entry point).
+			btnProcessPayment.Enabled = false;
+			barButtonItem8.Enabled  = false;
+			barButtonItem9.Enabled  = false;
+			barButtonItem10.Enabled = false;
+			barButtonItem11.Enabled = false;
+			barButtonItem13.Enabled = false;
+			barButtonItem15.Enabled = false;   // Award Waiver
+			return;
+		}
 		if (lblName.Caption != string.Empty || txtAccNo.Text != string.Empty)
 		{
 			barButtonItem4.Enabled = true;

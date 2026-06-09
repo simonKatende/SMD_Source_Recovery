@@ -543,6 +543,16 @@ public class FeesFollowUpService
             int u = b.UrgencyScore.CompareTo(a.UrgencyScore);   // higher score = chase sooner
             return u != 0 ? u : b.TotalBalance.CompareTo(a.TotalBalance);
         });
+
+        var remSummary = GetReminderSummaryByGuardian(settings.TermStartDate, settings.TermEndDate);
+        foreach (var row in rows)
+            if (remSummary.TryGetValue(row.GuardianContact, out var rs))
+            {
+                row.RemindersSentCount = rs.count;
+                row.LastReminderDate   = rs.last;
+                row.LastReminderType   = rs.type;
+            }
+
         return rows;
     }
 
@@ -596,7 +606,8 @@ public class FeesFollowUpService
 
     public List<StudentWorklistRow> GetStudentWorklist(string classFilter = "", decimal minBalance = 0)
     {
-        var guardianRows = GetGuardianWorklist(classFilter, minBalance);
+        var studentSettings = GetSettings();
+        var guardianRows = GetGuardianWorklist(classFilter, minBalance, studentSettings);
         var result = new List<StudentWorklistRow>();
 
         foreach (var g in guardianRows)
@@ -626,11 +637,22 @@ public class FeesFollowUpService
             }
         }
 
-        return result
+        var studentList = result
             .OrderByDescending(s => s.UrgencyScore)
             .ThenBy(s => s.ClassId)
             .ThenBy(s => s.FullName)
             .ToList();
+
+        var remByStudent = GetReminderSummaryByStudent(studentSettings.TermStartDate, studentSettings.TermEndDate);
+        foreach (var row in studentList)
+            if (remByStudent.TryGetValue(row.StudentNumber, out var rs))
+            {
+                row.RemindersSentCount = rs.count;
+                row.LastReminderDate   = rs.last;
+                row.LastReminderType   = rs.type;
+            }
+
+        return studentList;
     }
 
     public DashboardData GetDashboardData()
@@ -895,6 +917,22 @@ WHERE lp.rn = 1
         {
             try
             {
+                // Concurrency guard: re-check the log immediately before sending so a second user
+                // who sent moments ago doesn't cause a duplicate SMS.
+                if (item.ReminderType == "General")
+                {
+                    if (AlreadySentReminder(conn, item.GuardianKey, null, DateTime.Today, "General"))
+                        continue;
+                }
+                else
+                {
+                    bool allComponentsSent =
+                        item.Components != null && item.Components.Count > 0
+                            ? item.Components.All(c => AlreadySentReminder(conn, item.GuardianKey, c.StudentNumber, c.PromiseDate, item.ReminderType))
+                            : AlreadySentReminder(conn, item.GuardianKey, item.StudentNumber, item.PromiseDate, item.ReminderType);
+                    if (allComponentsSent) continue;
+                }
+
                 if (FeeSmsHelper.TrySend(connectionString, item.Phone, item.Message, out string err))
                 {
                     if (item.ReminderType == "General")
@@ -1024,6 +1062,44 @@ WHERE lp.rn = 1
         return set;
     }
 
+    // (count, lastSentAt, lastType) of reminders within the current term, keyed by GuardianKey.
+    private Dictionary<string, (int count, DateTime last, string type)>
+        GetReminderSummaryByGuardian(DateTime? termStart, DateTime? termEnd)
+        => GetReminderSummary("GuardianKey", termStart, termEnd);
+
+    // (count, lastSentAt, lastType) within the current term, keyed by StudentNumber.
+    private Dictionary<string, (int count, DateTime last, string type)>
+        GetReminderSummaryByStudent(DateTime? termStart, DateTime? termEnd)
+        => GetReminderSummary("StudentNumber", termStart, termEnd);
+
+    // Per-key reminder summary (count, most-recent SentAt, type of that most-recent row) over the
+    // term window, computed in a single pass so the "last type" is the term-scoped latest, not the
+    // all-time latest. keyColumn is a fixed identifier ("GuardianKey" | "StudentNumber"), never user input.
+    private Dictionary<string, (int count, DateTime last, string type)>
+        GetReminderSummary(string keyColumn, DateTime? termStart, DateTime? termEnd)
+    {
+        var map = new Dictionary<string, (int, DateTime, string)>(StringComparer.Ordinal);
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand(
+            $@";WITH Scoped AS (
+                 SELECT {keyColumn} AS K, ReminderType, SentAt,
+                        ROW_NUMBER() OVER (PARTITION BY {keyColumn} ORDER BY SentAt DESC) AS rn,
+                        COUNT(*)     OVER (PARTITION BY {keyColumn})                       AS Cnt
+                 FROM tbl_SmsReminderLog
+                 WHERE {keyColumn} IS NOT NULL
+                   AND (@start IS NULL OR SentAt >= @start)
+                   AND (@end   IS NULL OR SentAt <  DATEADD(DAY, 1, @end))
+               )
+               SELECT K, Cnt, SentAt, ReminderType FROM Scoped WHERE rn = 1", conn);
+        cmd.Parameters.Add("@start", SqlDbType.DateTime).Value = (object)termStart ?? DBNull.Value;
+        cmd.Parameters.Add("@end",   SqlDbType.DateTime).Value = (object)termEnd   ?? DBNull.Value;
+        using var rdr = cmd.ExecuteReader();
+        while (rdr.Read())
+            map[rdr.GetString(0)] = (rdr.GetInt32(1), rdr.GetDateTime(2), rdr.IsDBNull(3) ? "" : rdr.GetString(3));
+        return map;
+    }
+
     public List<ReminderItem> GetBalanceRemindersPreview()
     {
         var settings = GetSettings();
@@ -1035,12 +1111,27 @@ WHERE lp.rn = 1
         var rows   = GetGuardianWorklist("", 0, settings);
         var cooled = GetGuardiansInGeneralCooldown(settings.GeneralReminderCooldownDays);
 
+        // Cross-channel guard: never send a balance reminder to a guardian who is already getting a
+        // promise reminder today (e.g. a just-broken promise still in the Overdue window).
+        HashSet<string> promiseGuardians;
+        using (var pconn = new SqlConnection(connectionString))
+        {
+            pconn.Open();
+            promiseGuardians = new HashSet<string>(
+                GetStudentsWithActivePromises(pconn, school,
+                    settings.SmsTemplate2Day, settings.SmsTemplateDayOf, settings.SmsTemplateOverdue)
+                    .Select(i => i.GuardianKey)
+                    .Where(k => !string.IsNullOrEmpty(k)),   // guard against legacy NULL GuardianKey rows
+                StringComparer.Ordinal);
+        }
+
         var items = new List<ReminderItem>();
         foreach (var g in rows)
         {
             bool hasActivePromise = g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date >= today;
             if (!SmsReminderLogic.IsBalanceReminderEligible(g.Tier, g.TotalBalance, hasActivePromise)) continue;
             if (cooled.Contains(g.GuardianContact)) continue;
+            if (promiseGuardians.Contains(g.GuardianContact)) continue;   // in today's promise-reminder queue — skip balance SMS
 
             string phone = SmsReminderLogic.NormalizePhone(g.GuardianContact)
                         ?? SmsReminderLogic.NormalizePhone(g.Contact2);
