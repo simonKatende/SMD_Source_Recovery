@@ -47,6 +47,12 @@ public static class FeesUrgency
         double shortfall, double criticalShortfallPoints, bool hasActivePromise,
         int stalenessDays, int noProgressWeeks, double noProgressThreshold)
     {
+        // A fully-paid (or overpaid) family owes nothing, so it is never an action item — keep it
+        // Current regardless of contact recency or any lingering flags. This matters now that the
+        // guardian/student worklists also list nil- and credit-balance enrolled families.
+        if (g.TotalBalance <= 0m)
+            return PriorityTier.Current;
+
         // F2: single shortfall-based Critical rule (replaces pacing-gap + flat-phase rules).
         if (hasTermDates && shortfall >= criticalShortfallPoints && !hasActivePromise)
             return PriorityTier.Critical;

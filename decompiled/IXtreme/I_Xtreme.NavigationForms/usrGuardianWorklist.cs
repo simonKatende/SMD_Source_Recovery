@@ -107,7 +107,7 @@ public class usrGuardianWorklist : XtraUserControl
             string cf = _cboClass.SelectedIndex <= 0 ? "" : _cboClass.SelectedItem?.ToString() ?? "";
             decimal mb = _spnMinBalance.Value;
 
-            _allRows = _service.GetGuardianWorklist(cf, mb);
+            _allRows = _service.GetGuardianWorklist(cf, mb, includeAllEnrolled: mb == 0);
             _banner.Visible = !_service.AreTermDatesConfigured();
             _grid.DataSource = _allRows;
             ConfigureColumns();
@@ -126,7 +126,7 @@ public class usrGuardianWorklist : XtraUserControl
             }
             else if (!_classesLoaded)
             {
-                var all2 = _service.GetGuardianWorklist("", 0);
+                var all2 = _service.GetGuardianWorklist("", 0, includeAllEnrolled: true);
                 var classes = all2.SelectMany(r => r.Students).Select(s => s.ClassId)
                     .Where(c => !string.IsNullOrEmpty(c)).Distinct().OrderBy(c => c).ToList();
                 _cboClass.Properties.Items.Clear();

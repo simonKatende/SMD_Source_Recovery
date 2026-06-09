@@ -264,7 +264,7 @@ public class usrStudentWorklist : XtraUserControl
         var row = _view.GetRow(hit.RowHandle) as StudentWorklistRow;
         if (row == null) return;
 
-        var guardianRows = _service.GetGuardianWorklist("", 0);
+        var guardianRows = _service.GetGuardianWorklist("", 0, includeAllEnrolled: true);
         var guardianRow  = guardianRows.FirstOrDefault(g => g.GuardianContact == row.GuardianKey);
         if (guardianRow == null)
         {
