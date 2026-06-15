@@ -29,12 +29,33 @@ the product. Features:
 
 Level 4 features are unchecked by default in the wizard.
 
-## What changed in this build (25.1.9.5)
+## What changed in this build (25.1.9.6)
 
-Only **`IXtreme.exe`** was rebuilt from this repo's source — all the fees
-follow-up / SMS work lives in `decompiled/IXtreme` (namespace `I_Xtreme.*`).
-The other three EXEs and every `AlienAge.*.v4` library are unchanged and are
-carried over byte-for-byte from the original MSI's payload.
+`IXtreme.exe` **and the `AlienAge.*.v4` libraries it references** are rebuilt
+from this repo's source. IXtreme references those libraries as ProjectReferences,
+so building it rebuilds the whole managed runtime set; step 4 of `build.ps1` then
+copies every produced assembly whose name matches a payload file over the stale
+original. The other three EXEs (Library/MarksEntry/Messenger), IslamicTheology,
+the services, DevExpress and the ZK SDK are unchanged and carried over from the
+original MSI payload.
+
+### 25.1.9.6 fixes (post-deploy crash reports)
+- **Payment crash (`MissingMethodException: ...SMSGateWay.TrySendSMSViaPOST`).**
+  The 25.1.9.5 MSI shipped the *original* `AlienAge.ExtremeMessenger.v4.dll`
+  (extracted from the old MSI), which predates `TrySendSMSViaPOST` — but the
+  rebuilt `IXtreme.exe` calls it. Root cause: the installer payload was synced
+  only for `IXtreme.exe`, not the rebuilt libraries. Fixed by syncing **all**
+  IXtreme runtime assemblies (see step 4) so the shipped DLL matches what IXtreme
+  was built and tested against.
+- **Send Reminders returned the egosms HTML login page instead of sending.**
+  `FeeSmsHelper` built its request URL from `tbl_SMSAccount.url`; that column held
+  a portal/host URL (e.g. `https://www.egosms.co`), harmless for years because the
+  old gateway hardcoded the `/plain` endpoint and ignored it. The newer code
+  honoured it and hit the portal, which serves the login page. Fixed with
+  `SmsReminderLogic.ResolveSmsBaseUrl`, which only trusts a configured URL that
+  looks like a real plain-API endpoint (`/api/` or `/plain`) and otherwise falls
+  back to `https://www.egosms.co/api/v1/plain/?`. (If SMS still fails after this,
+  check the egosms **account credentials/balance** — that is data, not code.)
 
 The rebuilt `IXtreme.exe` uses preserialized (binary-formatted) `.resx`
 resources, so unlike the original it needs `System.Resources.Extensions` plus
@@ -47,7 +68,7 @@ shipped none of these, so a new component **`IXtremeRuntime`** (in the core
 throws when loading any form with binary resources.
 
 Version metadata:
-- `Version` bumped `25.1.9.4` -> `25.1.9.5`
+- `Version` `25.1.9.6` (25.1.9.4 original -> 25.1.9.5 first rebuild -> 25.1.9.6 crash fixes)
 - `Product Id="*"` (fresh ProductCode each build)
 - `UpgradeCode` unchanged -> installing this cleanly upgrades an existing install
   (`MajorUpgrade`, scheduled `afterInstallValidate`).

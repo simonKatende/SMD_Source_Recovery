@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Product Id="*" Codepage="1252" Language="1033" Manufacturer="Alien Age" Name="School Management Dynamics" UpgradeCode="{EC64F0B7-5DFA-4C97-A101-2952E9A43D82}" Version="25.1.9.5">
+    <Product Id="*" Codepage="1252" Language="1033" Manufacturer="Alien Age" Name="School Management Dynamics" UpgradeCode="{EC64F0B7-5DFA-4C97-A101-2952E9A43D82}" Version="25.1.9.6">
         <Package Comments="AlienAge is a Registered Trade Mark of Alien Age Limited" Compressed="yes" Description="School Management Dynamics" InstallerVersion="200" Languages="1033" Manufacturer="Alien Age" Platform="x86" />
         <Condition Message="You need to be an administrator to install this product.">Privileged</Condition>
         <Condition Message="This application requires WindowXP SP3/Windows Server 2003/Windows Vista/Windows Vista SP1/Windows Server 2008/Windows7/8/8.1/10 or Later Versions">(VersionNT = 501 AND  ServicePackLevel = 3) OR VersionNT = 502 OR VersionNT = 600 OR (VersionNT = 600 AND ServicePackLevel = 1) OR (VersionNT = 600 AND MsiNTProductType = 3) OR VersionNT = 601 OR VersionNT = 602 OR VersionNT = 603</Condition>

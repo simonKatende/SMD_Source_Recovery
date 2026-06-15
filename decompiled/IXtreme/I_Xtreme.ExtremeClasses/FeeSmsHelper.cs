@@ -40,9 +40,9 @@ internal static class FeeSmsHelper
             return false;
         }
 
-        string baseUrl = string.IsNullOrEmpty(url) || !url.StartsWith("http")
-            ? "https://www.egosms.co/api/v1/plain/?"
-            : (url.EndsWith("?") ? url : url + "?");
+        // Honour a properly-configured plain-API URL, but ignore a portal/host URL (which returns
+        // the egosms HTML login page instead of sending). See SmsReminderLogic.ResolveSmsBaseUrl.
+        string baseUrl = SmsReminderLogic.ResolveSmsBaseUrl(url);
 
         // Normalize the recipient to a Ugandan MSISDN; skip invalid numbers before hitting the gateway.
         string normalized = SmsReminderLogic.NormalizePhone(phone);

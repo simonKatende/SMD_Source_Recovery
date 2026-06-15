@@ -45,6 +45,25 @@ public static class SmsReminderLogic
         return int.TryParse(r, out int code) && code > 0;
     }
 
+    /// <summary>
+    /// The egosms send endpoint to use. A correctly-configured plain-API URL (one that contains
+    /// "/api/" or "/plain") is honoured; anything else — blank, non-http, or a portal/host URL
+    /// such as "https://www.egosms.co" that returns the HTML login page instead of sending —
+    /// falls back to the known plain endpoint. The trailing "?" is ensured for query building.
+    /// (The old gateway hardcoded this endpoint and ignored tbl_SMSAccount.url, so a stale
+    /// portal URL in that column was harmless until the newer code began honouring it.)
+    /// </summary>
+    public static string ResolveSmsBaseUrl(string configuredUrl)
+    {
+        const string Default = "https://www.egosms.co/api/v1/plain/?";
+        if (string.IsNullOrWhiteSpace(configuredUrl)) return Default;
+        string u = configuredUrl.Trim();
+        if (!u.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return Default;
+        if (u.IndexOf("/plain", StringComparison.OrdinalIgnoreCase) < 0
+            && u.IndexOf("/api/", StringComparison.OrdinalIgnoreCase) < 0) return Default;
+        return u.EndsWith("?", StringComparison.Ordinal) ? u : u + "?";
+    }
+
     /// <summary>Balance reminder targets: Critical or Broken Promise, owing, with no active promise.</summary>
     public static bool IsBalanceReminderEligible(PriorityTier tier, decimal balance, bool hasActivePromise)
         => balance > 0m && !hasActivePromise
