@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-    <Product Id="*" Codepage="1252" Language="1033" Manufacturer="Alien Age" Name="School Management Dynamics" UpgradeCode="{EC64F0B7-5DFA-4C97-A101-2952E9A43D82}" Version="25.1.9.7">
+    <Product Id="*" Codepage="1252" Language="1033" Manufacturer="Alien Age" Name="School Management Dynamics" UpgradeCode="{EC64F0B7-5DFA-4C97-A101-2952E9A43D82}" Version="25.1.9.8">
         <Package Comments="AlienAge is a Registered Trade Mark of Alien Age Limited" Compressed="yes" Description="School Management Dynamics" InstallerVersion="200" Languages="1033" Manufacturer="Alien Age" Platform="x86" />
         <Condition Message="You need to be an administrator to install this product.">Privileged</Condition>
         <Condition Message="This application requires WindowXP SP3/Windows Server 2003/Windows Vista/Windows Vista SP1/Windows Server 2008/Windows7/8/8.1/10 or Later Versions">(VersionNT = 501 AND  ServicePackLevel = 3) OR VersionNT = 502 OR VersionNT = 600 OR (VersionNT = 600 AND ServicePackLevel = 1) OR (VersionNT = 600 AND MsiNTProductType = 3) OR VersionNT = 601 OR VersionNT = 602 OR VersionNT = 603</Condition>
@@ -24,7 +24,7 @@
                         <Component Id="SMDShortcut" Guid="{2A8D9F3C-238F-5BF0-AA86-A092B37314F7}">
                             <RegistryValue Id="RegValue0" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="SMD" Value="1" Type="integer" KeyPath="yes" />
                             <RemoveFolder Id="RemFolder0" Directory="INSTALLFOLDER" On="both" />
-                            <Shortcut Id="desktopSc" Directory="DesktopFolder" Name="School Management Dynamics" ShortName="i_w2nihb" Arguments="/x [ProductCode]" Icon="IXtreme.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                            <Shortcut Id="desktopSc" Directory="DesktopFolder" Name="School Management Dynamics" ShortName="i_w2nihb" Target="[#IXtreme.exe]" Icon="IXtreme.exe" WorkingDirectory="INSTALLFOLDER" />
                         </Component>
                         <Component Id="IslamicTheologyC" Guid="{40164221-3974-56D3-A074-176DB8D01E52}">
                             <File Id="IslamicTheology.exe" Name="ArabicTheology.exe" KeyPath="yes" ShortName="mzxufyqw.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\IslamicTheology.exe" />
@@ -32,7 +32,7 @@
                         <Component Id="TheologyShortcut" Guid="{CE9777E6-D98D-5E9B-A0D3-F3B92727C3B2}">
                             <RegistryValue Id="RegValue_0" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="IslamicTheology" Value="1" Type="integer" KeyPath="yes" />
                             <RemoveFolder Id="RemFolder_0" Directory="INSTALLFOLDER" On="both" />
-                            <Shortcut Id="desktopit" Directory="DesktopFolder" Name="Islamic Theology" ShortName="v5w99u-1" Arguments="/x [ProductCode]" Icon="ArabicTheology.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                            <Shortcut Id="desktopit" Directory="DesktopFolder" Name="Islamic Theology" ShortName="v5w99u-1" Target="[#IslamicTheology.exe]" Icon="ArabicTheology.exe" WorkingDirectory="INSTALLFOLDER" />
                         </Component>
                         <Component Id="ServerTools" Guid="{861EBEDC-BC8C-56EC-B43A-ADFFE29AE409}">
                             <File Id="Server_Tools.exe" Name="Server Tools.exe" KeyPath="yes" ShortName="-0pl0lz2.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\Server_Tools.exe" />
@@ -40,7 +40,7 @@
                         <Component Id="ServerToolsDesktopShortcut" Guid="{C0E998C9-4E96-50CC-9CEF-0A7A72D65C2F}">
                             <RegistryValue Id="RegValue1" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="ServerTools" Value="1" Type="integer" KeyPath="yes" />
                             <RemoveFolder Id="RemFolder1" Directory="INSTALLFOLDER" On="both" />
-                            <Shortcut Id="ServerToolsSC" Directory="DesktopFolder" Name="Server Tools" ShortName="xts57mrq" Arguments="/x [ProductCode]" Icon="ServerTools.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                            <Shortcut Id="ServerToolsSC" Directory="DesktopFolder" Name="Server Tools" ShortName="xts57mrq" Target="[#Server_Tools.exe]" Icon="ServerTools.exe" WorkingDirectory="INSTALLFOLDER" />
                         </Component>
                         <Component Id="LibraryManagement" Guid="{E0C09155-992B-54C5-819E-07CA407CD2D5}">
                             <File Id="LibraryManagement.exe" Name="LibraryManagement.exe" KeyPath="yes" ShortName="m3o8flpv.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\LibraryManagement.exe" />
@@ -48,7 +48,7 @@
                         <Component Id="LibraryManagementDesktopShortcut" Guid="{8C0440A0-4D06-5D64-AAF6-D9A34FF1D84D}">
                             <RegistryValue Id="RegValue2" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="SMDLibrary" Value="1" Type="integer" KeyPath="yes" />
                             <RemoveFolder Id="RemFolder2" Directory="INSTALLFOLDER" On="both" />
-                            <Shortcut Id="LibrarySC" Directory="DesktopFolder" Name="Library Management" ShortName="u5r3unb1" Arguments="/x [ProductCode]" Icon="LibraryManagement.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                            <Shortcut Id="LibrarySC" Directory="DesktopFolder" Name="Library Management" ShortName="u5r3unb1" Target="[#LibraryManagement.exe]" Icon="LibraryManagement.exe" WorkingDirectory="INSTALLFOLDER" />
                         </Component>
                         <Component Id="EnterMarks" Guid="{B8C32549-CF5C-5CE6-8758-39A0D898BACD}">
                             <File Id="MarksEntry.exe" Name="MarksEntry.exe" KeyPath="yes" ShortName="r0mnk85c.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\MarksEntry.exe" />
@@ -56,7 +56,7 @@
                         <Component Id="EnterMarksDesktopShortcut" Guid="{2750A24A-A3A3-5078-BA07-C2FCF48E706B}">
                             <RegistryValue Id="RegValue3" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="TeachersGateway" Value="1" Type="integer" KeyPath="yes" />
                             <RemoveFolder Id="RemFolder3" Directory="INSTALLFOLDER" On="both" />
-                            <Shortcut Id="TGSC" Directory="DesktopFolder" Name="Teacher Gateway" ShortName="woqhxtvu" Arguments="/x [ProductCode]" Icon="MarksEntry.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                            <Shortcut Id="TGSC" Directory="DesktopFolder" Name="Teacher Gateway" ShortName="woqhxtvu" Target="[#MarksEntry.exe]" Icon="MarksEntry.exe" WorkingDirectory="INSTALLFOLDER" />
                         </Component>
                         <Component Id="XtremeMessenger" Guid="{A239E736-183E-5B0C-A506-D63597E88198}">
                             <File Id="ExtremeMessenger.exe" Name="ExtremeMessenger.exe" KeyPath="yes" ShortName="ahu3fwpg.exe" DiskId="1" Source="C:\SMD_Source_Recovery\installer\payload\File\ExtremeMessenger.exe" />
@@ -64,7 +64,7 @@
                         <Component Id="MessengerShortcut" Guid="{C21698DF-9D61-5DEE-8E69-40B73938E464}">
                             <RegistryValue Id="RegValue4" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="iXtremeMessenger" Value="1" Type="integer" KeyPath="yes" />
                             <RemoveFolder Id="RemFolder4" Directory="INSTALLFOLDER" On="both" />
-                            <Shortcut Id="_EdesktopSc" Directory="DesktopFolder" Name="SMD Messenger" ShortName="dyfbkehx" Arguments="/x [ProductCode]" Icon="ExtremeMessenger.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                            <Shortcut Id="_EdesktopSc" Directory="DesktopFolder" Name="SMD Messenger" ShortName="dyfbkehx" Target="[#ExtremeMessenger.exe]" Icon="ExtremeMessenger.exe" WorkingDirectory="INSTALLFOLDER" />
                         </Component>
                         <Component Id="RegistryEntries" Guid="{26496DFB-7237-5CAC-8568-810BCEE70A7B}">
                             <RegistryKey Id="_Keys" ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes" Key="Software\[Manufacturer]\[ProductName]\_Keys" Root="HKCU" />
@@ -336,11 +336,11 @@
                                 <Component Id="ProgramMenuDir" Guid="{BE172141-0019-5D3D-BEEC-5C62E54F3300}">
                                     <RegistryValue Id="reg5FB8C4F32576790876A1FAED84D91C6C" Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Value="1" Type="integer" KeyPath="yes" />
                                     <RemoveFolder Id="ProgramMenuDir" Directory="ProgramMenuDir" On="both" />
-                                    <Shortcut Id="UninstallProduct" Directory="ProgramMenuDir" Name="UnInstall Product" ShortName="j7dedi1l" Description="UnInstall Product" Arguments="/x [ProductCode]" Advertise="yes" />
-                                    <Shortcut Id="MenuSMD" Directory="ProgramMenuDir" Name="School Management Dynamics" ShortName="gzwts9j-" Description="School Management Dynamics" Icon="IXtreme.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
-                                    <Shortcut Id="MenuLb" Directory="ProgramMenuDir" Name="SMD Library" ShortName="zlrrkmwb" Description="Library Management" Icon="LibraryManagement.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
-                                    <Shortcut Id="MenuTG" Directory="ProgramMenuDir" Name="Teacher Gateway" ShortName="jps_pmdl" Description="Teacher Gateway" Icon="MarksEntry.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
-                                    <Shortcut Id="MenuIT" Directory="ProgramMenuDir" Name="Islamic Theology" ShortName="7bwh9zbq" Description="Islamic Theology" Icon="ArabicTheology.exe" WorkingDirectory="INSTALLFOLDER" Advertise="yes" />
+                                    <Shortcut Id="UninstallProduct" Directory="ProgramMenuDir" Name="UnInstall Product" ShortName="j7dedi1l" Description="UnInstall Product" Target="[SystemFolder]msiexec.exe" Arguments="/x [ProductCode]" />
+                                    <Shortcut Id="MenuSMD" Directory="ProgramMenuDir" Name="School Management Dynamics" ShortName="gzwts9j-" Description="School Management Dynamics" Target="[#IXtreme.exe]" Icon="IXtreme.exe" WorkingDirectory="INSTALLFOLDER" />
+                                    <Shortcut Id="MenuLb" Directory="ProgramMenuDir" Name="SMD Library" ShortName="zlrrkmwb" Description="Library Management" Target="[#LibraryManagement.exe]" Icon="LibraryManagement.exe" WorkingDirectory="INSTALLFOLDER" />
+                                    <Shortcut Id="MenuTG" Directory="ProgramMenuDir" Name="Teacher Gateway" ShortName="jps_pmdl" Description="Teacher Gateway" Target="[#MarksEntry.exe]" Icon="MarksEntry.exe" WorkingDirectory="INSTALLFOLDER" />
+                                    <Shortcut Id="MenuIT" Directory="ProgramMenuDir" Name="Islamic Theology" ShortName="7bwh9zbq" Description="Islamic Theology" Target="[#IslamicTheology.exe]" Icon="ArabicTheology.exe" WorkingDirectory="INSTALLFOLDER" />
                                 </Component>
                             </Directory>
                         </Directory>

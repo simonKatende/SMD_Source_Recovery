@@ -29,7 +29,29 @@ the product. Features:
 
 Level 4 features are unchecked by default in the wizard.
 
-## What changed in this build (25.1.9.7)
+## What changed in this build (25.1.9.8)
+
+### 25.1.9.8 fixes (desktop / Start-menu shortcuts)
+- **No shortcuts were created on install (and none removed on uninstall).** The
+  decompiled `.wxs` reconstructed all 11 shortcuts as advertised
+  (`Advertise="yes"`) with no `Target`, sitting in components keyed on a
+  `RegistryValue` rather than the target EXE. An advertised shortcut must resolve
+  through its component's file KeyPath, so with a registry KeyPath there was no
+  valid target and nothing was created; `light -sval` suppressed the ICE checks
+  that would have flagged it. The launch shortcuts also carried a spurious
+  `Arguments="/x [ProductCode]"` (the uninstall command) — another decompilation
+  artifact. Fixed by converting all 11 to non-advertised shortcuts with explicit
+  `Target="[#<FileId>]"` (and `Target="[SystemFolder]msiexec.exe"` for the
+  genuine "UnInstall Product" shortcut), dropping the stray uninstall arguments.
+  The existing `RegistryValue` KeyPath + `RemoveFolder` already make these valid
+  non-advertised components, so install creates the shortcuts and uninstall
+  removes them. `DISABLEADVTSHORTCUTS=1` is retained (aligned with
+  non-advertised behaviour).
+
+No payload assemblies changed in this build (managed binaries identical to
+25.1.9.7); only the installer authoring changed.
+
+## What changed in the 25.1.9.7 build
 
 ### 25.1.9.7 fixes (payment SMS)
 - **Parent received one SMS per billed line instead of one per deposit.** The
@@ -87,7 +109,7 @@ shipped none of these, so a new component **`IXtremeRuntime`** (in the core
 throws when loading any form with binary resources.
 
 Version metadata:
-- `Version` `25.1.9.7` (25.1.9.4 original -> 25.1.9.5 first rebuild -> 25.1.9.6 crash fixes -> 25.1.9.7 payment SMS)
+- `Version` `25.1.9.8` (25.1.9.4 original -> 25.1.9.5 first rebuild -> 25.1.9.6 crash fixes -> 25.1.9.7 payment SMS -> 25.1.9.8 shortcuts)
 - `Product Id="*"` (fresh ProductCode each build)
 - `UpgradeCode` unchanged -> installing this cleanly upgrades an existing install
   (`MajorUpgrade`, scheduled `afterInstallValidate`).
