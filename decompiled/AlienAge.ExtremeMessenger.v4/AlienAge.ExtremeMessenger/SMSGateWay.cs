@@ -39,7 +39,7 @@ public class SMSGateWay
 		{
 			ServicePointManager.Expect100Continue = true;
 			ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-			string requestUriString = $"https://www.egosms.co/api/v1/plain/?number={Recipients}&message={Message}&username={SMSUserName}&password={SMSPassword}&sender={SMSSender}";
+			string requestUriString = $"https://www.egosms.co/api/v1/plain/?number={Uri.EscapeDataString(Recipients)}&message={Uri.EscapeDataString(Message)}&username={Uri.EscapeDataString(SMSUserName)}&password={Uri.EscapeDataString(SMSPassword)}&sender={Uri.EscapeDataString(SMSSender)}";
 			HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(requestUriString);
 			httpWebRequest.Method = "POST";
 			httpWebRequest.ContentType = "application/x-www-form-urlencoded";

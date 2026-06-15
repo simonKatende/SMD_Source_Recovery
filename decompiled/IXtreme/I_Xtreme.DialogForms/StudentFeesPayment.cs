@@ -587,20 +587,38 @@ public class StudentFeesPayment : RibbonForm
 		}
 		__TranS.Commit();
 		sqlConnection.Close();
-		if (SchoolInfoTemp.SendSMS)
+	}
+
+	// Sends ONE confirmation SMS for a whole deposit/waiver, not one per billed line.
+	// A parent pays a single sum that the bursar allocates across several billed items
+	// (tuition, stationery, boarding...); they think in terms of the total deposited and
+	// the remaining total balance, so this is called once after all lines are recorded.
+	// amount = total deposited (or waiver amount); finalBalance = whole-student balance after it.
+	private void SendPaymentConfirmationSms(double amount, double finalBalance, bool isWaiver)
+	{
+		if (!SchoolInfoTemp.SendSMS)
 		{
-			SMSGateWay sMSGateWay = new SMSGateWay(DataConnection.ConnectToDatabase());
-			sMSGateWay.InitializeAccount();
-			string message = feesBalance <= 0.0
-				? string.Format("Dear Parent, thank you for paying UGX {0} for {1} on {2}. Fees fully cleared.\n- {3}", amount.ToString("#,#"), lblName.Caption, dtPayment.DateTime.ToString("dd-MMM-yyyy"), SMSGateWay.SMSSender)
-				: string.Format("Dear Parent, thank you for paying UGX {0} for {1} on {2}. Outstanding balance: UGX {3}.\n- {4}", amount.ToString("#,#"), lblName.Caption, dtPayment.DateTime.ToString("dd-MMM-yyyy"), feesBalance.ToString("#,#"), SMSGateWay.SMSSender);
-			string preferredContact = !string.IsNullOrEmpty(contactNo1) ? contactNo1 : contactNo2;
-			if (!string.IsNullOrEmpty(preferredContact))
-			{
-				string recipients = "256" + preferredContact.Substring(1, 9);
-				sMSGateWay.TrySendSMSViaPOST(recipients, message, out _);
-			}
+			return;
 		}
+		string preferredContact = !string.IsNullOrEmpty(contactNo1) ? contactNo1 : contactNo2;
+		string recipients = SmsReminderLogic.NormalizePhone(preferredContact);
+		if (string.IsNullOrEmpty(recipients))
+		{
+			return;
+		}
+		SMSGateWay sMSGateWay = new SMSGateWay(DataConnection.ConnectToDatabase());
+		if (!sMSGateWay.InitializeAccount())
+		{
+			return;
+		}
+		string date = dtPayment.DateTime.ToString("dd-MMM-yyyy");
+		string action = isWaiver
+			? string.Format("a fees waiver of UGX {0} has been applied for {1}", amount.ToString("#,#"), lblName.Caption)
+			: string.Format("thank you for paying UGX {0} for {1}", amount.ToString("#,#"), lblName.Caption);
+		string message = finalBalance <= 0.0
+			? string.Format("Dear Parent, {0} on {1}. Fees fully cleared.\n- {2}", action, date, SMSGateWay.SMSSender)
+			: string.Format("Dear Parent, {0} on {1}. Outstanding balance: UGX {2}.\n- {3}", action, date, finalBalance.ToString("#,#"), SMSGateWay.SMSSender);
+		sMSGateWay.TrySendSMSViaPOST(recipients, message, out _);
 	}
 
 	private int[] StockItemDetails(string Item)
@@ -1468,6 +1486,7 @@ public class StudentFeesPayment : RibbonForm
 			AddFeesPayment("Waiver on Fees", "2004-0100", WaiverAmt, text.ToUpper(), empty, feesBalance, Narration, "Fees Waiver");
 			UpdateCashOnAccount();
 			NewAmount = 0.0;
+			SendPaymentConfirmationSms(WaiverAmt, feesBalance, isWaiver: true);
 		}
 		else
 		{
@@ -1490,6 +1509,7 @@ public class StudentFeesPayment : RibbonForm
 				{
 					string empty2 = string.Empty;
 					double num = Convert.ToDouble(gridViewStudentPayment.Columns["Bal"].SummaryItem.SummaryValue);
+					double totalPaid = 0.0;
 					for (int i = 0; i < gridView1.RowCount; i++)
 					{
 						k++;
@@ -1499,6 +1519,7 @@ public class StudentFeesPayment : RibbonForm
 						if (result > 0.0)
 						{
 							NewAmount += result;
+							totalPaid += result;
 							double feesBalance = num - NewAmount;
 							string accNo = gridView1.GetRowCellValue(i, "accNo").ToString();
 							AddFeesPayment(particulars, accNo, result, empty.ToUpper(), empty2, feesBalance, "Fees Payment", cboPayToAccount.SelectedItem.ToString());
@@ -1510,6 +1531,10 @@ public class StudentFeesPayment : RibbonForm
 						}
 					}
 					ConfirmReceiptPrinting(empty.ToUpper());
+					if (totalPaid > 0.0)
+					{
+						SendPaymentConfirmationSms(totalPaid, num - totalPaid, isWaiver: false);
+					}
 				}
 				else
 				{
