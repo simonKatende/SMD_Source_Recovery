@@ -102,6 +102,21 @@ public class SmsReminderLogicTests
     }
 
     [Theory]
+    // Misconfigured / blank / portal URLs fall back to the working plain endpoint.
+    [InlineData(null,                              "https://www.egosms.co/api/v1/plain/?")]
+    [InlineData("",                                "https://www.egosms.co/api/v1/plain/?")]
+    [InlineData("   ",                             "https://www.egosms.co/api/v1/plain/?")]
+    [InlineData("https://www.egosms.co",           "https://www.egosms.co/api/v1/plain/?")]
+    [InlineData("https://www.egosms.co/",          "https://www.egosms.co/api/v1/plain/?")]
+    [InlineData("www.egosms.co/api/v1/plain/",     "https://www.egosms.co/api/v1/plain/?")] // non-http
+    // Properly-configured plain endpoints are honoured, with "?" ensured.
+    [InlineData("https://www.egosms.co/api/v1/plain/",  "https://www.egosms.co/api/v1/plain/?")]
+    [InlineData("https://www.egosms.co/api/v1/plain/?", "https://www.egosms.co/api/v1/plain/?")]
+    [InlineData("https://sms.example.com/api/send",     "https://sms.example.com/api/send?")]
+    public void ResolveSmsBaseUrl_falls_back_unless_real_plain_endpoint(string configured, string expected)
+        => Assert.Equal(expected, SmsReminderLogic.ResolveSmsBaseUrl(configured));
+
+    [Theory]
     [InlineData("OK", true)]
     [InlineData("ok", true)]
     [InlineData(" OK ", true)]

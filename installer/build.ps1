@@ -71,26 +71,35 @@ if (-not $SkipIXtremeBuild) {
 }
 Require-File $ixBuilt "IXtreme.exe was not produced by the Release build."
 
-# 4. Swap the freshly-built IXtreme.exe + its runtime companions into the payload.
-#    The rebuilt IXtreme uses preserialized (binary) resources, so it needs
-#    System.Resources.Extensions + its transitive deps and the binding redirect in
-#    IXtreme.exe.config -- none of which the original installer shipped.
+# 4. Sync the payload with IXtreme's tested build output.
+#    IXtreme references the AlienAge.*.v4 libraries as ProjectReferences, so building it
+#    rebuilds the whole managed runtime set (IXtreme.exe, AlienAge.* libs, SMDFastLane) and
+#    copies it -- plus System.Resources.Extensions and friends (the rebuilt EXE uses
+#    preserialized binary resources) -- into its output dir. The original MSI shipped STALE
+#    versions of these (e.g. an AlienAge.ExtremeMessenger.v4.dll missing TrySendSMSViaPOST,
+#    which crashed payment with MissingMethodException). So for every assembly the build
+#    produces whose name matches a payload File, copy the fresh version over the stale one.
+#    DevExpress/ZK third-party DLLs are byte-identical and simply stay in sync.
 $ixDir = Split-Path $ixBuilt -Parent
-$runtimeFiles = @(
-    'IXtreme.exe',
-    'IXtreme.exe.config',
-    'System.Resources.Extensions.dll',
-    'System.Memory.dll',
-    'System.Buffers.dll',
-    'System.Numerics.Vectors.dll',
-    'System.Runtime.CompilerServices.Unsafe.dll'
-)
-Write-Host "Swapping in updated IXtreme.exe + runtime companions..."
-foreach ($f in $runtimeFiles) {
-    $src = Join-Path $ixDir $f
-    Require-File $src "Expected build output missing: $f"
-    Copy-Item $src (Join-Path $payload "File\$f") -Force
+$wxsText = Get-Content $wxs -Raw
+$nameToSource = @{}
+[regex]::Matches($wxsText, '<File\b[^>]*>') | ForEach-Object {
+    $tag = $_.Value
+    $n = [regex]::Match($tag, 'Name="([^"]+)"').Groups[1].Value
+    $s = [regex]::Match($tag, 'Source="([^"]+)"').Groups[1].Value
+    if ($n -and $s) { $nameToSource[$n] = $s }
 }
+Write-Host "Syncing payload with IXtreme build output..."
+$synced = 0
+Get-ChildItem $ixDir -File -Recurse -Include *.dll,*.exe,*.config | ForEach-Object {
+    if ($nameToSource.ContainsKey($_.Name)) {
+        $dest = $nameToSource[$_.Name]
+        $new  = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+        $old  = (Test-Path $dest) ? (Get-FileHash $dest -Algorithm SHA256).Hash : ''
+        if ($new -ne $old) { Copy-Item $_.FullName $dest -Force; $synced++; Write-Host "  refreshed $($_.Name)" }
+    }
+}
+Write-Host "  $synced payload file(s) updated."
 
 # 5. Compile + link
 Write-Host "candle..."
