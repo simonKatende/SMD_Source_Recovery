@@ -29,7 +29,26 @@ the product. Features:
 
 Level 4 features are unchecked by default in the wizard.
 
-## What changed in this build (25.1.9.6)
+## What changed in this build (25.1.9.7)
+
+### 25.1.9.7 fixes (payment SMS)
+- **Parent received one SMS per billed line instead of one per deposit.** The
+  confirmation SMS was sent from inside `AddFeesPayment`, which the save loop
+  calls once per allocation line (tuition, stationery, boarding...). A single
+  400,000 deposit the bursar split across lines produced several texts —
+  including a misleading "Fees fully cleared" the instant one line zeroed out
+  while the parent still owed a balance. Now `StudentFeesPayment` accumulates the
+  whole deposit and sends **one** SMS with the total paid and the whole-student
+  balance (waiver path included, with waiver-specific wording; PIK excluded — no
+  UGX amount). The guardian number is normalized via the tested
+  `SmsReminderLogic.NormalizePhone` instead of the crash-prone `Substring(1,9)`.
+- **SMS message not URL-encoded.** `SMSGateWay.TrySendSMSViaPOST` interpolated the
+  message (spaces, commas, newline) raw into the egosms `/plain` URL; every query
+  value is now `Uri.EscapeDataString`-encoded, matching `FeeSmsHelper`.
+
+Refreshed payload assemblies: `IXtreme.exe`, `AlienAge.ExtremeMessenger.v4.dll`.
+
+## What changed in the 25.1.9.6 build
 
 `IXtreme.exe` **and the `AlienAge.*.v4` libraries it references** are rebuilt
 from this repo's source. IXtreme references those libraries as ProjectReferences,
@@ -68,7 +87,7 @@ shipped none of these, so a new component **`IXtremeRuntime`** (in the core
 throws when loading any form with binary resources.
 
 Version metadata:
-- `Version` `25.1.9.6` (25.1.9.4 original -> 25.1.9.5 first rebuild -> 25.1.9.6 crash fixes)
+- `Version` `25.1.9.7` (25.1.9.4 original -> 25.1.9.5 first rebuild -> 25.1.9.6 crash fixes -> 25.1.9.7 payment SMS)
 - `Product Id="*"` (fresh ProductCode each build)
 - `UpgradeCode` unchanged -> installing this cleanly upgrades an existing install
   (`MajorUpgrade`, scheduled `afterInstallValidate`).
