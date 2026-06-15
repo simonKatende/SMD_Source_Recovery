@@ -129,4 +129,43 @@ public class SmsReminderLogicTests
     [InlineData(null, false)]
     public void IsGatewaySuccessResponse_matches_OK_or_positive_int(string response, bool expected)
         => Assert.Equal(expected, SmsReminderLogic.IsGatewaySuccessResponse(response));
+
+    // delta = today - promiseDate, in days. Windows must partition [-3..7] with no overlap:
+    // -3..-1 = 3DayBefore, 0..1 = DayOf (day-of + 1-day catch-up), 2..7 = Overdue.
+    [Theory]
+    [InlineData(-4, null)]
+    [InlineData(-3, "3DayBefore")]
+    [InlineData(-2, "3DayBefore")]
+    [InlineData(-1, "3DayBefore")]
+    [InlineData(0,  "DayOf")]
+    [InlineData(1,  "DayOf")]      // catch-up day, must NOT also be Overdue
+    [InlineData(2,  "Overdue")]    // first overdue day, must NOT be DayOf
+    [InlineData(7,  "Overdue")]
+    [InlineData(8,  null)]
+    public void ClassifyPromiseReminder_returns_single_non_overlapping_type(int delta, string expected)
+    {
+        var promiseDate = new DateTime(2026, 6, 14);
+        var today = promiseDate.AddDays(delta);
+        Assert.Equal(expected, SmsReminderLogic.ClassifyPromiseReminder(today, promiseDate));
+    }
+
+    [Fact]
+    public void ResolveOptionalAmountSegments_keeps_inner_text_when_amount_present()
+        => Assert.Equal(
+            "today is your promised payment date of UGX {promised_amount} for X.",
+            SmsReminderLogic.ResolveOptionalAmountSegments(
+                "today is your promised payment date[[ of UGX {promised_amount}]] for X.", 100000m));
+
+    [Fact]
+    public void ResolveOptionalAmountSegments_drops_segment_when_amount_zero()
+        => Assert.Equal(
+            "today is your promised payment date for X.",
+            SmsReminderLogic.ResolveOptionalAmountSegments(
+                "today is your promised payment date[[ of UGX {promised_amount}]] for X.", 0m));
+
+    [Fact]
+    public void ResolveOptionalAmountSegments_leaves_template_without_markers_untouched()
+        => Assert.Equal(
+            "Balance: UGX {balance}.",
+            SmsReminderLogic.ResolveOptionalAmountSegments("Balance: UGX {balance}.", 0m));
 }
