@@ -13,15 +13,15 @@ public class FeesFollowUpService
     private readonly string connectionString;
 
     internal const string DefaultPreDue  =
-        "Dear Parent, you promised to pay UGX {promised_amount} for {names} ({class}) by {date}. " +
+        "Dear Parent, you promised a payment[[ of UGX {promised_amount}]] for {names} ({class}) by {date}. " +
         "Your balance is UGX {balance}. Please pay as promised. - {school}";
 
     internal const string DefaultDayOf   =
-        "Dear Parent, today is your promised payment date of UGX {promised_amount} for {names} ({class}). " +
+        "Dear Parent, today is your promised payment date[[ of UGX {promised_amount}]] for {names} ({class}). " +
         "Balance: UGX {balance}. Please pay today. - {school}";
 
     internal const string DefaultOverdue =
-        "Dear Parent, your payment of UGX {promised_amount} for {names} ({class}) was due on {date} " +
+        "Dear Parent, your payment[[ of UGX {promised_amount}]] for {names} ({class}) was due on {date} " +
         "but has not been received. Balance: UGX {balance}. Please pay immediately. - {school}";
 
     internal const string DefaultGeneral =
@@ -589,6 +589,11 @@ public class FeesFollowUpService
 
         return all.Where(g =>
         {
+            // Daily worklist = today's chase list, not the full ledger. Families on track
+            // (tier Current) don't need chasing, regardless of balance size; they stay on the
+            // guardian worklist but are excluded here.
+            if (g.Tier == PriorityTier.Current) return false;
+
             if (!nearDeadline
                 && g.LatestPromiseDate.HasValue
                 && g.LatestPromiseDate.Value.Date >= today
@@ -855,39 +860,31 @@ WHERE lp.rn = 1
             if (string.IsNullOrWhiteSpace(phone) || phone.StartsWith("NOCONTACT-", StringComparison.Ordinal))
                 continue;
 
-            // Determine which reminder types are due today (with catch-up)
-            var candidates = new (string type, bool isDue)[]
+            // Exactly one reminder type per promise per run; the windows do not overlap, so a
+            // single promise can never queue both a "DayOf" and an "Overdue" reminder.
+            string type = SmsReminderLogic.ClassifyPromiseReminder(today, pd);
+            if (type == null) continue;
+            string template = type switch
             {
-                ("3DayBefore", today >= pd.AddDays(-3) && today <= pd.AddDays(-1)),
-                ("DayOf",      today >= pd             && today <= pd.AddDays(1)),
-                ("Overdue",    today >= pd.AddDays(1)  && today <= pd.AddDays(7)),
+                "3DayBefore" => !string.IsNullOrWhiteSpace(preDueTemplate)  ? preDueTemplate  : DefaultPreDue,
+                "DayOf"      => !string.IsNullOrWhiteSpace(dayOfTemplate)   ? dayOfTemplate   : DefaultDayOf,
+                "Overdue"    => !string.IsNullOrWhiteSpace(overdueTemplate) ? overdueTemplate : DefaultOverdue,
+                _            => ""
             };
-
-            foreach (var (type, isDue) in candidates)
+            string msg = ApplySmsTemplate(template, balance, name, classId, pd, school, promised);
+            items.Add(new ReminderItem
             {
-                if (!isDue) continue;
-                string template = type switch
-                {
-                    "3DayBefore" => !string.IsNullOrWhiteSpace(preDueTemplate)  ? preDueTemplate  : DefaultPreDue,
-                    "DayOf"      => !string.IsNullOrWhiteSpace(dayOfTemplate)   ? dayOfTemplate   : DefaultDayOf,
-                    "Overdue"    => !string.IsNullOrWhiteSpace(overdueTemplate) ? overdueTemplate : DefaultOverdue,
-                    _            => ""
-                };
-                string msg = ApplySmsTemplate(template, balance, name, classId, pd, school, promised);
-                items.Add(new ReminderItem
-                {
-                    GuardianKey    = guardianKey,
-                    Phone          = phone,
-                    StudentNumber  = studentNo,
-                    StudentName    = name,
-                    ClassId        = classId,
-                    PromiseDate    = pd,
-                    PromisedAmount = promised,
-                    Balance        = balance,
-                    ReminderType   = type,
-                    Message        = msg,
-                });
-            }
+                GuardianKey    = guardianKey,
+                Phone          = phone,
+                StudentNumber  = studentNo,
+                StudentName    = name,
+                ClassId        = classId,
+                PromiseDate    = pd,
+                PromisedAmount = promised,
+                Balance        = balance,
+                ReminderType   = type,
+                Message        = msg,
+            });
         }
         return items;
     }
@@ -983,7 +980,7 @@ WHERE lp.rn = 1
 
     private static string ApplySmsTemplate(string template, decimal balance,
         string studentName, string classId, DateTime date, string school, decimal promisedAmount)
-        => template
+        => SmsReminderLogic.ResolveOptionalAmountSegments(template, promisedAmount)
             .Replace("{promised_amount}", SmsReminderLogic.FormatAmount(promisedAmount))
             .Replace("{balance}",         SmsReminderLogic.FormatAmount(balance))
             .Replace("{names}",           studentName)

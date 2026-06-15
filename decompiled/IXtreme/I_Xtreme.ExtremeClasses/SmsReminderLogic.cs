@@ -70,6 +70,49 @@ public static class SmsReminderLogic
            && (tier == PriorityTier.Critical || tier == PriorityTier.BrokenPromise);
 
     /// <summary>
+    /// Classify a promise into exactly one reminder type for today, or null if none is due.
+    /// Windows partition the days around the promise date with no overlap so a single promise
+    /// can never produce two reminders on the same run:
+    ///   delta -3..-1 = "3DayBefore", delta 0..1 = "DayOf" (promise day + 1-day catch-up),
+    ///   delta 2..7 = "Overdue", where delta = (today - promiseDate) in whole days.
+    /// </summary>
+    public static string ClassifyPromiseReminder(DateTime today, DateTime promiseDate)
+    {
+        int delta = (today.Date - promiseDate.Date).Days;
+        if (delta >= -3 && delta <= -1) return "3DayBefore";
+        if (delta == 0  || delta == 1)  return "DayOf";
+        if (delta >= 2  && delta <= 7)  return "Overdue";
+        return null;
+    }
+
+    /// <summary>
+    /// Resolve optional "[[ ... ]]" segments in an SMS template against the promised amount.
+    /// Each segment is unwrapped (markers removed, inner text kept) when promisedAmount &gt; 0,
+    /// or dropped entirely when promisedAmount is 0 / negative. Lets a template carry an amount
+    /// clause that disappears for promises logged without an amount, instead of rendering "UGX 0".
+    /// Templates with no markers are returned unchanged.
+    /// </summary>
+    public static string ResolveOptionalAmountSegments(string template, decimal promisedAmount)
+    {
+        if (string.IsNullOrEmpty(template)) return template;
+        var sb = new StringBuilder(template.Length);
+        int i = 0;
+        while (i < template.Length)
+        {
+            int open = template.IndexOf("[[", i, StringComparison.Ordinal);
+            if (open < 0) { sb.Append(template, i, template.Length - i); break; }
+            int close = template.IndexOf("]]", open + 2, StringComparison.Ordinal);
+            if (close < 0) { sb.Append(template, i, template.Length - i); break; }
+
+            sb.Append(template, i, open - i);                       // text before the segment
+            if (promisedAmount > 0m)
+                sb.Append(template, open + 2, close - (open + 2));  // keep inner text
+            i = close + 2;                                          // skip the segment when dropped
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Collapse per-student promise reminders into one item per (GuardianKey, ReminderType).
     /// Names/classes are joined in input order, balance/promised summed, PromiseDate = earliest,
     /// and every underlying (StudentNumber, PromiseDate) is retained in Components for per-student
