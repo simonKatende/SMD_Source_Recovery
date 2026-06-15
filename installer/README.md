@@ -29,7 +29,22 @@ the product. Features:
 
 Level 4 features are unchecked by default in the wizard.
 
-## What changed in this build (25.1.9.8)
+## What changed in this build (25.1.9.9)
+
+### 25.1.9.9 fixes (license agreement)
+- **License Agreement page showed WiX placeholder text.** The wizard
+  (`WixUI_FeatureTree`) includes a License Agreement dialog, but the `.wxs` set
+  no `WixUILicenseRtf`, so `light` fell back to WiX's built-in placeholder
+  `License.rtf`. The original MSI carried no recoverable EULA in its binary
+  streams. Added the real Alien Age "School Management Dynamics Software License
+  Agreement" (18 sections + Exhibit A, supplied by the vendor) as
+  [`License.rtf`](License.rtf) and wired it via
+  `<WixVariable Id="WixUILicenseRtf" .../>`. The install now gates behind
+  accepting the actual agreement.
+
+No payload assemblies changed in this build.
+
+## What changed in the 25.1.9.8 build
 
 ### 25.1.9.8 fixes (desktop / Start-menu shortcuts)
 - **No shortcuts were created on install (and none removed on uninstall).** The
@@ -109,7 +124,7 @@ shipped none of these, so a new component **`IXtremeRuntime`** (in the core
 throws when loading any form with binary resources.
 
 Version metadata:
-- `Version` `25.1.9.8` (25.1.9.4 original -> 25.1.9.5 first rebuild -> 25.1.9.6 crash fixes -> 25.1.9.7 payment SMS -> 25.1.9.8 shortcuts)
+- `Version` `25.1.9.9` (25.1.9.4 original -> 25.1.9.5 first rebuild -> 25.1.9.6 crash fixes -> 25.1.9.7 payment SMS -> 25.1.9.8 shortcuts -> 25.1.9.9 license)
 - `Product Id="*"` (fresh ProductCode each build)
 - `UpgradeCode` unchanged -> installing this cleanly upgrades an existing install
   (`MajorUpgrade`, scheduled `afterInstallValidate`).
