@@ -1,0 +1,41 @@
+<!-- tests/FeesFollowUp.IntegrationTests/FeesFollowUp.IntegrationTests.csproj -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>11.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <AssemblyName>FeesFollowUp.IntegrationTests</AssemblyName>
+    <RootNamespace>FeesFollowUp.IntegrationTests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- FeesFollowUpService.cs targets net472's System.Data.SqlClient; the package
+         provides the same API surface on net8.0. -->
+    <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
+  </ItemGroup>
+
+  <!-- The service and everything it needs, minus FeesFollowUpService.App.cs (the
+       application-side constructor that connects to the school's saved database). -->
+  <ItemGroup>
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\WorklistRow.cs"          Link="Models\WorklistRow.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\GuardianWorklistRow.cs"  Link="Models\GuardianWorklistRow.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\FeesContactLog.cs"       Link="Models\FeesContactLog.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\FeesPromise.cs"          Link="Models\FeesPromise.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\FeesUrgency.cs"      Link="Logic\FeesUrgency.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\SmsReminderLogic.cs" Link="Logic\SmsReminderLogic.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\PromiseEvaluator.cs" Link="Logic\PromiseEvaluator.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\FamilySms.cs"        Link="Logic\FamilySms.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\FeesWorkflow.cs"     Link="Logic\FeesWorkflow.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\FeesFollowUpService.cs" Link="Logic\FeesFollowUpService.cs" />
+  </ItemGroup>
+
+</Project>

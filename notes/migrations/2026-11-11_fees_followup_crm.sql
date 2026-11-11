@@ -4,6 +4,7 @@
 --
 -- What it changes
 --   1. tbl_FeesContactLog   + SemesterId   (which term an interaction belongs to)
+--                             GuardianKey widened 20 -> 50
 --                           + PromiseScope ('Family' | 'Student'; NULL on old rows = Family)
 --   2. tbl_SmsReminderLog   + SemesterId
 --   3. tbl_FollowUpSettings   SettingValue widened 200 -> 1000 (SMS templates were being cut off)
@@ -31,6 +32,10 @@ IF COL_LENGTH('dbo.tbl_FeesContactLog', 'SemesterId') IS NULL
 GO
 IF COL_LENGTH('dbo.tbl_FeesContactLog', 'PromiseScope') IS NULL
     ALTER TABLE dbo.tbl_FeesContactLog ADD PromiseScope VARCHAR(10) NULL;
+GO
+-- The guardian key can be 'NOCONTACT-' + a 12-character student number (22 characters).
+IF COL_LENGTH('dbo.tbl_FeesContactLog', 'GuardianKey') < 50
+    ALTER TABLE dbo.tbl_FeesContactLog ALTER COLUMN GuardianKey VARCHAR(50) NULL;
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes
                WHERE name = 'IX_FeesContactLog_Term' AND object_id = OBJECT_ID('dbo.tbl_FeesContactLog'))

@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
-using AlienAge.Connectivity;
 using I_Xtreme.Models;
 
 namespace I_Xtreme.ExtremeClasses;
 
-public class FeesFollowUpService
+public partial class FeesFollowUpService
 {
     private readonly string connectionString;
 
@@ -33,16 +32,45 @@ public class FeesFollowUpService
                 ELSE 'NOCONTACT-' + s.StudentNumber
             END";
 
-    public FeesFollowUpService()
+    /// <summary>Sends one SMS; returns false with a reason when it could not be sent.</summary>
+    internal delegate bool SmsSend(string phone, string message, out string error);
+
+    /// <summary>How reminders are actually sent (the egosms gateway in the application).</summary>
+    internal SmsSend SendSms { get; set; }
+
+    /// <summary>Decrypts the stored school name (the application stores it encrypted).</summary>
+    internal Func<string, string> DecryptSchoolName { get; set; }
+
+    /// <summary>
+    /// A service bound to one database. The application uses the parameterless constructor
+    /// (FeesFollowUpService.App.cs), which connects to the school's database and wires the
+    /// SMS gateway; this one exists so the feature can be tested against a throwaway database.
+    /// </summary>
+    public FeesFollowUpService(string connectionString)
     {
-        connectionString = DataConnection.ConnectToDatabase();
+        if (string.IsNullOrWhiteSpace(connectionString))
+            throw new ArgumentException("A database connection string is required.", nameof(connectionString));
+        this.connectionString = connectionString;
     }
 
     public string ConnectionString => connectionString;
 
     /// <summary>The term the application is working in (e.g. "TermIII-2026").</summary>
     public string GetWorkingSemester()
-        => _semesterCache ??= AlienAge.Semesters.WorkingSemesters.GetWorkingSemester();
+    {
+        if (_semesterCache != null) return _semesterCache;
+        // Same source as the application's term setup (tbl_ActiveSemester).
+        using var conn = new SqlConnection(connectionString);
+        conn.Open();
+        using var cmd = new SqlCommand("SELECT semester FROM tbl_ActiveSemester", conn);
+        string semester = null;
+        using (var rdr = cmd.ExecuteReader())
+            while (rdr.Read()) semester = rdr["semester"]?.ToString();
+        if (string.IsNullOrWhiteSpace(semester))
+            throw new InvalidOperationException(
+                "No working term is set in the application. Set the term before using Fees Follow-up.");
+        return _semesterCache = semester.Trim();
+    }
 
     /// <summary>
     /// Throws a plain-language error when the database has not had the Fees Follow-up update
@@ -927,6 +955,8 @@ public class FeesFollowUpService
         data.RemindersSentToday    = sentToday;
         data.RemindersSentThisWeek = sentThisWeek;
         data.LastAutoReminderRun   = GetLastAutoRun()?.StartedAt;
+        data.AutoRemindersEnabled  = settings.AutoRemindersEnabled;
+        data.AutoReminderTime      = settings.AutoReminderTime;
         return data;
     }
 
@@ -986,17 +1016,24 @@ public class FeesFollowUpService
 
     public string GetSchoolName()
     {
-        const string sql = "SELECT TOP 1 SchoolName FROM SchoolDetails";
+        string raw;
+        using (var conn = new SqlConnection(connectionString))
+        using (var cmd  = new SqlCommand("SELECT TOP 1 SchoolName FROM SchoolDetails", conn))
+        {
+            conn.Open();
+            raw = cmd.ExecuteScalar() as string ?? "";
+        }
+        if (DecryptSchoolName == null || raw == "") return raw;
         try
         {
-            using var conn = new SqlConnection(connectionString);
-            using var cmd  = new SqlCommand(sql, conn);
-            conn.Open();
-            var raw = cmd.ExecuteScalar() as string ?? "";
-            try { return AlienAge.Security.CryptorEngine.Decrypt(raw); }
-            catch { return raw; }   // return raw if decryption fails
+            return DecryptSchoolName(raw);
         }
-        catch { return ""; }
+        catch (Exception ex)
+        {
+            // Some databases hold the name unencrypted: use it as stored.
+            System.Diagnostics.Debug.WriteLine($"FeesFollowUpService: school name is not encrypted, using it as stored: {ex.Message}");
+            return raw;
+        }
     }
 
     /// <summary>The message template in force for a reminder type ("3DayBefore" | "DayOf" | "Overdue" | "General").</summary>
@@ -1083,7 +1120,9 @@ public class FeesFollowUpService
                 int delivered = 0;
                 foreach (string message in messages)
                 {
-                    if (FeeSmsHelper.TrySend(connectionString, item.Phone, message, out string err))
+                    if (SendSms == null)
+                        throw new InvalidOperationException("No SMS gateway is configured for this service.");
+                    if (SendSms(item.Phone, message, out string err))
                         delivered++;
                     else
                         result.Failures.Add($"{item.ReminderType} to {item.Phone} ({item.StudentName}): {err}");
@@ -1598,7 +1637,7 @@ public class FeesFollowUpService
                @PromiseDate, @PromiseAmount, @SemesterId, @PromiseScope)", conn, tx))
             {
                 cmd.Parameters.Add("@StudentNumber", SqlDbType.VarChar,   50).Value = entry.StudentNumber ?? "";
-                cmd.Parameters.Add("@GuardianKey",   SqlDbType.VarChar,   20).Value = (object)guardianKey ?? DBNull.Value;
+                cmd.Parameters.Add("@GuardianKey",   SqlDbType.VarChar,   50).Value = (object)guardianKey ?? DBNull.Value;
                 cmd.Parameters.Add("@ContactDate",   SqlDbType.DateTime      ).Value = entry.ContactDate;
                 cmd.Parameters.Add("@LoggedBy",      SqlDbType.VarChar,   50).Value = entry.LoggedBy ?? "";
                 cmd.Parameters.Add("@Channel",       SqlDbType.VarChar,   20).Value = entry.Channel.ToString();
@@ -1750,7 +1789,7 @@ public class FeesFollowUpService
            OR (cl.GuardianKey IS NULL AND cl.StudentNumber IN ({inList}))
         ORDER BY cl.ContactDate DESC, cl.ContactId DESC", conn);
 
-        da.SelectCommand.Parameters.Add("@guardianKey", SqlDbType.VarChar, 20).Value = guardianKey;
+        da.SelectCommand.Parameters.Add("@guardianKey", SqlDbType.VarChar, 50).Value = guardianKey;
         for (int i = 0; i < nums.Count; i++)
             da.SelectCommand.Parameters.Add($"@sn{i}", SqlDbType.VarChar, 50).Value = nums[i];
 

@@ -86,6 +86,7 @@ public class dlgSendRemindersPreview : XtraForm
         _view.OptionsBehavior.Editable        = false;
         _view.OptionsSelection.MultiSelect    = true;
         _view.OptionsDetail.SmartDetailExpand = false;
+        _view.OptionsView.RowAutoHeight       = true;   // a family may get more than one message
 
         this.Controls.AddRange(new Control[] { _lblCount, _grid, _btnDelete, _btnSend, _btnCancel });
     }
@@ -125,6 +126,7 @@ public class dlgSendRemindersPreview : XtraForm
             AddNumCol("PromisedAmount", "Promised (UGX)", 110);
         }
         AddNumCol("Balance",    "Balance (UGX)",   110);
+        AddCol("SmsCount",      "SMS",              40);
         AddCol("Message",       "Message",         360);
 
         _view.CustomColumnDisplayText += (s, e) =>
@@ -206,7 +208,7 @@ public class dlgSendRemindersPreview : XtraForm
         string confirmTitle = _mode == ReminderMode.Balance ? "Send Balance Reminders" : "Send Reminders";
         int guardianCount = _items.Select(i => i.GuardianKey).Distinct().Count();
         if (XtraMessageBox.Show(
-                $"Send {_items.Count} SMS to {guardianCount} guardian(s)? This uses SMS credits.",
+                $"Send {_items.Sum(i => i.SmsCount)} SMS to {guardianCount} guardian(s)? This uses SMS credits.",
                 confirmTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
             return;
 

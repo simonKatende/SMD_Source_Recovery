@@ -242,6 +242,8 @@ public class DashboardData
     public int     RemindersSentToday    { get; set; }
     public int     RemindersSentThisWeek { get; set; }
     public DateTime? LastAutoReminderRun { get; set; }
+    public bool    AutoRemindersEnabled  { get; set; }
+    public string  AutoReminderTime      { get; set; } = "09:00";
 }
 
 public class ClassCollectionRow
