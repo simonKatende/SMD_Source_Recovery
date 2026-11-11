@@ -66,7 +66,12 @@ public static class FeesUrgency
         }
 
         // Broken promise (retained, 5% tolerance for rounding).
-        if (g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date < today)
+        // When the promises have been evaluated instalment by instalment, that verdict wins.
+        if (g.Promise != null)
+        {
+            if (g.Promise.IsBroken) return PriorityTier.BrokenPromise;
+        }
+        else if (g.LatestPromiseDate.HasValue && g.LatestPromiseDate.Value.Date < today)
         {
             decimal promised = g.LatestPromiseAmount ?? (g.TotalBalance + g.PaymentsSinceLatestPromise);
             if (g.PaymentsSinceLatestPromise < promised * 0.95m)
