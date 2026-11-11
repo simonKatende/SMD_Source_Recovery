@@ -3763,6 +3763,8 @@ public class MainForm : RibbonForm
 
 	private void MainForm_Load(object sender, EventArgs e)
 	{
+		// Fees Follow-up: send the day's promise reminders automatically while the application is open.
+		I_Xtreme.ExtremeClasses.FeesAutoReminders.Start(() => CurrentUser.GetSystemUser());
 		backstageViewControl1.SelectedTabChanged += backstageViewControl1_SelectedTabChanged;
 		GetTenYearsBack();
 		for (int i = 8; i < 73; i++)
@@ -24888,7 +24890,7 @@ public class MainForm : RibbonForm
 		this.bbiLogInteraction.ItemClick += (s, e) => OpenLogInteraction();
 		this.bbiViewInteractions = new DevExpress.XtraBars.BarButtonItem();
 		this.bbiViewInteractions.Name    = "bbiViewInteractions";
-		this.bbiViewInteractions.Caption = "View Interactions";
+		this.bbiViewInteractions.Caption = "Reports";
 		this.bbiViewInteractions.ImageOptions.Image      = I_Xtreme.Properties.Resources.FeesReport;
 		this.bbiViewInteractions.ImageOptions.LargeImage = I_Xtreme.Properties.Resources.FeesReport;
 		this.bbiViewInteractions.ItemClick += (s, e) =>
@@ -24901,8 +24903,8 @@ public class MainForm : RibbonForm
 			catch (Exception ex)
 			{
 				DevExpress.XtraEditors.XtraMessageBox.Show(
-					$"Could not open the interactions view.\n\n{ex.Message}",
-					"View Interactions", System.Windows.Forms.MessageBoxButtons.OK,
+					$"Could not open the follow-up reports.\n\n{ex.Message}",
+					"Follow-up Reports", System.Windows.Forms.MessageBoxButtons.OK,
 					System.Windows.Forms.MessageBoxIcon.Warning);
 			}
 		};

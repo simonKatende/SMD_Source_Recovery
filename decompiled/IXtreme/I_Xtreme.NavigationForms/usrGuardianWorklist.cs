@@ -171,6 +171,7 @@ public class usrGuardianWorklist : XtraUserControl
         AddTierCol("Tier",            "Priority",      120);
         AddDateCol("LastContactDate", "Last Contact",  100);
         AddOutcomeCol("LastOutcome",  "Last Outcome",  120);
+        AddCol("PromiseStatusText",   "Promise",       190);
         AddNumCol("RemindersSentCount", "Reminders",    80);
         AddDateCol("LastReminderDate",  "Last Reminder", 110);
     }
@@ -287,9 +288,23 @@ public class usrGuardianWorklist : XtraUserControl
         if (row == null) return;
         int idx = _allRows.IndexOf(row);
         if (idx < 0) idx = 0;
-        using var dlg = new dlgFeesContactInteraction(_allRows, idx);
-        dlg.ShowDialog(this.FindForm());
+        string lastKey;
+        using (var dlg = new dlgFeesContactInteraction(_allRows, idx))
+        {
+            dlg.ShowDialog(this.FindForm());
+            lastKey = dlg.LastGuardianKey;
+        }
         LoadData();
+        // Return to the family that was open, instead of jumping back to the top of the list.
+        if (lastKey != null && _grid.DataSource is System.Collections.Generic.List<GuardianWorklistRow> shown)
+        {
+            int at = shown.FindIndex(r => r.GuardianContact == lastKey);
+            if (at >= 0)
+            {
+                _view.FocusedRowHandle = at;
+                _view.MakeRowVisible(at);
+            }
+        }
     }
 
     public void Print(bool preview = false)

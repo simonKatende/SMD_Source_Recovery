@@ -23,6 +23,14 @@ public class usrDailyWorklist : XtraUserControl
     private TextEdit    _txtSearch;
     private bool        _columnsConfigured;
     private LabelControl _banner;
+    private LabelControl _lblProgress;
+    private ProgressBarControl _progress;
+    private RadioGroup   _rgShow;
+    private SimpleButton _btnStart;
+    private bool         _loading;
+
+    // Which part of today's list is showing.
+    private enum ShowFilter { ToDo, TryAgain, Done, All }
 
     public usrDailyWorklist()
     {
@@ -39,9 +47,39 @@ public class usrDailyWorklist : XtraUserControl
     {
         this.SuspendLayout();
 
-        var topPanel = new Panel { Dock = DockStyle.Top, Height = 48 };
+        var topPanel = new Panel { Dock = DockStyle.Top, Height = 84 };
 
-        _txtSearch = new TextEdit { Location = new Point(8, 10), Width = 320 };
+        // Row 1: where the team stands today.
+        _progress = new ProgressBarControl { Location = new Point(8, 8), Size = new Size(220, 18) };
+        _progress.Properties.Minimum = 0;
+        _progress.Properties.Maximum = 100;
+        _progress.Properties.ShowTitle = true;
+        _progress.Properties.PercentView = true;
+        _lblProgress = new LabelControl
+        {
+            Location = new Point(238, 10), AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(760, 16),
+        };
+        _lblProgress.Appearance.Font = new Font("Tahoma", 9, FontStyle.Bold);
+
+        // Row 2: start calling, choose what to see, search.
+        _btnStart = new SimpleButton { Text = "Start calling", Width = 110, Location = new Point(8, 44) };
+        _btnStart.Appearance.Font = new Font("Tahoma", 8.25f, FontStyle.Bold);
+        _btnStart.ToolTip = "Open the next family that has not been called today";
+        _btnStart.Click += (s, e) => StartCalling();
+
+        _rgShow = new RadioGroup { Location = new Point(126, 38), Size = new Size(470, 34) };
+        _rgShow.Properties.Items.AddRange(new[]
+        {
+            new DevExpress.XtraEditors.Controls.RadioGroupItem(ShowFilter.ToDo,     "To call"),
+            new DevExpress.XtraEditors.Controls.RadioGroupItem(ShowFilter.TryAgain, "Try again"),
+            new DevExpress.XtraEditors.Controls.RadioGroupItem(ShowFilter.Done,     "Done"),
+            new DevExpress.XtraEditors.Controls.RadioGroupItem(ShowFilter.All,      "All"),
+        });
+        _rgShow.Properties.Columns = 4;
+        _rgShow.EditValue = ShowFilter.ToDo;
+        _rgShow.EditValueChanged += (s, e) => { if (!_loading) ApplyView(null); };
+
+        _txtSearch = new TextEdit { Location = new Point(606, 45), Width = 280 };
         _txtSearch.Properties.NullText = "Search guardian name, contact, student...";
         _txtSearch.EditValueChanged += TxtSearch_EditValueChanged;
 
@@ -49,10 +87,10 @@ public class usrDailyWorklist : XtraUserControl
         {
             Text     = "Refresh",
             Width    = 70,
-            Location = new Point(332, 10),
+            Location = new Point(892, 44),
             Anchor   = AnchorStyles.Top | AnchorStyles.Left,
         };
-        topPanel.Controls.AddRange(new Control[] { _txtSearch, btnRefresh });
+        topPanel.Controls.AddRange(new Control[] { _progress, _lblProgress, _btnStart, _rgShow, _txtSearch, btnRefresh });
         btnRefresh.Click += (s, e) => LoadData();
 
         _grid = new GridControl { Dock = DockStyle.Fill };
@@ -64,6 +102,7 @@ public class usrDailyWorklist : XtraUserControl
         _view.OptionsBehavior.Editable      = false;
         _view.OptionsDetail.SmartDetailExpand = false;
         _view.RowStyle   += View_RowStyle;
+        _view.RowCellStyle += View_RowCellStyle;
         _view.DoubleClick += View_DoubleClick;
 
         _banner = new LabelControl
@@ -72,7 +111,7 @@ public class usrDailyWorklist : XtraUserControl
             Visible   = false,
             AutoSizeMode = LabelAutoSizeMode.None,
             Height    = 24,
-            Text      = "Term start/end not set — deadline-based prioritisation is off. Set them in Follow-up Settings.",
+            Text      = "Term dates are not set for this term, so nobody can be marked Critical. Set them in Follow-up Settings.",
         };
         _banner.Appearance.BackColor = Color.LightGoldenrodYellow;
         _banner.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;
@@ -83,20 +122,95 @@ public class usrDailyWorklist : XtraUserControl
         this.ResumeLayout(false);
     }
 
-    private void LoadData()
+    private void LoadData() => LoadData(FocusedKey());
+
+    /// <summary>Reload today's list and put the cursor back on the given family (or the next one to call).</summary>
+    private void LoadData(string keepKey)
     {
         try
         {
             _allRows = _service.GetDailyWorklist(0);
             _banner.Visible = !_service.AreTermDatesConfigured();
-            _grid.DataSource = _allRows;
             ConfigureColumns();
+            ApplyView(keepKey);
         }
         catch (Exception ex)
         {
             XtraMessageBox.Show($"Could not load daily worklist.\n\n{ex.Message}",
                 "Fees Follow-up", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
+    }
+
+    private string FocusedKey() => (_view?.GetFocusedRow() as GuardianWorklistRow)?.GuardianContact;
+
+    private ShowFilter CurrentFilter => _rgShow.EditValue is ShowFilter f ? f : ShowFilter.ToDo;
+
+    private static bool Matches(GuardianWorklistRow r, ShowFilter filter) => filter switch
+    {
+        ShowFilter.ToDo     => r.TodayStatus == TodayStatus.NotCalled,
+        ShowFilter.TryAgain => r.TodayStatus == TodayStatus.Tried,
+        ShowFilter.Done     => r.TodayStatus == TodayStatus.Done,
+        _                   => true,
+    };
+
+    /// <summary>Show the chosen part of the list, update the progress strip, and restore the cursor.</summary>
+    private void ApplyView(string keepKey)
+    {
+        var progress = DailyListLogic.Progress(_allRows);
+        _progress.Position = progress.Percent;
+        _lblProgress.Text  = progress.Summary;
+        _btnStart.Enabled  = progress.NotCalled + progress.Tried > 0;
+        _btnStart.Text     = progress.Worked == 0 ? "Start calling" : "Continue calling";
+
+        // Counts on the choices, so the team sees what is left without switching views.
+        _loading = true;
+        _rgShow.Properties.Items[0].Description = $"To call ({progress.NotCalled})";
+        _rgShow.Properties.Items[1].Description = $"Try again ({progress.Tried})";
+        _rgShow.Properties.Items[2].Description = $"Done ({progress.Done})";
+        _rgShow.Properties.Items[3].Description = $"All ({progress.Total})";
+        // Nothing left to call: show what there is rather than an empty screen.
+        if (CurrentFilter == ShowFilter.ToDo && progress.NotCalled == 0 && progress.Total > 0)
+            _rgShow.EditValue = progress.Tried > 0 ? ShowFilter.TryAgain : ShowFilter.All;
+        _loading = false;
+
+        string q = (_txtSearch.Text ?? "").Trim().ToLower();
+        var filter = CurrentFilter;
+        var shown = _allRows.Where(r => Matches(r, filter) && (q == "" ||
+                r.GuardianLabel.ToLower().Contains(q) ||
+                r.GuardianContact.Contains(q) ||
+                (r.Contact2 ?? "").Contains(q) ||
+                r.Students.Any(st => st.FullName.ToLower().Contains(q) || st.StudentNumber.Contains(q))))
+            .ToList();
+        _grid.DataSource = shown;
+
+        // Back to the family that was selected; otherwise the top row, which is the next to call.
+        int index = keepKey == null ? -1 : shown.FindIndex(r => r.GuardianContact == keepKey);
+        _view.FocusedRowHandle = index >= 0 ? index : (shown.Count > 0 ? 0 : GridControl.InvalidRowHandle);
+        if (index >= 0) _view.MakeRowVisible(index);
+    }
+
+    /// <summary>Open the interaction window on the next family not yet called today.</summary>
+    private void StartCalling()
+    {
+        int next = DailyListLogic.NextToWork(_allRows, -1);
+        if (next < 0)
+        {
+            XtraMessageBox.Show("Every family on today's list has been worked.", "Daily Worklist",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        OpenInteraction(next);
+    }
+
+    private void OpenInteraction(int index)
+    {
+        string lastKey;
+        using (var dlg = new dlgFeesContactInteraction(_allRows, index, () => _service.GetDailyWorklist(0)))
+        {
+            dlg.ShowDialog(this.FindForm());
+            lastKey = dlg.LastGuardianKey;
+        }
+        LoadData(lastKey);
     }
 
     private void ConfigureColumns()
@@ -110,6 +224,7 @@ public class usrDailyWorklist : XtraUserControl
         colNum.VisibleIndex = 0; colNum.Width = 36; colNum.OptionsColumn.AllowEdit = false;
         _view.CustomUnboundColumnData += (s, e) => { if (e.Column == colNum && e.IsGetData) e.Value = e.ListSourceRowIndex + 1; };
 
+        AddCol("TodayStatusText",     "Today",          80);
         AddCol("GuardianLabel",       "Guardian",      200);
         _view.CustomColumnDisplayText += (s, e) =>
         {
@@ -126,6 +241,7 @@ public class usrDailyWorklist : XtraUserControl
         AddTierCol("Tier",            "Priority",      120);
         AddDateCol("LastContactDate", "Last Contact",  100);
         AddOutcomeCol("LastOutcome",  "Last Outcome",  120);
+        AddCol("PromiseStatusText",   "Promise",       190);
     }
 
     private GridColumn AddCol(string field, string caption, int width)
@@ -217,19 +333,35 @@ public class usrDailyWorklist : XtraUserControl
         {
             e.Appearance.ForeColor = Color.Gray;
         }
+        // Finished for today: calm and out of the way, whatever the priority colour.
+        if (row.TodayStatus == TodayStatus.Done)
+        {
+            e.Appearance.BackColor = Color.FromArgb(232, 245, 233);
+            e.Appearance.ForeColor = Color.DimGray;
+            e.HighPriority = true;
+        }
     }
 
-    private void TxtSearch_EditValueChanged(object sender, EventArgs e)
+    private void View_RowCellStyle(object sender, RowCellStyleEventArgs e)
     {
-        string q = (_txtSearch.Text ?? "").Trim().ToLower();
-        _grid.DataSource = string.IsNullOrEmpty(q) ? _allRows :
-            _allRows.Where(r =>
-                r.GuardianLabel.ToLower().Contains(q) ||
-                r.GuardianContact.Contains(q) ||
-                (r.Contact2 ?? "").Contains(q) ||
-                r.Students.Any(st => st.FullName.ToLower().Contains(q) || st.StudentNumber.Contains(q))
-            ).ToList();
+        if (!(_view.GetRow(e.RowHandle) is GuardianWorklistRow row)) return;
+        if (e.Column.FieldName == "TodayStatusText")
+        {
+            e.Appearance.Font = new Font(e.Appearance.Font, FontStyle.Bold);
+            e.Appearance.ForeColor = row.TodayStatus switch
+            {
+                TodayStatus.Done  => Color.ForestGreen,
+                TodayStatus.Tried => Color.FromArgb(180, 110, 0),
+                _                 => Color.SlateGray,
+            };
+        }
+        else if (e.Column.FieldName == "PromiseStatusText" && (row.PromiseDueToday || (row.Promise != null && row.Promise.IsBroken)))
+        {
+            e.Appearance.ForeColor = Color.Firebrick;
+        }
     }
+
+    private void TxtSearch_EditValueChanged(object sender, EventArgs e) => ApplyView(FocusedKey());
 
     private void View_DoubleClick(object sender, EventArgs e)
     {
@@ -239,10 +371,7 @@ public class usrDailyWorklist : XtraUserControl
         var row = _view.GetRow(hit.RowHandle) as GuardianWorklistRow;
         if (row == null) return;
         int idx = _allRows.IndexOf(row);
-        if (idx < 0) idx = 0;
-        using var dlg = new dlgFeesContactInteraction(_allRows, idx);
-        dlg.ShowDialog(this.FindForm());
-        LoadData();
+        OpenInteraction(idx < 0 ? 0 : idx);
     }
 
     public void Print(bool preview = false)
