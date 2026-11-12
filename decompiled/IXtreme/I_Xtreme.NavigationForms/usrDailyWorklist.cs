@@ -234,7 +234,7 @@ public class usrDailyWorklist : XtraUserControl
                 && gr.IsUnreachable)
                 e.DisplayText = (e.Value?.ToString() ?? "") + "  (no phone)";
         };
-        AddCol("GuardianContact",     "Contact",       120);
+        AddCol("PhoneDisplay",        "Contact",       120);
         AddCol("Contact2",            "Alt Contact",   120);
         AddCol("StudentNames",        "Students",      200);
         AddNumCol("TotalBalance",     "Balance (UGX)", 120);

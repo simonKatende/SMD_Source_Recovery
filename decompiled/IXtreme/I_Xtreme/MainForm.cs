@@ -4936,6 +4936,10 @@ public class MainForm : RibbonForm
 				}
 			};
 		}
+		else
+		{
+			_usrFeesFollowUp.LoadDashboard();   // coming back from a list: show today's figures, not stale ones
+		}
 		_currentWorklistCtl = null;
 		CurrentControl.LoadControl(_usrFeesFollowUp, panelMain);
 		ribbon.SelectedPage = ribbonPageFeesFollowUp;

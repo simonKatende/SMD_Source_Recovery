@@ -90,9 +90,14 @@ public class GuardianWorklistRow
     public string GuardianLabel =>
         !string.IsNullOrWhiteSpace(GuardianName)
             ? $"{GuardianName} ({GuardianRelation})"
-            : !string.IsNullOrWhiteSpace(GuardianRelation)
-                ? $"{GuardianContact} ({GuardianRelation})"
-                : GuardianContact;
+            : IsUnreachable
+                ? "(no guardian details)"
+                : !string.IsNullOrWhiteSpace(GuardianRelation)
+                    ? $"{GuardianContact} ({GuardianRelation})"
+                    : GuardianContact;
+
+    /// <summary>The phone number to show: blank when the family has none (the key is then a placeholder).</summary>
+    public string PhoneDisplay => IsUnreachable ? "" : GuardianContact;
 
     public List<StudentSummary> Students          { get; set; } = new();
     public int   StudentCount   => Students.Count;

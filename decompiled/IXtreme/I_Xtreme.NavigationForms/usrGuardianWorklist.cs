@@ -162,7 +162,7 @@ public class usrGuardianWorklist : XtraUserControl
                 && gr.IsUnreachable)
                 e.DisplayText = (e.Value?.ToString() ?? "") + "  (no phone)";
         };
-        AddCol("GuardianContact",     "Contact",       120);
+        AddCol("PhoneDisplay",     "Contact",       120);
         AddCol("Contact2",            "Alt Contact",   120);
         AddCol("StudentNames",        "Students",      200);
         AddNumCol("TotalBalance",     "Balance (UGX)", 120);
@@ -269,7 +269,8 @@ public class usrGuardianWorklist : XtraUserControl
 
     private void TxtSearch_EditValueChanged(object sender, EventArgs e)
     {
-        string q = (_txtSearch.Text ?? "").Trim().ToLower();
+        // EditValue, not Text: an empty DevExpress editor reports its grey prompt as Text.
+        string q = (_txtSearch.EditValue as string ?? "").Trim().ToLower();
         _grid.DataSource = string.IsNullOrEmpty(q) ? _allRows :
             _allRows.Where(r =>
                 r.GuardianLabel.ToLower().Contains(q) ||
@@ -295,6 +296,7 @@ public class usrGuardianWorklist : XtraUserControl
             lastKey = dlg.LastGuardianKey;
         }
         LoadData();
+        TxtSearch_EditValueChanged(this, EventArgs.Empty);   // keep whatever was being searched for
         // Return to the family that was open, instead of jumping back to the top of the list.
         if (lastKey != null && _grid.DataSource is System.Collections.Generic.List<GuardianWorklistRow> shown)
         {

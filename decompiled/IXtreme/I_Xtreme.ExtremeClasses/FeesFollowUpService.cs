@@ -825,6 +825,7 @@ public partial class FeesFollowUpService
         return all
             .Where(g => DailyListLogic.IsOnDailyList(g, today, nearDeadline, settings.PartialPromiseCoverageThreshold))
             .OrderBy(g => (int)g.TodayStatus)
+            .ThenBy(g => g.IsUnreachable)            // families with a phone number first: they can be called
             .ThenByDescending(g => g.UrgencyScore)   // F4: same ranking as the guardian list
             .ThenByDescending(g => g.TotalBalance)
             .ToList();

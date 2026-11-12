@@ -625,7 +625,9 @@ public class dlgFeesContactInteraction : XtraForm
                 && (e.Value == null || e.Value == DBNull.Value || string.IsNullOrEmpty(e.Value.ToString())))
                 e.DisplayText = "Whole family";
             else if (e.Column.FieldName == "Outcome" && Enum.TryParse(e.Value?.ToString(), out ContactOutcome oc))
-                e.DisplayText = OutcomeText(oc);
+                e.DisplayText = OutcomeText(oc, gridViewHistory.GetListSourceRowCellValue(e.ListSourceRowIndex, "Channel")?.ToString());
+            else if (e.Column.FieldName == "Channel" && e.Value?.ToString() == "InPerson")
+                e.DisplayText = "In person";
         };
 
         var colAmt = gridViewHistory.Columns["PromiseAmount"];
@@ -635,10 +637,22 @@ public class dlgFeesContactInteraction : XtraForm
             colAmt.DisplayFormat.FormatString = "N0";
         }
 
-        gridViewHistory.BestFitColumns();
-        var noteCol = gridViewHistory.Columns["Note"];
-        if (noteCol != null) noteCol.Width = Math.Min(noteCol.Width, 200);
-        if (studentCol != null && studentCol.Width < 150) studentCol.Width = 150;
+        // Fixed, readable widths: best-fit squeezed the date and outcome to a few characters.
+        void Width(string f, int w) { var c = gridViewHistory.Columns[f]; if (c != null) c.Width = w; }
+        var dateCol = gridViewHistory.Columns["ContactDate"];
+        if (dateCol != null)
+        {
+            dateCol.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.DateTime;
+            dateCol.DisplayFormat.FormatString = "dd-MMM-yy";
+        }
+        Width("ContactDate", 80);
+        Width("Channel",     70);
+        Width("Outcome",     120);
+        Width("StudentName", 130);
+        Width("Note",        230);
+        Width("LoggedBy",    100);
+        Width("PaymentPlan", 190);
+        Width("Term",        90);
     }
 
     // Interactions from earlier terms are history only: shown greyed.
@@ -650,6 +664,10 @@ public class dlgFeesContactInteraction : XtraForm
         if (!string.Equals(sem, _service.GetWorkingSemester(), StringComparison.OrdinalIgnoreCase))
             e.Appearance.ForeColor = Color.Gray;
     }
+
+    /// <summary>Outcome as shown to users; a sent SMS reads "SMS sent" rather than "Spoke to parent".</summary>
+    internal static string OutcomeText(ContactOutcome o, string channel)
+        => o == ContactOutcome.Contacted && channel == "SMS" ? "SMS sent" : OutcomeText(o);
 
     internal static string OutcomeText(ContactOutcome o) => o switch
     {

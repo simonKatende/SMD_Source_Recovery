@@ -131,6 +131,7 @@ public class dlgInteractionLog : XtraForm
         cboOutcome.Properties.Items.Add(AllOutcomes);
         foreach (ContactOutcome o in Enum.GetValues(typeof(ContactOutcome)))
             cboOutcome.Properties.Items.Add(dlgFeesContactInteraction.OutcomeText(o));
+        cboOutcome.Properties.Items.Add("SMS sent");
         cboOutcome.SelectedIndex = 0;
         cboOutcome.SelectedIndexChanged += (s, e) => ApplyInteractionFilter();
 
@@ -165,6 +166,7 @@ public class dlgInteractionLog : XtraForm
         view.OptionsView.RowAutoHeight      = true;
         view.OptionsBehavior.Editable       = false;
         view.OptionsPrint.AutoWidth         = true;
+        WrapWhenPrinted(view);
 
         var colDate = AddCol(view, "ContactDate", "Date", 110);
         colDate.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.DateTime;
@@ -211,7 +213,7 @@ public class dlgInteractionLog : XtraForm
             _interactions.Columns.Add("OutcomeText", typeof(string));
             foreach (DataRow row in _interactions.Rows)
                 row["OutcomeText"] = Enum.TryParse(row["Outcome"]?.ToString(), out ContactOutcome oc)
-                    ? dlgFeesContactInteraction.OutcomeText(oc) : row["Outcome"]?.ToString();
+                    ? dlgFeesContactInteraction.OutcomeText(oc, row["Channel"]?.ToString()) : row["Outcome"]?.ToString();
 
             // Officers who logged something in this range
             string keep = cboOfficer.SelectedItem as string ?? AllOfficers;
@@ -299,6 +301,7 @@ public class dlgInteractionLog : XtraForm
         viewPromises.OptionsView.ShowFooter        = true;
         viewPromises.OptionsBehavior.Editable      = false;
         viewPromises.OptionsPrint.AutoWidth        = true;
+        WrapWhenPrinted(viewPromises);
 
         AddCol(viewPromises, "GuardianLabel", "Parent / Guardian", 160);
         AddCol(viewPromises, "Phone",         "Phone",             95);
@@ -396,6 +399,17 @@ public class dlgInteractionLog : XtraForm
     }
 
     // ── Grid helpers ──────────────────────────────────────────────────────────
+
+    // On paper the columns are narrower than on screen: wrap text rather than cutting it off.
+    private static void WrapWhenPrinted(GridView v)
+    {
+        v.OptionsPrint.UsePrintStyles = true;
+        v.OptionsPrint.AllowMultilineHeaders = true;
+        v.AppearancePrint.Row.TextOptions.WordWrap         = DevExpress.Utils.WordWrap.Wrap;
+        v.AppearancePrint.Row.Font                         = new Font("Tahoma", 7.5f);
+        v.AppearancePrint.HeaderPanel.TextOptions.WordWrap = DevExpress.Utils.WordWrap.Wrap;
+        v.AppearancePrint.HeaderPanel.Font                 = new Font("Tahoma", 7.5f, FontStyle.Bold);
+    }
 
     private static GridColumn AddCol(GridView v, string field, string caption, int width)
     {
