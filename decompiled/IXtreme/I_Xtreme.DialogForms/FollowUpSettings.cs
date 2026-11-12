@@ -121,6 +121,10 @@ public class FollowUpSettings : XtraForm
         spin.Properties.MinValue     = min;
         spin.Properties.MaxValue     = max;
         spin.Properties.MaskSettings.Set("mask", "N0");
+        spin.Properties.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
+        spin.Properties.DisplayFormat.FormatString = "N0";
+        spin.Properties.EditFormat.FormatType      = DevExpress.Utils.FormatType.Numeric;
+        spin.Properties.EditFormat.FormatString    = "N0";
         return spin;
     }
 
@@ -393,7 +397,7 @@ public class FollowUpSettings : XtraForm
         memoMessage.Properties.MaxLength  = 900;
         memoMessage.EditValueChanged += (s, e) => UpdateMessagePreview();
 
-        var lblPreview = new LabelControl { Text = "What a parent with two children would receive:", Location = new Point(18, y + 118) };
+        var lblPreview = new LabelControl { Text = "What a parent with two children would receive.  Words inside [[ ]] are left out when the parent gave no amount.", Location = new Point(18, y + 118) };
         lblPreview.Appearance.ForeColor = Color.DimGray;
         memoPreview = new MemoEdit { Location = new Point(18, y + 136), Size = new Size(648, 74) };
         memoPreview.Properties.ReadOnly   = true;

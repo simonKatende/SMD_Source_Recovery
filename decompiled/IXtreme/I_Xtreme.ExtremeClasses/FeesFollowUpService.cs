@@ -337,19 +337,23 @@ public partial class FeesFollowUpService
     )
     SELECT
         COUNT(*)                                                              AS TotalEnrolled,
-        ISNULL(SUM(ctp.TotalBilled + ISNULL(ptb.BFAmount, 0)), 0)           AS TotalPayable,
-        ISNULL(SUM(ctp.TotalPaid), 0)                                        AS TotalPaid,
-        ISNULL(SUM(CASE WHEN ctp.TotalBilled + ISNULL(ptb.BFAmount, 0)
-                             - ctp.TotalPaid <= 0 THEN 1 ELSE 0 END), 0)    AS NilBalance,
-        ISNULL(SUM(CASE WHEN ctp.TotalPaid = 0
-                         AND ctp.TotalBilled + ISNULL(ptb.BFAmount, 0) > 0
+        ISNULL(SUM(ISNULL(ctp.TotalBilled, 0) + ISNULL(ptb.BFAmount, 0)), 0) AS TotalPayable,
+        ISNULL(SUM(ISNULL(ctp.TotalPaid, 0)), 0)                             AS TotalPaid,
+        ISNULL(SUM(CASE WHEN ISNULL(ctp.TotalBilled, 0) + ISNULL(ptb.BFAmount, 0)
+                             - ISNULL(ctp.TotalPaid, 0) <= 0 THEN 1 ELSE 0 END), 0) AS NilBalance,
+        ISNULL(SUM(CASE WHEN ISNULL(ctp.TotalPaid, 0) = 0
+                         AND ISNULL(ctp.TotalBilled, 0) + ISNULL(ptb.BFAmount, 0) > 0
                         THEN 1 ELSE 0 END), 0)                               AS ZeroPaid
         ,(SELECT ISNULL(SUM(Credit), 0) FROM FeesPayment
           WHERE SemesterId = @currentSemester AND Credit > 0
             AND DateOfPayment >= @weekStart)                                AS CollectedThisWeek
     FROM tbl_Stud s
-    INNER JOIN CurrentTermPayments ctp ON ctp.StudentNumber = s.StudentNumber
-    LEFT  JOIN PrevTermLastBalance  ptb ON ptb.StudentNumber = s.StudentNumber";
+    LEFT JOIN CurrentTermPayments ctp ON ctp.StudentNumber = s.StudentNumber
+    LEFT JOIN PrevTermLastBalance  ptb ON ptb.StudentNumber = s.StudentNumber
+    -- Same students as the worklists: billed this term, or active with a balance brought forward.
+    WHERE ctp.StudentNumber IS NOT NULL
+       OR (ISNULL(ptb.BFAmount, 0) > 0
+           AND ISNULL(NULLIF(LTRIM(RTRIM(s.Status)), ''), 'Active') = 'Active')";
 
         using var conn = new SqlConnection(connectionString);
         conn.Open();

@@ -173,7 +173,8 @@ public class usrDailyWorklist : XtraUserControl
             _rgShow.EditValue = progress.Tried > 0 ? ShowFilter.TryAgain : ShowFilter.All;
         _loading = false;
 
-        string q = (_txtSearch.Text ?? "").Trim().ToLower();
+        // EditValue, not Text: an empty DevExpress editor reports its grey prompt as Text.
+        string q = (_txtSearch.EditValue as string ?? "").Trim().ToLower();
         var filter = CurrentFilter;
         var shown = _allRows.Where(r => Matches(r, filter) && (q == "" ||
                 r.GuardianLabel.ToLower().Contains(q) ||

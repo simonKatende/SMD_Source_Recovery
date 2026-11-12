@@ -87,7 +87,7 @@ public class dlgInteractionLog : XtraForm
         btnPrint   = new SimpleButton { Text = "Print",           Width = 90,  Location = new Point(108, 9) };
         btnExport  = new SimpleButton { Text = "Export to Excel", Width = 120, Location = new Point(204, 9) };
         btnClose   = new SimpleButton { Text = "Close", Width = 90, Anchor = AnchorStyles.Top | AnchorStyles.Right };
-        btnClose.Location = new Point(this.ClientSize.Width - 102, 9);
+        bottom.Resize += (s, e) => btnClose.Location = new Point(bottom.ClientSize.Width - 102, 9);
         btnPreview.Click += (s, e) => Output(preview: true);
         btnPrint.Click   += (s, e) => Output(preview: false);
         btnExport.Click  += (s, e) => Export();

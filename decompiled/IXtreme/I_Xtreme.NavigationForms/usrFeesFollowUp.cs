@@ -32,6 +32,7 @@ public class usrFeesFollowUp : XtraUserControl
     }
     private readonly Dictionary<string, Tile> _tiles = new Dictionary<string, Tile>();
     private FlowLayoutPanel _kpiPanel;
+    private FlowLayoutPanel _tileRow;   // the row of tiles for the section being built
     private LabelControl    _banner;
     private LabelControl    _lblHeader;
 
@@ -79,9 +80,9 @@ public class usrFeesFollowUp : XtraUserControl
             Dock          = DockStyle.Top,
             AutoSize      = true,
             AutoSizeMode  = AutoSizeMode.GrowAndShrink,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents  = true,
-            Padding       = new Padding(4, 0, 4, 4),
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents  = false,
+            Padding       = new Padding(4, 0, 4, 2),
         };
 
         AddSection("Money");
@@ -150,24 +151,28 @@ public class usrFeesFollowUp : XtraUserControl
             Text      = title.ToUpperInvariant(),
             Font      = new Font("Tahoma", 7.5f, FontStyle.Bold),
             ForeColor = Color.Gray,
-            AutoSize  = false,
-            Size      = new Size(600, 16),
-            Margin    = new Padding(4, 6, 3, 0),
+            AutoSize  = true,
+            Margin    = new Padding(4, 4, 3, 0),
         };
-        // Start each section on its own line.
-        if (_kpiPanel.Controls.Count > 0)
-            _kpiPanel.SetFlowBreak(_kpiPanel.Controls[_kpiPanel.Controls.Count - 1], true);
+        _tileRow = new FlowLayoutPanel
+        {
+            AutoSize      = true,
+            AutoSizeMode  = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents  = false,
+            Margin        = new Padding(0),
+        };
         _kpiPanel.Controls.Add(lbl);
-        _kpiPanel.SetFlowBreak(lbl, true);
+        _kpiPanel.Controls.Add(_tileRow);
     }
 
     private void AddTile(string key, string caption, Color valueColor, Action onClick = null)
     {
-        var grp = new GroupControl { Width = 178, Height = 78, Text = caption, Margin = new Padding(3, 2, 3, 2) };
+        var grp = new GroupControl { Width = 190, Height = 66, Text = caption, Margin = new Padding(3, 1, 3, 1) };
         var value = new Label
         {
             Text      = "—",
-            Font      = new Font("Tahoma", 14, FontStyle.Bold),
+            Font      = new Font("Tahoma", 12.5f, FontStyle.Bold),
             ForeColor = valueColor,
             Dock      = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -178,7 +183,7 @@ public class usrFeesFollowUp : XtraUserControl
             Font      = new Font("Tahoma", 7.5f),
             ForeColor = Color.DimGray,
             Dock      = DockStyle.Bottom,
-            Height    = 15,
+            Height    = 14,
             TextAlign = ContentAlignment.MiddleCenter,
         };
         grp.Controls.Add(value);
@@ -193,7 +198,7 @@ public class usrFeesFollowUp : XtraUserControl
             }
             grp.AppearanceCaption.Font = new Font("Tahoma", 8.25f, FontStyle.Underline);
         }
-        _kpiPanel.Controls.Add(grp);
+        _tileRow.Controls.Add(grp);
     }
 
     private void SetTile(string key, string value, string sub = "", Color? color = null)
