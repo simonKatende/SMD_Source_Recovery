@@ -232,7 +232,9 @@ public class usrDailyWorklist : XtraUserControl
             if (e.Column.FieldName == "GuardianLabel"
                 && _view.GetRow(_view.GetRowHandle(e.ListSourceRowIndex)) is GuardianWorklistRow gr
                 && gr.IsUnreachable)
-                e.DisplayText = (e.Value?.ToString() ?? "") + "  (no phone)";
+                e.DisplayText = string.IsNullOrWhiteSpace(gr.GuardianName)
+                    ? "(no guardian details)"
+                    : (e.Value?.ToString() ?? "") + "  (no phone)";
         };
         AddCol("PhoneDisplay",        "Contact",       120);
         AddCol("Contact2",            "Alt Contact",   120);

@@ -324,6 +324,7 @@ public class dlgFeesContactInteraction : XtraForm
         colAmt.DisplayFormat.FormatString = "N0";
         this.gridViewPlan.Columns.AddRange(new[] { colDue, colAmt });
         this.gridViewPlan.CellValueChanged += (s, e) => UpdatePlanTotal();
+        this.gridViewPlan.HiddenEditor     += (s, e) => { gridViewPlan.UpdateCurrentRow(); UpdatePlanTotal(); };
 
         this.btnAddInstalment = new SimpleButton
             { Text = "+ Add a date", Location = new Point(776, 98), Width = 104, Visible = false };
@@ -331,8 +332,12 @@ public class dlgFeesContactInteraction : XtraForm
         {
             gridViewPlan.CloseEditor();
             _plan.Add(new InstalmentRow());
-            gridViewPlan.FocusedRowHandle = _plan.Count - 1;
             UpdatePlanTotal();
+            // Put the cursor straight into the new line's date, ready to type.
+            gridPlan.Focus();
+            gridViewPlan.FocusedRowHandle = _plan.Count - 1;
+            gridViewPlan.FocusedColumn    = gridViewPlan.Columns["DueDate"];
+            gridViewPlan.ShowEditor();
         };
         this.btnRemoveInstalment = new SimpleButton
             { Text = "Remove", Location = new Point(776, 126), Width = 104, Visible = false };

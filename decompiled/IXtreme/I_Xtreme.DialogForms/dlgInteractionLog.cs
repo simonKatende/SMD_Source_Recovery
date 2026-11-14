@@ -175,7 +175,7 @@ public class dlgInteractionLog : XtraForm
         AddCol(view, "Phone",           "Phone",             95);
         AddCol(view, "StudentName",     "Children",          170);
         AddCol(view, "Classes",         "Class",             70);
-        AddCol(view, "Channel",         "How",               60);
+        AddCol(view, "ChannelText",     "How",               60);
         AddCol(view, "OutcomeText",     "Response",          115);
         var colNote = AddCol(view, "Note", "Notes", 220);
         colNote.ColumnEdit = new DevExpress.XtraEditors.Repository.RepositoryItemMemoEdit { WordWrap = true };
@@ -211,9 +211,13 @@ public class dlgInteractionLog : XtraForm
         {
             _interactions = _service.GetInteractionsReport(from, to);
             _interactions.Columns.Add("OutcomeText", typeof(string));
+            _interactions.Columns.Add("ChannelText", typeof(string));
             foreach (DataRow row in _interactions.Rows)
+            {
+                row["ChannelText"] = row["Channel"]?.ToString() == "InPerson" ? "In person" : row["Channel"]?.ToString();
                 row["OutcomeText"] = Enum.TryParse(row["Outcome"]?.ToString(), out ContactOutcome oc)
                     ? dlgFeesContactInteraction.OutcomeText(oc, row["Channel"]?.ToString()) : row["Outcome"]?.ToString();
+            }
 
             // Officers who logged something in this range
             string keep = cboOfficer.SelectedItem as string ?? AllOfficers;
