@@ -1,212 +1,368 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
+using DevExpress.XtraCharts;
 using DevExpress.XtraEditors;
 using DevExpress.XtraGrid;
+using DevExpress.XtraGrid.Columns;
 using DevExpress.XtraGrid.Views.Grid;
+using DevExpress.XtraTab;
 using I_Xtreme.ExtremeClasses;
 using I_Xtreme.Models;
 using I_Xtreme.DialogForms;
 
 namespace I_Xtreme.NavigationForms;
 
+/// <summary>
+/// The Fees Follow-up dashboard: where collections stand, what the team has done today,
+/// what parents have promised, and where the money is still outstanding.
+/// </summary>
 public class usrFeesFollowUp : XtraUserControl
 {
-    // ── KPI strip ─────────────────────────────────────────────────────────────
-    // Label-slot indices: Row 1 = 0-4 and 11; Row 2 = 5-10. Card 11 ("Collected
-    // This Week") renders last in Row 1 but is allocated index 11 so the existing
-    // Row 2 cards (5-10) keep their numbers. Next free index is 12.
-    private readonly Label[] _kpiValues = new Label[15];
     public event Action<string> NavigationRequested;
-    private FlowLayoutPanel  _kpiPanel;
-    private LabelControl _banner;
 
-    // ── Priority breakdown grid ───────────────────────────────────────────────
-    private GridControl _gridPriority;
-    private GridView    _viewPriority;
+    // ── Tiles ─────────────────────────────────────────────────────────────────
+    private sealed class Tile
+    {
+        public Label Value;
+        public Label Sub;
+        public Color NormalColor;
+    }
+    private readonly Dictionary<string, Tile> _tiles = new Dictionary<string, Tile>();
+    private FlowLayoutPanel _kpiPanel;
+    private FlowLayoutPanel _tileRow;   // the row of tiles for the section being built
+    private LabelControl    _banner;
+    private LabelControl    _lblHeader;
 
-    // ── Top 5 by balance grid ─────────────────────────────────────────────────
-    private GridControl _gridTop5;
-    private GridView    _viewTop5;
+    // ── Detail tabs ───────────────────────────────────────────────────────────
+    private XtraTabControl _tabs;
+    private GridControl _gridClass, _gridWeekly, _gridPromises, _gridPriority, _gridTop5, _gridTeam;
+    private GridView    _viewClass, _viewWeekly, _viewPromises, _viewPriority, _viewTop5, _viewTeam;
+    private ChartControl _chart;
+    private LabelControl _lblTrendNote;
 
     // ── State ─────────────────────────────────────────────────────────────────
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
+    // Terms for which the "dates not set" question has already been asked in this session.
+    private static readonly HashSet<string> _askedAboutTerm = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
     public usrFeesFollowUp()
     {
         InitializeComponent();
     }
 
-    // ── InitializeComponent ───────────────────────────────────────────────────
+    // ── Layout ────────────────────────────────────────────────────────────────
 
     private void InitializeComponent()
     {
         this.SuspendLayout();
 
-        // Section 3 — Top 5 by balance
-        var lblTop5 = new LabelControl
-        {
-            Text     = "Top 5 Guardians by Outstanding Balance",
-            Dock     = DockStyle.Top,
-            AutoSize = false,
-            Height   = 20,
-        };
+        // Detail tabs (Fill)
+        _tabs = new XtraTabControl { Dock = DockStyle.Fill };
+        var pageClass    = new XtraTabPage { Text = "Collection by class" };
+        var pageTrend    = new XtraTabPage { Text = "Week by week" };
+        var pagePromises = new XtraTabPage { Text = "Promises" };
+        var pageChase    = new XtraTabPage { Text = "Who to chase" };
+        var pageTeam     = new XtraTabPage { Text = "Team activity" };
+        _tabs.TabPages.AddRange(new[] { pageClass, pageTrend, pagePromises, pageChase, pageTeam });
 
-        _gridTop5 = new GridControl { Dock = DockStyle.Top, Height = 180 };
-        _viewTop5 = new GridView();
-        _gridTop5.MainView = _viewTop5;
-        _gridTop5.ViewCollection.Add(_viewTop5);
-        _viewTop5.OptionsView.ShowGroupPanel   = false;
-        _viewTop5.OptionsBehavior.Editable     = false;
-        _viewTop5.OptionsDetail.SmartDetailExpand = false;
+        BuildClassPage(pageClass);
+        BuildTrendPage(pageTrend);
+        BuildPromisesPage(pagePromises);
+        BuildChasePage(pageChase);
+        BuildTeamPage(pageTeam);
 
-        var colGuardian = new DevExpress.XtraGrid.Columns.GridColumn
-            { FieldName = "GuardianLabel", Caption = "Guardian", Width = 200, VisibleIndex = 0 };
-        colGuardian.OptionsColumn.AllowEdit = false;
-
-        var colBalance = new DevExpress.XtraGrid.Columns.GridColumn
-            { FieldName = "TotalBalance", Caption = "Balance (UGX)", Width = 140, VisibleIndex = 1 };
-        colBalance.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
-        colBalance.DisplayFormat.FormatString = "N0";
-        colBalance.OptionsColumn.AllowEdit    = false;
-
-        var colStudents = new DevExpress.XtraGrid.Columns.GridColumn
-            { FieldName = "StudentCount", Caption = "Students", Width = 70, VisibleIndex = 2 };
-        colStudents.OptionsColumn.AllowEdit = false;
-
-        var colTier = new DevExpress.XtraGrid.Columns.GridColumn
-        {
-            FieldName   = "TierDisplay",
-            Caption     = "Priority",
-            UnboundType = DevExpress.Data.UnboundColumnType.String,
-            Width       = 120,
-            VisibleIndex = 3,
-        };
-        colTier.OptionsColumn.AllowEdit = false;
-
-        _viewTop5.Columns.AddRange(new[] { colGuardian, colBalance, colStudents, colTier });
-        _viewTop5.CustomUnboundColumnData += ViewTop5_UnboundData;
-        _viewTop5.RowStyle += ViewTop5_RowStyle;
-
-        // Section 2 — Priority breakdown
-        var lblPriority = new LabelControl
-        {
-            Text     = "Balance by Priority Tier",
-            Dock     = DockStyle.Top,
-            AutoSize = false,
-            Height   = 20,
-        };
-
-        _gridPriority = new GridControl { Dock = DockStyle.Top, Height = 110 };
-        _viewPriority = new GridView();
-        _gridPriority.MainView = _viewPriority;
-        _gridPriority.ViewCollection.Add(_viewPriority);
-        _viewPriority.OptionsView.ShowGroupPanel = false;
-        _viewPriority.OptionsBehavior.Editable   = false;
-        _viewPriority.OptionsDetail.SmartDetailExpand = false;
-
-        var colPrio = new DevExpress.XtraGrid.Columns.GridColumn
-        {
-            FieldName    = "TierDisplay",
-            Caption      = "Priority",
-            UnboundType  = DevExpress.Data.UnboundColumnType.String,
-            Width        = 160,
-            VisibleIndex = 0,
-        };
-        colPrio.OptionsColumn.AllowEdit = false;
-
-        var colGuardianCount = new DevExpress.XtraGrid.Columns.GridColumn
-            { FieldName = "GuardianCount", Caption = "Guardians", Width = 90, VisibleIndex = 1 };
-        colGuardianCount.OptionsColumn.AllowEdit = false;
-
-        var colPrioBalance = new DevExpress.XtraGrid.Columns.GridColumn
-            { FieldName = "TotalBalance", Caption = "Total Balance (UGX)", Width = 160, VisibleIndex = 2 };
-        colPrioBalance.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
-        colPrioBalance.DisplayFormat.FormatString = "N0";
-        colPrioBalance.OptionsColumn.AllowEdit    = false;
-
-        _viewPriority.Columns.AddRange(new[] { colPrio, colGuardianCount, colPrioBalance });
-        _viewPriority.CustomUnboundColumnData += ViewPriority_UnboundData;
-        _viewPriority.RowStyle += ViewPriority_RowStyle;
-
-        // Section 1 — KPI strip (9 cards)
+        // Tiles (Top, grows with its content)
         _kpiPanel = new FlowLayoutPanel
         {
             Dock          = DockStyle.Top,
-            Height        = 300,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents  = true,
-            AutoScroll    = false,
+            AutoSize      = true,
+            AutoSizeMode  = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents  = false,
+            Padding       = new Padding(4, 0, 4, 2),
         };
-        // Row 1: financial totals
-        _kpiPanel.Controls.Add(BuildKpiCard(0, "Total Payable (UGX)",     Color.DarkSlateGray));
-        _kpiPanel.Controls.Add(BuildKpiCard(1, "Total Collected (UGX)",   Color.DarkGreen));
-        _kpiPanel.Controls.Add(BuildKpiCard(2, "Total Outstanding (UGX)", Color.DarkRed));
-        _kpiPanel.Controls.Add(BuildKpiCard(3, "Collection Rate (%)",     Color.SeaGreen));
-        _kpiPanel.Controls.Add(BuildKpiCard(4, "Total Enrolled",          Color.DimGray));
-        _kpiPanel.Controls.Add(BuildKpiCard(11, "Collected This Week (UGX)", Color.SeaGreen));
-        // Row 2: follow-up activity (some tiles are clickable)
-        _kpiPanel.Controls.Add(BuildKpiCard(5,  "Cleared (Nil Balance)",  Color.ForestGreen));
-        _kpiPanel.Controls.Add(BuildKpiCard(6,  "Guardians w/ Balance",   Color.DarkBlue,
-            () => NavigationRequested?.Invoke("guardian_worklist")));
-        _kpiPanel.Controls.Add(BuildKpiCard(7,  "Today's Remaining",      Color.DarkOrange,
-            () => NavigationRequested?.Invoke("daily_worklist")));
-        _kpiPanel.Controls.Add(BuildKpiCard(8,  "Broken Promises",        Color.Crimson));
-        _kpiPanel.Controls.Add(BuildKpiCard(9,  "Zero Paid",              Color.OrangeRed,
-            () => NavigationRequested?.Invoke("student_zeropaid")));
-        _kpiPanel.Controls.Add(BuildKpiCard(10, "Term Week",              Color.SlateBlue));
-        // Row 3: on-track-for-goal (F8)
-        _kpiPanel.Controls.Add(BuildKpiCard(12, "Required Today (%)",      Color.SlateGray));
-        _kpiPanel.Controls.Add(BuildKpiCard(13, "Projected Collection (%)", Color.SeaGreen));
-        _kpiPanel.Controls.Add(BuildKpiCard(14, "Behind Pace (UGX)",       Color.DarkRed));
 
-        // Add controls — bottom-docked first, then top-docked in reverse visual order
-        this.Controls.Add(lblTop5);
-        this.Controls.Add(_gridTop5);
-        this.Controls.Add(lblPriority);
-        this.Controls.Add(_gridPriority);
-        this.Controls.Add(_kpiPanel);
+        AddSection("Money");
+        AddTile("payable",     "Total Payable (UGX)",       Color.DarkSlateGray);
+        AddTile("collected",   "Collected (UGX)",           Color.DarkGreen);
+        AddTile("outstanding", "Outstanding (UGX)",         Color.DarkRed);
+        AddTile("rate",        "Collected So Far (%)",      Color.SeaGreen);
+        AddTile("week",        "Collected This Week (UGX)", Color.SeaGreen);
+        AddTile("behind",      "Behind Target (UGX)",       Color.DarkRed);
 
+        AddSection("Follow-up today");
+        AddTile("daily",     "Today's Calls",           Color.DarkOrange,
+            () => NavigationRequested?.Invoke("daily_worklist"));
+        AddTile("guardians", "Families Owing",          Color.DarkBlue,
+            () => NavigationRequested?.Invoke("guardian_worklist"));
+        AddTile("zeropaid",  "Students Paid Nothing",   Color.OrangeRed,
+            () => NavigationRequested?.Invoke("student_zeropaid"));
+        AddTile("cleared",   "Students Cleared",        Color.ForestGreen);
+        AddTile("enrolled",  "Students Billed",         Color.DimGray);
+        AddTile("termweek",  "Week of Term",            Color.SlateBlue);
+
+        AddSection("Promises and reminders");
+        AddTile("duetoday", "Promises Due Today",        Color.DarkOrange, OpenReports);
+        AddTile("dueweek",  "Due in Next 7 Days",        Color.SteelBlue,  OpenReports);
+        AddTile("missed",   "Missed Promises",           Color.Crimson,    OpenReports);
+        AddTile("keptrate", "Promises Kept (%)",         Color.ForestGreen, OpenReports);
+        AddTile("sms",      "Reminders Sent This Week",  Color.SlateBlue);
+        AddTile("auto",     "Automatic Reminders",       Color.DimGray, OpenSettings);
+
+        // Header (Top)
+        var header = new Panel { Dock = DockStyle.Top, Height = 34 };
+        _lblHeader = new LabelControl { Location = new Point(10, 8), AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(820, 18) };
+        _lblHeader.Appearance.Font = new Font("Tahoma", 10.5f, FontStyle.Bold);
+        var btnRefresh = new SimpleButton { Text = "Refresh", Width = 76, Location = new Point(840, 5) };
+        btnRefresh.Click += (s, e) => LoadDashboard();
+        header.Controls.AddRange(new Control[] { _lblHeader, btnRefresh });
+
+        // Banner (Top)
         _banner = new LabelControl
         {
-            Dock      = DockStyle.Top,
-            Visible   = false,
+            Dock         = DockStyle.Top,
+            Visible      = false,
             AutoSizeMode = LabelAutoSizeMode.None,
-            Height    = 24,
-            Text      = "Term start/end not set — deadline-based prioritisation is off. Set them in Follow-up Settings.",
+            Height       = 26,
+            Cursor       = Cursors.Hand,
         };
         _banner.Appearance.BackColor = Color.LightGoldenrodYellow;
+        _banner.Appearance.Font = new Font("Tahoma", 8.25f, FontStyle.Bold);
         _banner.Appearance.TextOptions.HAlignment = DevExpress.Utils.HorzAlignment.Center;
+        _banner.Click += (s, e) => OpenSettings();
+
+        // Fill first, then top-docked in reverse visual order.
+        this.Controls.Add(_tabs);
+        this.Controls.Add(_kpiPanel);
+        this.Controls.Add(header);
         this.Controls.Add(_banner);
 
         this.Load += usrFeesFollowUp_Load;
         this.ResumeLayout(false);
     }
 
-    // ── KPI card builder ──────────────────────────────────────────────────────
-
-    private GroupControl BuildKpiCard(int idx, string caption, Color valueColor, Action onClick = null)
+    private void AddSection(string title)
     {
-        var grp = new GroupControl { Width = 185, Height = 90, Text = caption };
         var lbl = new Label
         {
+            Text      = title.ToUpperInvariant(),
+            Font      = new Font("Tahoma", 7.5f, FontStyle.Bold),
+            ForeColor = Color.Gray,
+            AutoSize  = true,
+            Margin    = new Padding(4, 4, 3, 0),
+        };
+        _tileRow = new FlowLayoutPanel
+        {
+            AutoSize      = true,
+            AutoSizeMode  = AutoSizeMode.GrowAndShrink,
+            FlowDirection = FlowDirection.LeftToRight,
+            WrapContents  = false,
+            Margin        = new Padding(0),
+        };
+        _kpiPanel.Controls.Add(lbl);
+        _kpiPanel.Controls.Add(_tileRow);
+    }
+
+    private void AddTile(string key, string caption, Color valueColor, Action onClick = null)
+    {
+        var grp = new GroupControl { Width = 190, Height = 66, Text = caption, Margin = new Padding(3, 1, 3, 1) };
+        var value = new Label
+        {
             Text      = "—",
-            Font      = new Font("Tahoma", 16, FontStyle.Bold),
+            Font      = new Font("Tahoma", 12.5f, FontStyle.Bold),
             ForeColor = valueColor,
             Dock      = DockStyle.Fill,
             TextAlign = ContentAlignment.MiddleCenter,
         };
-        grp.Controls.Add(lbl);
-        _kpiValues[idx] = lbl;
+        var sub = new Label
+        {
+            Text      = "",
+            Font      = new Font("Tahoma", 7.5f),
+            ForeColor = Color.DimGray,
+            Dock      = DockStyle.Bottom,
+            Height    = 14,
+            TextAlign = ContentAlignment.MiddleCenter,
+        };
+        grp.Controls.Add(value);
+        grp.Controls.Add(sub);
+        _tiles[key] = new Tile { Value = value, Sub = sub, NormalColor = valueColor };
         if (onClick != null)
         {
-            grp.Cursor = Cursors.Hand;
-            lbl.Cursor = Cursors.Hand;
-            grp.Click += (s, e) => onClick();
-            lbl.Click += (s, e) => onClick();
+            foreach (Control c in new Control[] { grp, value, sub })
+            {
+                c.Cursor = Cursors.Hand;
+                c.Click += (s, e) => onClick();
+            }
+            grp.AppearanceCaption.Font = new Font("Tahoma", 8.25f, FontStyle.Underline);
         }
-        return grp;
+        _tileRow.Controls.Add(grp);
+    }
+
+    private void SetTile(string key, string value, string sub = "", Color? color = null)
+    {
+        var t = _tiles[key];
+        t.Value.Text      = value;
+        t.Sub.Text        = sub ?? "";
+        t.Value.ForeColor = color ?? t.NormalColor;
+    }
+
+    private static GridView NewGrid(Control parent, out GridControl grid, DockStyle dock = DockStyle.Fill)
+    {
+        grid = new GridControl { Dock = dock };
+        var view = new GridView();
+        grid.MainView = view;
+        grid.ViewCollection.Add(view);
+        view.OptionsView.ShowGroupPanel       = false;
+        view.OptionsView.ShowIndicator        = false;
+        view.OptionsBehavior.Editable         = false;
+        view.OptionsDetail.SmartDetailExpand  = false;
+        parent.Controls.Add(grid);
+        return view;
+    }
+
+    private static GridColumn Col(GridView view, string field, string caption, int width, string format = null)
+    {
+        var col = new GridColumn { FieldName = field, Caption = caption, Width = width, VisibleIndex = view.Columns.Count };
+        col.OptionsColumn.AllowEdit = false;
+        if (format != null)
+        {
+            col.DisplayFormat.FormatType = format.StartsWith("d", StringComparison.Ordinal) && format.Contains("MMM")
+                ? DevExpress.Utils.FormatType.DateTime : DevExpress.Utils.FormatType.Numeric;
+            col.DisplayFormat.FormatString = format;
+        }
+        view.Columns.Add(col);
+        return col;
+    }
+
+    private static void Total(GridView view, string field, string format = "{0:N0}")
+    {
+        view.OptionsView.ShowFooter = true;
+        view.Columns[field].SummaryItem.SummaryType   = DevExpress.Data.SummaryItemType.Sum;
+        view.Columns[field].SummaryItem.DisplayFormat = format;
+    }
+
+    private void BuildClassPage(XtraTabPage page)
+    {
+        _viewClass = NewGrid(page, out _gridClass);
+        Col(_viewClass, "ClassId",     "Class",             90);
+        Col(_viewClass, "Students",    "Students",          70);
+        Col(_viewClass, "Billed",      "Payable (UGX)",     130, "N0");
+        Col(_viewClass, "Paid",        "Collected (UGX)",   130, "N0");
+        Col(_viewClass, "Outstanding", "Outstanding (UGX)", 130, "N0");
+        Col(_viewClass, "PercentPaid", "% Collected",       90,  "F1");
+        Col(_viewClass, "Cleared",     "Cleared",           70);
+        Col(_viewClass, "ZeroPaid",    "Paid nothing",      90);
+        foreach (string f in new[] { "Students", "Billed", "Paid", "Outstanding", "Cleared", "ZeroPaid" }) Total(_viewClass, f);
+        // Classes furthest behind are listed first; shade the ones under the line needed today.
+        _viewClass.RowCellStyle += (s, e) =>
+        {
+            if (e.Column.FieldName != "PercentPaid") return;
+            if (!(_viewClass.GetRow(e.RowHandle) is ClassCollectionRow row)) return;
+            if (_requiredToday > 0 && row.PercentPaid < _requiredToday)
+                e.Appearance.ForeColor = Color.Firebrick;
+            else
+                e.Appearance.ForeColor = Color.ForestGreen;
+            e.Appearance.Font = new Font(e.Appearance.Font, FontStyle.Bold);
+        };
+    }
+
+    private double _requiredToday;
+
+    private void BuildTrendPage(XtraTabPage page)
+    {
+        _chart = new ChartControl { Dock = DockStyle.Fill };
+        _chart.Legend.AlignmentHorizontal = LegendAlignmentHorizontal.Center;
+        _chart.Legend.AlignmentVertical   = LegendAlignmentVertical.BottomOutside;
+        _chart.Legend.Direction           = LegendDirection.LeftToRight;
+        page.Controls.Add(_chart);
+
+        _viewWeekly = NewGrid(page, out _gridWeekly, DockStyle.Bottom);
+        _gridWeekly.Height = 170;
+        Col(_viewWeekly, "Week",          "Week",                 60);
+        Col(_viewWeekly, "WeekStarting",  "Week starting",        110, "dd-MMM-yyyy");
+        Col(_viewWeekly, "Collected",     "Collected (UGX)",      140, "N0");
+        Col(_viewWeekly, "CumulativePct", "Collected so far (%)", 140, "F1");
+        Col(_viewWeekly, "RequiredPct",   "Needed by then (%)",   140, "F1");
+        Col(_viewWeekly, "GapPct",        "Ahead / behind (pts)", 140, "+0.0;-0.0;0.0");
+        _viewWeekly.RowCellStyle += (s, e) =>
+        {
+            if (e.Column.FieldName == "GapPct" && _viewWeekly.GetRow(e.RowHandle) is WeeklyCollectionRow row)
+                e.Appearance.ForeColor = row.GapPct < 0 ? Color.Firebrick : Color.ForestGreen;
+        };
+
+        _lblTrendNote = new LabelControl
+        {
+            Dock = DockStyle.Top, AutoSizeMode = LabelAutoSizeMode.None, Height = 22,
+            Text = "  Set the term dates in Follow-up Settings to see collections week by week.",
+        };
+        _lblTrendNote.Appearance.ForeColor = Color.DimGray;
+        page.Controls.Add(_lblTrendNote);
+    }
+
+    // One line of the promises summary grid.
+    private sealed class PipelineRow
+    {
+        public string  Line   { get; set; }
+        public int     Count  { get; set; }
+        public decimal Amount { get; set; }
+    }
+
+    private void BuildPromisesPage(XtraTabPage page)
+    {
+        _viewPromises = NewGrid(page, out _gridPromises);
+        Col(_viewPromises, "Line",   "Promises this term", 260);
+        Col(_viewPromises, "Count",  "How many",           100);
+        Col(_viewPromises, "Amount", "Amount (UGX)",       160, "N0");
+
+        var bar = new Panel { Dock = DockStyle.Top, Height = 36 };
+        var btn = new SimpleButton { Text = "Open the promises report…", Location = new Point(8, 6), Width = 190 };
+        btn.Click += (s, e) => OpenReports();
+        var hint = new LabelControl { Text = "Print or export the full list of promises and payment plans.", Location = new Point(208, 11) };
+        hint.Appearance.ForeColor = Color.DimGray;
+        bar.Controls.AddRange(new Control[] { btn, hint });
+        page.Controls.Add(bar);
+    }
+
+    private void BuildChasePage(XtraTabPage page)
+    {
+        var right = new Panel { Dock = DockStyle.Fill };
+        _viewTop5 = NewGrid(right, out _gridTop5);
+        Col(_viewTop5, "GuardianLabel",     "Largest balances — guardian", 220);
+        Col(_viewTop5, "TotalBalance",      "Balance (UGX)",               130, "N0");
+        Col(_viewTop5, "StudentCount",      "Students",                     70);
+        var tier = Col(_viewTop5, "TierDisplay", "Priority", 130);
+        tier.UnboundType = DevExpress.Data.UnboundColumnType.String;
+        Col(_viewTop5, "PromiseStatusText", "Promise",                     200);
+        _viewTop5.CustomUnboundColumnData += ViewTop5_UnboundData;
+        _viewTop5.RowStyle += ViewTop5_RowStyle;
+
+        var left = new Panel { Dock = DockStyle.Left, Width = 440 };
+        _viewPriority = NewGrid(left, out _gridPriority);
+        var prio = Col(_viewPriority, "TierDisplay", "Priority", 170);
+        prio.UnboundType = DevExpress.Data.UnboundColumnType.String;
+        Col(_viewPriority, "GuardianCount", "Families",            90);
+        Col(_viewPriority, "TotalBalance",  "They owe (UGX)",     160, "N0");
+        _viewPriority.CustomUnboundColumnData += ViewPriority_UnboundData;
+        _viewPriority.RowStyle += ViewPriority_RowStyle;
+
+        page.Controls.Add(right);
+        page.Controls.Add(left);
+    }
+
+    private void BuildTeamPage(XtraTabPage page)
+    {
+        _viewTeam = NewGrid(page, out _gridTeam);
+        Col(_viewTeam, "Officer",          "Officer",                    180);
+        Col(_viewTeam, "ContactsToday",    "Contacts today",             110);
+        Col(_viewTeam, "ContactsThisWeek", "Contacts this week",         130);
+        Col(_viewTeam, "ReachedThisWeek",  "Parents reached this week",  170);
+        Col(_viewTeam, "PromisesThisWeek", "Promises this week",         130);
+        Col(_viewTeam, "PromisedThisWeek", "Amount promised (UGX)",      160, "N0");
+        foreach (string f in new[] { "ContactsToday", "ContactsThisWeek", "ReachedThisWeek", "PromisesThisWeek", "PromisedThisWeek" })
+            Total(_viewTeam, f);
     }
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -217,19 +373,21 @@ public class usrFeesFollowUp : XtraUserControl
 
     public void LoadDashboard()
     {
+        DashboardData data = null;
         DevExpress.XtraSplashScreen.SplashScreenManager.ShowForm(typeof(I_Xtreme.DialogForms.WaitForm1));
         DevExpress.XtraSplashScreen.SplashScreenManager.Default.SetWaitFormDescription("Loading Fees Follow-up Dashboard...");
         DevExpress.XtraSplashScreen.SplashScreenManager.Default.SendCommand(I_Xtreme.DialogForms.WaitForm1.WaitFormCommand.LoadFeesFollowUp, 0);
         System.Threading.Thread.Sleep(25);
         try
         {
-            var data = _service.GetDashboardData();
-            UpdateKpiStrip(data);
-            UpdatePriorityBreakdown(data);
-            UpdateTopByBalance(data);
+            data = _service.GetDashboardData();
+            UpdateHeader(data);
+            UpdateTiles(data);
+            UpdateTabs(data);
         }
         catch (Exception ex)
         {
+            DevExpress.XtraSplashScreen.SplashScreenManager.CloseForm(throwExceptionIfAlreadyClosed: false);
             XtraMessageBox.Show(
                 $"Could not load dashboard data.\n\n{ex.Message}",
                 "Fees Follow-up",
@@ -240,41 +398,121 @@ public class usrFeesFollowUp : XtraUserControl
         {
             DevExpress.XtraSplashScreen.SplashScreenManager.CloseForm(throwExceptionIfAlreadyClosed: false);
         }
+
+        // New term in the application and its dates not entered yet: remind once per session.
+        if (data != null && data.TermDatesNeedSetting && _askedAboutTerm.Add(data.TermName))
+        {
+            if (XtraMessageBox.Show(
+                    $"The application is now working in {data.TermName}, but the start and end dates for this term " +
+                    "have not been entered in Fees Follow-up.\n\n" +
+                    "Until they are set, the system cannot tell which families are falling behind.\n\n" +
+                    "Enter the term dates now?",
+                    "Fees Follow-up — new term", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                OpenSettings();
+        }
     }
 
-    private void UpdateKpiStrip(DashboardData data)
+    private void UpdateHeader(DashboardData data)
     {
-        // Row 1: financial totals
-        _kpiValues[0].Text  = $"{data.TotalPayable:N0}";
-        _kpiValues[1].Text  = $"{data.TotalCollected:N0}";
-        _kpiValues[2].Text  = $"{data.TotalOutstanding:N0}";
-        _kpiValues[3].Text  = $"{data.CollectionRate:F1}%";
-        _kpiValues[4].Text  = $"{data.TotalEnrolled}";
-        _kpiValues[11].Text = $"{data.CollectedThisWeek:N0}";
-        // Row 2: follow-up activity
-        _kpiValues[5].Text  = $"{data.NilBalanceStudents}";
-        _kpiValues[6].Text  = $"{data.TotalGuardiansWithBalance}";
-        _kpiValues[7].Text  = $"{data.DailyListRemaining} / {data.DailyListTotal}";
-        _kpiValues[8].Text  = $"{data.BrokenPromiseCount}";
-        _kpiValues[9].Text  = $"{data.ZeroPaidStudents}";
-        _kpiValues[10].Text = data.TermWeekDisplay;
-        // Row 3: on-track-for-goal (—" when term dates are not configured)
-        _kpiValues[12].Text = data.TermDatesConfigured ? $"{data.RequiredRateToday:F1}%"       : "—";
-        _kpiValues[13].Text = data.TermDatesConfigured ? $"{data.ProjectedCollectionRate:F1}%" : "—";
-        _kpiValues[14].Text = data.TermDatesConfigured ? $"{data.AmountBehindPace:N0}"         : "—";
+        string week = data.TermDatesConfigured && data.CurrentTermWeek > 0
+            ? $"   ·   Week {data.CurrentTermWeek} of {data.TotalTermWeeks}"
+            : "";
+        _lblHeader.Text = $"{data.TermName}{week}   ·   as at {data.AsOf:dd-MMM-yyyy HH:mm}";
         _banner.Visible = !data.TermDatesConfigured;
+        _banner.Text    = $"The dates for {data.TermName} have not been set, so nobody can be marked Critical. Click here to set them.";
     }
 
-    private void UpdatePriorityBreakdown(DashboardData data)
+    private void UpdateTiles(DashboardData data)
     {
+        bool dated = data.TermDatesConfigured;
+        _requiredToday = dated ? data.RequiredRateToday : 0.0;
+
+        // Money
+        SetTile("payable",     $"{data.TotalPayable:N0}");
+        SetTile("collected",   $"{data.TotalCollected:N0}");
+        SetTile("outstanding", $"{data.TotalOutstanding:N0}", $"{data.TotalGuardiansWithBalance} families");
+        bool behindLine = dated && (double)data.CollectionRate < data.RequiredRateToday;
+        SetTile("rate", $"{data.CollectionRate:F1}%",
+            dated ? $"needed by today: {data.RequiredRateToday:F1}%" : "",
+            behindLine ? Color.Firebrick : (Color?)null);
+        SetTile("week",   $"{data.CollectedThisWeek:N0}");
+        SetTile("behind", dated ? $"{data.AmountBehindPace:N0}" : "—",
+            dated ? $"on course for {data.ProjectedCollectionRate:F1}% (goal {data.CollectionGoalPercent:F0}%)" : "set the term dates",
+            dated && data.AmountBehindPace == 0 ? Color.ForestGreen : (Color?)null);
+
+        // Follow-up today
+        int worked = data.DailyListContacted + data.DailyListTried;
+        SetTile("daily", $"{worked} / {data.DailyListTotal}",
+            data.DailyListTotal == 0 ? "nobody to call today"
+                : $"{data.DailyListContacted} done · {data.DailyListTried} to try again",
+            data.DailyListTotal > 0 && worked >= data.DailyListTotal ? Color.ForestGreen : (Color?)null);
+        SetTile("guardians", $"{data.TotalGuardiansWithBalance}");
+        SetTile("zeropaid",  $"{data.ZeroPaidStudents}");
+        SetTile("cleared",   $"{data.NilBalanceStudents}", $"of {data.TotalEnrolled} students");
+        SetTile("enrolled",  $"{data.TotalEnrolled}");
+        SetTile("termweek",  dated && data.CurrentTermWeek > 0 ? $"{data.CurrentTermWeek} / {data.TotalTermWeeks}" : "—",
+            dated ? (data.CurrentTermWeek > 0 ? $"{data.TermProgress * 100:F0}% of term gone" : "term not started") : "set the term dates");
+
+        // Promises and reminders
+        var p = data.Promises;
+        SetTile("duetoday", $"{p.DueTodayCount}",    p.DueTodayCount > 0 ? $"UGX {p.DueTodayAmount:N0}" : "");
+        SetTile("dueweek",  $"{p.DueThisWeekCount}", p.DueThisWeekCount > 0 ? $"UGX {p.DueThisWeekAmount:N0}" : "");
+        SetTile("missed",   $"{p.MissedCount}",      p.MissedCount > 0 ? $"UGX {p.MissedAmount:N0}" : "",
+            p.MissedCount == 0 ? Color.ForestGreen : (Color?)null);
+        SetTile("keptrate", p.KeptCount + p.MissedCount == 0 ? "—" : $"{p.KeptRatePercent:F0}%",
+            $"{p.KeptCount} kept · {p.MissedCount} missed");
+        SetTile("sms", $"{data.RemindersSentThisWeek}", $"{data.RemindersSentToday} today");
+        SetTile("auto", data.AutoRemindersEnabled ? "On" : "Off",
+            data.AutoRemindersEnabled
+                ? (data.LastAutoReminderRun.HasValue ? $"last ran {data.LastAutoReminderRun:dd-MMM HH:mm}" : $"daily at {data.AutoReminderTime}")
+                : "click to switch on",
+            data.AutoRemindersEnabled ? Color.ForestGreen : (Color?)null);
+    }
+
+    private void UpdateTabs(DashboardData data)
+    {
+        _gridClass.DataSource = data.ByClass;
+
+        // Week by week
+        _gridWeekly.DataSource = data.WeeklyTrend;
+        _lblTrendNote.Visible  = !data.TermDatesConfigured;
+        _chart.Series.Clear();
+        if (data.WeeklyTrend.Count > 0)
+        {
+            var actual = new Series("Collected so far (%)", ViewType.Line);
+            var needed = new Series("Needed by then (%)",   ViewType.Line);
+            foreach (var w in data.WeeklyTrend)
+            {
+                actual.Points.Add(new SeriesPoint($"Wk {w.Week}", Math.Round(w.CumulativePct, 1)));
+                needed.Points.Add(new SeriesPoint($"Wk {w.Week}", Math.Round(w.RequiredPct, 1)));
+            }
+            ((LineSeriesView)actual.View).Color = Color.SeaGreen;
+            ((LineSeriesView)actual.View).MarkerVisibility = DevExpress.Utils.DefaultBoolean.True;
+            ((LineSeriesView)needed.View).Color = Color.IndianRed;
+            ((LineSeriesView)needed.View).LineStyle.DashStyle = DashStyle.Dash;
+            _chart.Series.AddRange(new[] { actual, needed });
+            if (_chart.Diagram is XYDiagram diagram)
+            {
+                diagram.AxisY.Title.Text = "% of fees collected";
+                diagram.AxisY.Title.Visibility = DevExpress.Utils.DefaultBoolean.True;
+            }
+        }
+
+        // Promises
+        var p = data.Promises;
+        _gridPromises.DataSource = new List<PipelineRow>
+        {
+            new PipelineRow { Line = "Families with a promise in force", Count = p.FamiliesWithPromise, Amount = p.PendingAmount + p.MissedAmount },
+            new PipelineRow { Line = "Due today",                         Count = p.DueTodayCount,       Amount = p.DueTodayAmount },
+            new PipelineRow { Line = "Due in the next 7 days",            Count = p.DueThisWeekCount,    Amount = p.DueThisWeekAmount },
+            new PipelineRow { Line = "Still to be paid (all dates)",      Count = p.PendingCount,        Amount = p.PendingAmount },
+            new PipelineRow { Line = "Kept",                              Count = p.KeptCount,           Amount = p.KeptAmount },
+            new PipelineRow { Line = "Missed",                            Count = p.MissedCount,         Amount = p.MissedAmount },
+        };
+
         _gridPriority.DataSource = data.ByPriority;
-        _viewPriority.RefreshData();
-    }
-
-    private void UpdateTopByBalance(DashboardData data)
-    {
-        _gridTop5.DataSource = data.TopByBalance;
-        _viewTop5.RefreshData();
+        _gridTop5.DataSource     = data.TopByBalance;
+        _gridTeam.DataSource     = data.TeamActivity;
     }
 
     // ── Grid unbound columns ──────────────────────────────────────────────────
@@ -283,7 +521,7 @@ public class usrFeesFollowUp : XtraUserControl
         DevExpress.XtraGrid.Views.Base.CustomColumnDataEventArgs e)
     {
         if (!e.IsGetData || e.Column.FieldName != "TierDisplay") return;
-        var row = _viewPriority.GetRow(e.ListSourceRowIndex) as PriorityGroupStats;
+        var row = _viewPriority.GetRow(_viewPriority.GetRowHandle(e.ListSourceRowIndex)) as PriorityGroupStats;
         e.Value = TierDisplayName(row?.Tier ?? PriorityTier.Current);
     }
 
@@ -291,13 +529,13 @@ public class usrFeesFollowUp : XtraUserControl
         DevExpress.XtraGrid.Views.Base.CustomColumnDataEventArgs e)
     {
         if (!e.IsGetData || e.Column.FieldName != "TierDisplay") return;
-        var row = _viewTop5.GetRow(e.ListSourceRowIndex) as GuardianWorklistRow;
+        var row = _viewTop5.GetRow(_viewTop5.GetRowHandle(e.ListSourceRowIndex)) as GuardianWorklistRow;
         string text = TierDisplayName(row?.Tier ?? PriorityTier.Current);
         if (row != null && row.CallRequired) text += " + Call";
         e.Value = text;
     }
 
-    // ── Grid row styles ───────────────────────────────────────────────────────
+    // ── Grid row styles (same soft colours as the worklists) ──────────────────
 
     private void ViewPriority_RowStyle(object sender,
         DevExpress.XtraGrid.Views.Grid.RowStyleEventArgs e)
@@ -316,8 +554,7 @@ public class usrFeesFollowUp : XtraUserControl
         // CallRequired is a flag orthogonal to the risk tier — colour it from the flag (takes precedence).
         if (row.CallRequired)
         {
-            e.Appearance.BackColor = Color.DarkSlateBlue;
-            e.Appearance.ForeColor = Color.White;
+            e.Appearance.BackColor = Color.FromArgb(226, 232, 245);
             e.HighPriority = true;
         }
     }
@@ -327,21 +564,19 @@ public class usrFeesFollowUp : XtraUserControl
         switch (tier)
         {
             case PriorityTier.Critical:
-                e.Appearance.BackColor = Color.OrangeRed;
-                e.Appearance.ForeColor = Color.White;
+                e.Appearance.BackColor = Color.FromArgb(252, 228, 228);
                 e.HighPriority = true;
                 break;
             case PriorityTier.BrokenPromise:
-                e.Appearance.BackColor = Color.LightCoral;
+                e.Appearance.BackColor = Color.FromArgb(251, 224, 216);
                 e.HighPriority = true;
                 break;
             case PriorityTier.Stale:
-                e.Appearance.BackColor = Color.LightYellow;
+                e.Appearance.BackColor = Color.FromArgb(252, 246, 221);
                 e.HighPriority = true;
                 break;
             case PriorityTier.CallRequired:
-                e.Appearance.BackColor = Color.DarkSlateBlue;
-                e.Appearance.ForeColor = Color.White;
+                e.Appearance.BackColor = Color.FromArgb(226, 232, 245);
                 e.HighPriority = true;
                 break;
         }
@@ -363,9 +598,31 @@ public class usrFeesFollowUp : XtraUserControl
 
     public void OpenSettings()
     {
-        using var dlg = new FollowUpSettings();
-        if (dlg.ShowDialog(this) == DialogResult.OK)
-            LoadDashboard();
+        try
+        {
+            using var dlg = new FollowUpSettings();
+            if (dlg.ShowDialog(this) == DialogResult.OK)
+                LoadDashboard();
+        }
+        catch (Exception ex)
+        {
+            XtraMessageBox.Show($"Could not open Follow-up Settings.\n\n{ex.Message}", "Fees Follow-up",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+    }
+
+    private void OpenReports()
+    {
+        try
+        {
+            using var dlg = new dlgInteractionLog();
+            dlg.ShowDialog(this);
+        }
+        catch (Exception ex)
+        {
+            XtraMessageBox.Show($"Could not open the follow-up reports.\n\n{ex.Message}", "Fees Follow-up",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 
     public void SendReminders()

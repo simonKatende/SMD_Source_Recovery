@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using DevExpress.XtraEditors;
@@ -8,153 +9,275 @@ using I_Xtreme.Models;
 
 namespace I_Xtreme.DialogForms;
 
+/// <summary>
+/// Send a fees SMS to one guardian family from the interaction window. Shows exactly what will
+/// be sent before sending: one message with the family total, or one message per child.
+/// </summary>
 public class dlgTemplatedSms : XtraForm
 {
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
     private ComboBoxEdit  _cboTemplate;
-    private MemoEdit      _memoMessage;
+    private RadioGroup    _rgStyle;
+    private MemoEdit      _memoTemplate, _memoPreview;
     private SimpleButton  _btnSend, _btnCancel;
-    private LabelControl  _lblRecipient, _lblStudents;
+    private LabelControl  _lblRecipient, _lblStudents, _lblCount;
 
     // Inputs -- set before ShowDialog()
-    public string               RecipientPhone { get; set; }
-    public List<StudentSummary> Students       { get; set; }
-    public string               GuardianKey    { get; set; }
-    public DateTime?            PromiseDate    { get; set; }
-    public decimal              PromisedAmount { get; set; }
+    public string              RecipientPhone { get; set; }
+    public GuardianWorklistRow Guardian       { get; set; }
 
-    // Output
-    public string SentSummary { get; private set; }
+    // Outputs
+    public string   SentSummary { get; private set; }
+    public SmsStyle StyleUsed   { get; private set; }
 
-    private readonly string[] _templateKeys  = { "3-Day Reminder", "Day-Of Reminder", "Overdue Reminder", "General Reminder", "Freeform" };
-    private readonly string[] _templateTypes = { "3DayBefore",     "DayOf",           "Overdue",          "General",          null };
+    private readonly string[] _templateKeys  = { "Promise reminder (before the date)", "Promise due today", "Promise overdue", "Balance reminder", "Write my own message" };
+    private readonly string[] _templateTypes = { "3DayBefore",                         "DayOf",             "Overdue",         "General",          null };
+
+    private FeesFollowUpSettings _settings;
+    private string _school;
+    private List<string> _messages = new List<string>();
+
+    // The promise the message is about (the missed instalment first, else the next one due).
+    private DateTime _promiseDate = DateTime.Today;
+    private decimal  _promisedAmount;
+    private string   _promiseStudentNumber;
+    private bool     _hasPromise;
 
     public dlgTemplatedSms() { InitializeComponent(); }
 
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
+        try
+        {
+            _settings = _service.GetSettings();
+            _school   = _service.GetSchoolName();
+        }
+        catch (Exception ex)
+        {
+            XtraMessageBox.Show($"Could not load SMS settings.\n\n{ex.Message}", "Send SMS",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            DialogResult = DialogResult.Cancel;
+            Close();
+            return;
+        }
+
+        ReadPromise();
         _lblRecipient.Text = $"To: {RecipientPhone}";
-        string names = string.Join(", ", (Students ?? new List<StudentSummary>())
-            .Select(s => $"{s.FullName} ({s.ClassId})"));
-        _lblStudents.Text = $"Students: {names}";
-        // Pre-select General Reminder when guardian has no promise on record
-        int defaultIdx = (PromisedAmount == 0 && PromiseDate == null) ? 3 : 0;
-        _cboTemplate.SelectedIndex = defaultIdx;
-        ApplyTemplate(defaultIdx);
+        _lblStudents.Text  = "Children: " + string.Join(", ", Students.Select(s => $"{s.FullName} ({s.ClassId})"));
+        _rgStyle.EditValue = Guardian?.SmsStyle ?? SmsStyle.FamilyTotal;
+        _rgStyle.Enabled   = Students.Count > 1;
+
+        // Pick the message that fits where the promise stands today.
+        int index = 3;   // balance reminder
+        if (_hasPromise)
+        {
+            int days = (DateTime.Today - _promiseDate.Date).Days;
+            index = days < 0 ? 0 : days == 0 ? 1 : 2;
+        }
+        _cboTemplate.SelectedIndex = index;   // fires ApplyTemplate
+    }
+
+    private List<StudentSummary> Students => Guardian?.Students ?? new List<StudentSummary>();
+
+    private void ReadPromise()
+    {
+        var promise = Guardian?.Promise;
+        if (promise == null || !promise.HasPromise) return;
+        var inst = promise.EarliestMissed ?? promise.NextDue;
+        if (inst == null) return;   // every instalment kept: nothing to remind about
+        var plan = promise.ActivePlans.First(p => p.Instalments.Contains(inst));
+        _hasPromise           = true;
+        _promiseDate          = inst.DueDate;
+        _promisedAmount       = inst.Amount.HasValue && inst.Amount.Value > 0m ? inst.AmountOutstanding : 0m;
+        _promiseStudentNumber = plan.IsFamily ? null : plan.StudentNumber;
     }
 
     private void InitializeComponent()
     {
-        this.Text            = "Send Reminder SMS";
-        this.Size            = new System.Drawing.Size(700, 420);
+        this.Text            = "Send SMS to Parent";
+        this.ClientSize      = new Size(720, 560);
         this.StartPosition   = FormStartPosition.CenterParent;
-        this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
+        this.FormBorderStyle = FormBorderStyle.FixedDialog;
+        this.MaximizeBox     = false;
+        this.MinimizeBox     = false;
 
-        _lblRecipient = new LabelControl
-            { Location = new System.Drawing.Point(12, 14), AutoSize = true };
-        _lblStudents = new LabelControl
-            { Location = new System.Drawing.Point(12, 34), AutoSize = true };
+        _lblRecipient = new LabelControl { Location = new Point(12, 12), AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(690, 16) };
+        _lblRecipient.Appearance.Font = new Font("Tahoma", 9, FontStyle.Bold);
+        _lblStudents  = new LabelControl { Location = new Point(12, 32), AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(690, 16) };
 
-        var lblTemplate = new LabelControl
-            { Text = "Template:", Location = new System.Drawing.Point(12, 66) };
-        _cboTemplate = new ComboBoxEdit
-            { Location = new System.Drawing.Point(90, 62), Width = 220 };
-        _cboTemplate.Properties.TextEditStyle =
-            DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
-        _cboTemplate.Properties.Items.AddRange(_templateKeys);
-        _cboTemplate.SelectedIndexChanged += (s, e2) => ApplyTemplate(_cboTemplate.SelectedIndex);
-
-        var lblNote = new LabelControl
+        var lblStyle = new LabelControl { Text = "Send as:", Location = new Point(12, 64) };
+        _rgStyle = new RadioGroup { Location = new Point(90, 56), Size = new Size(470, 30) };
+        _rgStyle.Properties.Items.AddRange(new[]
         {
-            Text     = "Message template below -- {names} and {class} are replaced per student at send time:",
-            Location = new System.Drawing.Point(12, 100),
-            AutoSize = true,
+            new DevExpress.XtraEditors.Controls.RadioGroupItem(SmsStyle.FamilyTotal, "One message with the family total"),
+            new DevExpress.XtraEditors.Controls.RadioGroupItem(SmsStyle.PerChild,    "A separate message for each child"),
+        });
+        _rgStyle.Properties.Columns = 2;
+        _rgStyle.EditValueChanged += (s, e) => RefreshPreview();
+
+        var lblTemplate = new LabelControl { Text = "Message:", Location = new Point(12, 100) };
+        _cboTemplate = new ComboBoxEdit { Location = new Point(90, 96), Width = 300 };
+        _cboTemplate.Properties.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
+        _cboTemplate.Properties.Items.AddRange(_templateKeys);
+        _cboTemplate.SelectedIndexChanged += (s, e) => ApplyTemplate(_cboTemplate.SelectedIndex);
+
+        var lblEdit = new LabelControl
+        {
+            Text = "Wording (you can change it). Words in { } are filled in automatically: {names}  {class}  {balance}  {promised_amount}  {date}  {school}",
+            Location = new Point(12, 130), AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(696, 16),
         };
-        _memoMessage = new MemoEdit
-            { Location = new System.Drawing.Point(12, 118), Size = new System.Drawing.Size(660, 200) };
-        _memoMessage.Properties.ScrollBars = ScrollBars.Vertical;
+        lblEdit.Appearance.ForeColor = Color.DimGray;
+        _memoTemplate = new MemoEdit { Location = new Point(12, 150), Size = new Size(696, 90) };
+        _memoTemplate.Properties.ScrollBars = ScrollBars.Vertical;
+        _memoTemplate.EditValueChanged += (s, e) => RefreshPreview();
 
-        _btnSend = new SimpleButton
-            { Text = "Send", Location = new System.Drawing.Point(516, 332), Width = 80 };
+        var lblPreview = new LabelControl { Text = "This is exactly what the parent will receive:", Location = new Point(12, 252) };
+        lblPreview.Appearance.Font = new Font("Tahoma", 9, FontStyle.Bold);
+        _memoPreview = new MemoEdit { Location = new Point(12, 272), Size = new Size(696, 210) };
+        _memoPreview.Properties.ReadOnly   = true;
+        _memoPreview.Properties.ScrollBars = ScrollBars.Vertical;
+        _memoPreview.Properties.Appearance.BackColor = Color.FromArgb(247, 249, 252);
+        _memoPreview.TabStop = false;
+
+        _lblCount = new LabelControl { Location = new Point(12, 492), AutoSizeMode = LabelAutoSizeMode.None, Size = new Size(500, 16) };
+
+        _btnSend = new SimpleButton { Text = "Send", Location = new Point(532, 520), Width = 84 };
         _btnSend.Click += BtnSend_Click;
+        _btnCancel = new SimpleButton { Text = "Cancel", Location = new Point(624, 520), Width = 84 };
+        _btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
-        _btnCancel = new SimpleButton
-            { Text = "Cancel", Location = new System.Drawing.Point(604, 332), Width = 80 };
-        _btnCancel.Click += (s, e2) => { DialogResult = DialogResult.Cancel; Close(); };
-
+        this.AcceptButton = null;
+        this.CancelButton = _btnCancel;
         this.Controls.AddRange(new Control[]
-            { _lblRecipient, _lblStudents, lblTemplate, _cboTemplate, lblNote, _memoMessage, _btnSend, _btnCancel });
+        {
+            _lblRecipient, _lblStudents, lblStyle, _rgStyle, lblTemplate, _cboTemplate,
+            lblEdit, _memoTemplate, lblPreview, _memoPreview, _lblCount, _btnSend, _btnCancel,
+        });
     }
 
     private void ApplyTemplate(int idx)
     {
-        if (idx < 0 || idx >= _templateKeys.Length) return;
-        if (_templateTypes[idx] == null) { _memoMessage.Text = ""; return; }
+        if (idx < 0 || idx >= _templateKeys.Length || _settings == null) return;
+        string type = _templateTypes[idx];
+        _memoTemplate.Text = type == null ? "" : FeesFollowUpService.TemplateFor(type, _settings);
+        if (type == null) _memoTemplate.Focus();
+        RefreshPreview();
+    }
 
-        var      settings = _service.GetSettings();
-        string   school   = _service.GetSchoolName();
-        DateTime date     = PromiseDate ?? DateTime.Today;
-        // Use first student for preview
-        var      first    = Students?.FirstOrDefault();
-        decimal  balance  = first?.Balance ?? 0m;
-        string   name     = first?.FullName ?? "{names}";
-        string   cls      = first?.ClassId  ?? "{class}";
-
-        string template = _templateTypes[idx] switch
+    // The children a message is about: the one child for a child-specific promise reminder,
+    // otherwise every listed child in the family.
+    private List<StudentSummary> ScopeFor(string type)
+    {
+        if (type != null && type != "General" && !string.IsNullOrWhiteSpace(_promiseStudentNumber))
         {
-            "3DayBefore" => !string.IsNullOrWhiteSpace(settings.SmsTemplate2Day)    ? settings.SmsTemplate2Day    : FeesFollowUpService.DefaultPreDue,
-            "DayOf"      => !string.IsNullOrWhiteSpace(settings.SmsTemplateDayOf)   ? settings.SmsTemplateDayOf   : FeesFollowUpService.DefaultDayOf,
-            "Overdue"    => !string.IsNullOrWhiteSpace(settings.SmsTemplateOverdue) ? settings.SmsTemplateOverdue : FeesFollowUpService.DefaultOverdue,
-            "General"    => FeesFollowUpService.DefaultGeneral,
-            _            => ""
-        };
-        _memoMessage.Text = FeesFollowUpService.RenderTemplate(
-            template, balance, name, cls, date, school, PromisedAmount);
+            var one = Students.Where(s => string.Equals(s.StudentNumber, _promiseStudentNumber,
+                StringComparison.OrdinalIgnoreCase)).ToList();
+            if (one.Count > 0) return one;
+        }
+        return Students;
+    }
+
+    private void RefreshPreview()
+    {
+        if (_settings == null || _cboTemplate.SelectedIndex < 0) return;
+        string type  = _templateTypes[_cboTemplate.SelectedIndex];
+        var    style = _rgStyle.EditValue is SmsStyle st ? st : SmsStyle.FamilyTotal;
+        bool promiseMessage = type != null && type != "General";
+
+        // Never the same text twice: a message with no child-specific words goes out once.
+        _messages = FamilySms.Compose(style, _memoTemplate.Text.Trim(), ScopeFor(type),
+                promiseMessage ? _promiseDate : DateTime.Today, _school,
+                promiseMessage ? _promisedAmount : 0m, _promiseStudentNumber)
+            .Distinct().ToList();
+
+        if (_messages.Count == 0)
+        {
+            _memoPreview.Text = "";
+            _lblCount.Text    = "Nothing to send yet.";
+            _btnSend.Enabled  = false;
+            return;
+        }
+
+        var lines = new List<string>();
+        for (int i = 0; i < _messages.Count; i++)
+        {
+            if (_messages.Count > 1) lines.Add($"— Message {i + 1} of {_messages.Count} —");
+            lines.Add(_messages[i]);
+            lines.Add($"({_messages[i].Length} characters)");
+            lines.Add("");
+        }
+        _memoPreview.Text = string.Join(Environment.NewLine, lines);
+
+        int parts = _messages.Sum(FamilySms.SegmentCount);
+        _lblCount.Text = _messages.Count == 1
+            ? $"1 SMS will be sent" + (parts > 1 ? $" (long message: charged as {parts})" : "")
+            : $"{_messages.Count} SMS will be sent" + (parts > _messages.Count ? $" (charged as {parts})" : "");
+        _lblCount.Appearance.ForeColor = promiseMessage && !_hasPromise ? Color.DarkOrange : Color.Black;
+        if (promiseMessage && !_hasPromise)
+            _lblCount.Text += "   ·   This family has no open promise, so the date shown is today.";
+        _btnSend.Enabled = true;
     }
 
     private void BtnSend_Click(object sender, EventArgs e)
     {
-        string templateText = _memoMessage.Text.Trim();
-        if (string.IsNullOrEmpty(templateText))
+        if (_messages.Count == 0)
         {
-            XtraMessageBox.Show("Message cannot be empty.", "Validation",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            XtraMessageBox.Show("The message is empty.", "Send SMS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
-        var failures = new List<string>();
-        int sent     = 0;
-        string school = _service.GetSchoolName();
-        DateTime date = PromiseDate ?? DateTime.Today;
-        string reminderType = _templateTypes[_cboTemplate.SelectedIndex] ?? "Manual";
-
-        foreach (var student in Students ?? new List<StudentSummary>())
+        if (_messages.Any(m => m.Contains("{") && m.Contains("}")))
         {
-            string msg = FeesFollowUpService.RenderTemplate(
-                templateText, student.Balance, student.FullName, student.ClassId,
-                date, school, PromisedAmount);
+            XtraMessageBox.Show("The message still contains a word in { } that could not be filled in. " +
+                "Check the spelling of the words in brackets.", "Send SMS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
 
-            if (FeeSmsHelper.TrySend(_service.ConnectionString, RecipientPhone, msg, out string err))
+        string type = _templateTypes[_cboTemplate.SelectedIndex] ?? "Manual";
+        var failures = new List<string>();
+        int sent = 0;
+        _btnSend.Enabled = false;
+        Cursor = Cursors.WaitCursor;
+        try
+        {
+            foreach (string msg in _messages)
             {
-                _service.LogManualReminderSent(RecipientPhone, student.StudentNumber, date, reminderType);
-                sent++;
+                if (FeeSmsHelper.TrySend(_service.ConnectionString, RecipientPhone, msg, out string err))
+                    sent++;
+                else
+                    failures.Add(err);
             }
-            else
+
+            if (sent > 0)
             {
-                failures.Add($"{student.FullName}: {err}");
+                try
+                {
+                    _service.LogManualReminderSent(Guardian.GuardianContact,
+                        type == "Manual" || type == "General" ? DateTime.Today : _promiseDate, type);
+                }
+                catch (Exception logEx)
+                {
+                    failures.Add($"The SMS was sent, but recording it failed: {logEx.Message}");
+                }
             }
+        }
+        finally
+        {
+            Cursor = Cursors.Default;
+            _btnSend.Enabled = true;
         }
 
         if (failures.Count > 0)
-            XtraMessageBox.Show($"Sent: {sent}. Failed:\n" + string.Join("\n", failures),
-                "SMS -- Partial Send", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            XtraMessageBox.Show($"Sent: {sent} of {_messages.Count}.\n\n" + string.Join("\n", failures.Distinct()),
+                "Send SMS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 
         if (sent > 0)
         {
-            SentSummary  = $"Template SMS sent to {sent} student(s)";
+            StyleUsed    = _rgStyle.EditValue is SmsStyle st ? st : SmsStyle.FamilyTotal;
+            SentSummary  = (sent == 1 ? "SMS sent: " : $"{sent} SMS sent. First: ") + _messages[0];
             DialogResult = DialogResult.OK;
             Close();
         }
-        // If sent == 0, failures already shown above -- dialog stays open
+        // If nothing was sent the reasons are shown above and the window stays open.
     }
 }

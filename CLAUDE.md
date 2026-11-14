@@ -94,6 +94,8 @@ Shared vocabulary for developing the Fees Follow-up CRM feature. When either of 
 
 ### Worklist
 
+**Testing the service** — `FeesFollowUpService(connectionString)` is the testable constructor; the parameterless one (`FeesFollowUpService.App.cs`) connects to the saved school database. `tests/FeesFollowUp.IntegrationTests` builds a throwaway `SMD_Test_*` database, applies `notes/migrations/2026-11-11_fees_followup_crm.sql`, and drops it afterwards.
+
 **Worklist** — the grid on the Fees Follow-up page. One row per guardian family with an outstanding balance, sorted by Priority Tier (Critical first). Backed by `List<GuardianWorklistRow>`.
 
 **Guardian Worklist Row** — a single worklist row. Holds aggregated financials, priority tier, and last contact info for one guardian family. Backed by `GuardianWorklistRow`.
@@ -142,7 +144,21 @@ Sorted ascending — lower number = higher urgency.
 
 **Promise Amount** — amount the guardian committed to paying. Optional alongside Promise Date.
 
-**Payments Since Promise** — sum of payments received after the latest Promise Date. Used to evaluate whether a promise was honoured.
+**Payments Since Promise** — sum of current-term payments dated on or after the day the promise was logged (whole days: a payment on the logging day counts). Used to evaluate whether a promise was honoured.
+
+**Promise Scope** — who a promise is for. `Family` (the default; blank `StudentNumber`) is judged against every child's payments and the family balance, including siblings who have cleared. `Student` is judged against that one child. Stored in `tbl_FeesContactLog.PromiseScope`; rows from before 2026-11-11 have NULL and are treated as `Family`.
+
+**Payment Plan / Instalment** — a promise may carry several dated instalments (`tbl_FeesPromiseInstalment`, one row per date). Payments since the promise are allocated to instalments in date order; each is `Kept` (≥95% covered, or the balance is cleared), `Pending` (due today or later) or `Missed`. An instalment with no amount means "clear the balance". The contact row keeps a summary (first date, total).
+
+**Active Plan** — the promise(s) still in force: the newest promise replaces older ones covering the same children (a family promise replaces everything before it; a child promise replaces that child's earlier promise and any earlier family promise). Only active plans drive tiers, reminders and reports. All of this lives in the pure `PromiseEvaluator`; `GuardianWorklistRow.Promise` (`PromiseState`) carries the result and `ComputeTier` uses it in place of the legacy `LatestPromise*` fields.
+
+**SMS Style** — how a family receives fees SMS: `FamilyTotal` (one message naming every child, family balance) or `PerChild` (one message per owing child; the promised amount is quoted only for the child the promise was logged for). Per-family choice in `tbl_FeesGuardianPrefs`, school default in the `DefaultSmsStyle` setting. `FamilySms.Compose` is the single place messages are built, for manual, promise and balance sends.
+
+**Today Status** — what has happened on the daily list for a family today: `NotCalled`, `Tried` (logged, not reached) or `Done` (reached: Contacted / Promised / Refused). Worked families stay on the daily list; the list is ordered NotCalled, Tried, Done so the next family to call is at the top. `DailyListLogic` holds the membership rule and is shared by the list and the dashboard tile.
+
+**Working Term** — the application's active term (`tbl_ActiveSemester`). Interactions, promises and reminder-log rows carry `SemesterId` and only the working term's rows drive lists, tiers and reminders; older rows are history ("Earlier terms").
+
+**Automatic reminders** — promise reminders only, once a day at `AutoReminderTime` when `AutoRemindersEnabled`: an in-app timer (`FeesAutoReminders`) while the application is open, and `IXtreme.exe /send-fee-reminders` (no window) from a Windows scheduled task when it is closed. The day is claimed by inserting into `tbl_FeesReminderRun` (primary key = date), so only one PC sends. Balance reminders are never automatic.
 
 **Gateway success** — egosms `/plain` returns the literal `OK` on success (some variants return a
 positive integer). `SmsReminderLogic.IsGatewaySuccessResponse` is the single source of truth; a non-OK,
@@ -160,7 +176,7 @@ recording disabled; payments are recorded under Accounts → Pay In.
 
 **Stale Threshold** — days since last contact before a row becomes Stale. Default: 7.
 
-**Term Start / Term End** — boundaries of the current academic term. Required for the Required-Payment Line and the Critical tier. When not set, deadline-based prioritisation is off: shortfall is 0, the Critical tier cannot trigger, and the worklists/dashboard show a warning banner.
+**Term Start / Term End** — boundaries of the current academic term, entered in Follow-up Settings and stamped with the term they were entered for (`TermDatesSemester`). When the working term changes they stop applying (`TermDatesNeedSetting`) and the dashboard reminds the user to enter the new ones. Required for the Required-Payment Line and the Critical tier. When not set, deadline-based prioritisation is off: shortfall is 0, the Critical tier cannot trigger, and the worklists/dashboard show a warning banner.
 
 **Collection Goal** — the term-end collection target driving the Required-Payment Line. Stored as a fraction (0–1), shown as a percentage. Default 0.98 (98%).
 

@@ -160,9 +160,11 @@ public class usrGuardianWorklist : XtraUserControl
             if (e.Column.FieldName == "GuardianLabel"
                 && _view.GetRow(_view.GetRowHandle(e.ListSourceRowIndex)) is GuardianWorklistRow gr
                 && gr.IsUnreachable)
-                e.DisplayText = (e.Value?.ToString() ?? "") + "  (no phone)";
+                e.DisplayText = string.IsNullOrWhiteSpace(gr.GuardianName)
+                    ? "(no guardian details)"
+                    : (e.Value?.ToString() ?? "") + "  (no phone)";
         };
-        AddCol("GuardianContact",     "Contact",       120);
+        AddCol("PhoneDisplay",     "Contact",       120);
         AddCol("Contact2",            "Alt Contact",   120);
         AddCol("StudentNames",        "Students",      200);
         AddNumCol("TotalBalance",     "Balance (UGX)", 120);
@@ -171,6 +173,7 @@ public class usrGuardianWorklist : XtraUserControl
         AddTierCol("Tier",            "Priority",      120);
         AddDateCol("LastContactDate", "Last Contact",  100);
         AddOutcomeCol("LastOutcome",  "Last Outcome",  120);
+        AddCol("PromiseStatusText",   "Promise",       190);
         AddNumCol("RemindersSentCount", "Reminders",    80);
         AddDateCol("LastReminderDate",  "Last Reminder", 110);
     }
@@ -268,7 +271,8 @@ public class usrGuardianWorklist : XtraUserControl
 
     private void TxtSearch_EditValueChanged(object sender, EventArgs e)
     {
-        string q = (_txtSearch.Text ?? "").Trim().ToLower();
+        // EditValue, not Text: an empty DevExpress editor reports its grey prompt as Text.
+        string q = (_txtSearch.EditValue as string ?? "").Trim().ToLower();
         _grid.DataSource = string.IsNullOrEmpty(q) ? _allRows :
             _allRows.Where(r =>
                 r.GuardianLabel.ToLower().Contains(q) ||
@@ -287,9 +291,24 @@ public class usrGuardianWorklist : XtraUserControl
         if (row == null) return;
         int idx = _allRows.IndexOf(row);
         if (idx < 0) idx = 0;
-        using var dlg = new dlgFeesContactInteraction(_allRows, idx);
-        dlg.ShowDialog(this.FindForm());
+        string lastKey;
+        using (var dlg = new dlgFeesContactInteraction(_allRows, idx))
+        {
+            dlg.ShowDialog(this.FindForm());
+            lastKey = dlg.LastGuardianKey;
+        }
         LoadData();
+        TxtSearch_EditValueChanged(this, EventArgs.Empty);   // keep whatever was being searched for
+        // Return to the family that was open, instead of jumping back to the top of the list.
+        if (lastKey != null && _grid.DataSource is System.Collections.Generic.List<GuardianWorklistRow> shown)
+        {
+            int at = shown.FindIndex(r => r.GuardianContact == lastKey);
+            if (at >= 0)
+            {
+                _view.FocusedRowHandle = at;
+                _view.MakeRowVisible(at);
+            }
+        }
     }
 
     public void Print(bool preview = false)

@@ -56,13 +56,30 @@ internal static class Program
 		}
 	}
 
+	/// <summary>
+	/// Starts the application with no window, sends the day's fee promise reminders if they
+	/// are due, and exits. Used by the Windows scheduled task created in Follow-up Settings.
+	/// </summary>
+	internal const string SendFeeRemindersSwitch = "/send-fee-reminders";
+
 	[STAThread]
-	private static void Main()
+	private static int Main(string[] args)
 	{
+		if (args != null && Array.Exists(args, a => string.Equals(a, SendFeeRemindersSwitch, StringComparison.OrdinalIgnoreCase)))
+		{
+			// No database connection saved on this PC: nothing can be sent, and no window may be shown.
+			if (!DataConnection.DatabaseConnected())
+			{
+				return 2;
+			}
+			I_Xtreme.ExtremeClasses.FeesAutoReminders.RunIfDue("(scheduled task)");
+			return 0;
+		}
 		BonusSkins.Register();
 		SkinManager.EnableFormSkins();
 		Application.EnableVisualStyles();
 		Application.SetCompatibleTextRenderingDefault(defaultValue: false);
 		Application.Run(new MyFancyContext());
+		return 0;
 	}
 }

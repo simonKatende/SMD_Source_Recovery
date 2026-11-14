@@ -20,6 +20,9 @@ public class dlgFeesContactInteraction : XtraForm
     // ── Info panel (structured header) ────────────────────────────────────────
     private Panel        _infoPanel;
     private Label        _lblGuardianName, _lblContacts, _lblBalance, _lblBalanceRight, _lblTier;
+    private Label        _lblToday, _lblPromise;
+    private ComboBoxEdit _cboSmsStyle;
+    private bool         _loadingRow;
 
     // ── Students grid ─────────────────────────────────────────────────────────
     private DevExpress.XtraGrid.GridControl gridStudents;
@@ -43,14 +46,35 @@ public class dlgFeesContactInteraction : XtraForm
     private ComboBoxEdit  _cboPromiseStudent;
     private LabelControl  _lblPromiseStudent;
 
+    // ── Payment plan (one or more dated instalments) ──────────────────────────
+    private class InstalmentRow
+    {
+        public DateTime? DueDate { get; set; }
+        public decimal?  Amount  { get; set; }
+    }
+    private const string WholeFamily = "Whole family";
+    private System.ComponentModel.BindingList<InstalmentRow> _plan = new System.ComponentModel.BindingList<InstalmentRow>();
+    private DevExpress.XtraGrid.GridControl gridPlan;
+    private GridView                        gridViewPlan;
+    private LabelControl  lblPlan, lblPlanTotal;
+    private SimpleButton  btnAddInstalment, btnRemoveInstalment;
+
     // ── State ─────────────────────────────────────────────────────────────────
     private readonly List<GuardianWorklistRow> _worklist;
     private int _currentIndex;
     private int _editContactId = -1;
     private readonly FeesFollowUpService _service = new FeesFollowUpService();
+    private readonly Func<List<GuardianWorklistRow>> _reloadRows;
 
-    public dlgFeesContactInteraction(List<GuardianWorklistRow> worklist, int startIndex)
+    /// <summary>The guardian key showing when the window closed, so the list can return to it.</summary>
+    public string LastGuardianKey => _worklist.Count > 0 ? Current.GuardianContact : null;
+
+    /// <param name="reloadRows">Fetches fresh rows after a save so the family shown is up to date
+    /// (defaults to the guardian worklist of families owing).</param>
+    public dlgFeesContactInteraction(List<GuardianWorklistRow> worklist, int startIndex,
+        Func<List<GuardianWorklistRow>> reloadRows = null)
     {
+        _reloadRows   = reloadRows ?? (() => _service.GetGuardianWorklist("", 0));
         _worklist     = worklist;
         _currentIndex = Math.Max(0, Math.Min(startIndex, worklist.Count - 1));
         InitializeComponent();
@@ -119,7 +143,7 @@ public class dlgFeesContactInteraction : XtraForm
         this._infoPanel = new Panel
         {
             Dock      = DockStyle.Top,
-            Height    = 80,
+            Height    = 104,
             BackColor = Color.FromArgb(245, 245, 245),
         };
 
@@ -159,9 +183,36 @@ public class dlgFeesContactInteraction : XtraForm
             Padding   = new Padding(6, 2, 6, 2),
             Anchor    = AnchorStyles.Top | AnchorStyles.Right,
         };
+        // Today's status and promise position — the two things an officer needs at a glance.
+        this._lblToday = new Label
+        {
+            Font     = new Font("Tahoma", 9, FontStyle.Bold),
+            Location = new Point(8, 80),
+            AutoSize = true,
+            Padding  = new Padding(6, 2, 6, 2),
+        };
+        this._lblPromise = new Label
+        {
+            Font      = new Font("Tahoma", 9),
+            Location  = new Point(130, 82),
+            AutoSize  = true,
+            ForeColor = Color.FromArgb(60, 60, 60),
+        };
+        // How this family wants its fees SMS — remembered once chosen.
+        var lblSmsStyle = new Label
+        {
+            Text = "SMS to this family:", Font = new Font("Tahoma", 8.25f), AutoSize = true,
+            Anchor = AnchorStyles.Top | AnchorStyles.Right, Name = "lblSmsStyle",
+        };
+        this._cboSmsStyle = new ComboBoxEdit { Width = 190, Anchor = AnchorStyles.Top | AnchorStyles.Right };
+        this._cboSmsStyle.Properties.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
+        this._cboSmsStyle.Properties.Items.AddRange(new object[] { "One message, family total", "Separate message per child" });
+        this._cboSmsStyle.SelectedIndexChanged += CboSmsStyle_SelectedIndexChanged;
+
         this._infoPanel.Controls.AddRange(new Control[]
         {
             _lblGuardianName, _lblContacts, _lblBalance, _lblBalanceRight, _lblTier,
+            _lblToday, _lblPromise, lblSmsStyle, _cboSmsStyle,
         });
         this._infoPanel.Resize += (s, e) =>
         {
@@ -171,10 +222,16 @@ public class dlgFeesContactInteraction : XtraForm
             if (_lblTier != null)
                 _lblTier.Location = new Point(
                     _infoPanel.ClientSize.Width - _lblTier.Width - 12, 56);
+            if (_cboSmsStyle != null)
+            {
+                _cboSmsStyle.Location = new Point(_infoPanel.ClientSize.Width - _cboSmsStyle.Width - 12, 78);
+                var lbl = _infoPanel.Controls["lblSmsStyle"];
+                if (lbl != null) lbl.Location = new Point(_cboSmsStyle.Left - lbl.Width - 6, 82);
+            }
         };
 
         // ── Contact log panel (Bottom) ─────────────────────────────────────────
-        var logPanel = new Panel { Dock = DockStyle.Bottom, Height = 220 };
+        var logPanel = new Panel { Dock = DockStyle.Bottom, Height = 246 };
 
         var lblChannel = new LabelControl { Text = "Channel:", Location = new Point(8, 10) };
         this.rgChannel = new DevExpress.XtraEditors.RadioGroup();
@@ -182,7 +239,7 @@ public class dlgFeesContactInteraction : XtraForm
         {
             new(ContactChannel.SMS,      "SMS"),
             new(ContactChannel.Phone,    "Phone"),
-            new(ContactChannel.InPerson, "InPerson"),
+            new(ContactChannel.InPerson, "In person"),
         });
         this.rgChannel.Properties.Columns = 3;
         this.rgChannel.SelectedIndex = 1;    // Phone
@@ -203,18 +260,15 @@ public class dlgFeesContactInteraction : XtraForm
         this.cboOutcome = new ComboBoxEdit();
         this.cboOutcome.Properties.TextEditStyle = DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
         foreach (ContactOutcome o in Enum.GetValues(typeof(ContactOutcome)))
-            this.cboOutcome.Properties.Items.Add(o);
+            this.cboOutcome.Properties.Items.Add(new OutcomeItem(o));
         this.cboOutcome.SelectedIndex = -1;
         this.cboOutcome.Location      = new Point(70, 46);
         this.cboOutcome.Width         = 200;
         this.cboOutcome.SelectedIndexChanged += (s, e) =>
-        {
-            bool promised = cboOutcome.SelectedItem is ContactOutcome o2 && o2 == ContactOutcome.Promised;
-            lblPromiseDate.Visible     = dtePromiseDate.Visible     = promised;
-            lblPromiseAmount.Visible   = txtPromiseAmount.Visible   = promised;
-            _lblPromiseStudent.Visible = _cboPromiseStudent.Visible = promised;
-        };
+            ShowPromiseControls(SelectedOutcome == ContactOutcome.Promised);
 
+        // Promise date/amount editors are kept (hidden) for compatibility; the payment plan
+        // grid below is what the officer fills in.
         this.lblPromiseDate   = new LabelControl { Text = "Promise date:",   Location = new Point(282, 52), Visible = false };
         this.dtePromiseDate   = new DateEdit     { Location = new Point(370, 47), Width = 120, Visible = false };
         this.lblPromiseAmount = new LabelControl { Text = "Promise amount:", Location = new Point(500, 52), Visible = false };
@@ -224,28 +278,91 @@ public class dlgFeesContactInteraction : XtraForm
 
         this._lblPromiseStudent = new LabelControl
         {
-            Text     = "Student:",
-            Location = new System.Drawing.Point(725, 52),
+            Text     = "Promise is for:",
+            Location = new System.Drawing.Point(290, 52),
             Visible  = false,
         };
         this._cboPromiseStudent = new ComboBoxEdit
         {
-            Location = new System.Drawing.Point(786, 47),
-            Width    = 200,
+            Location = new System.Drawing.Point(376, 47),
+            Width    = 240,
             Visible  = false,
         };
         this._cboPromiseStudent.Properties.TextEditStyle =
             DevExpress.XtraEditors.Controls.TextEditStyles.DisableTextEditor;
 
-        this.memoNote = new MemoEdit { Location = new Point(8, 80), Size = new Size(560, 80) };
+        this.memoNote = new MemoEdit { Location = new Point(8, 80), Size = new Size(430, 118) };
+        this.memoNote.Properties.NullValuePrompt = "Notes from the conversation…";
+        this.memoNote.Properties.MaxLength = 500;
 
-        this.btnSave = new SimpleButton { Text = "Save", Location = new Point(8, 168), Width = 80 };
+        // Payment plan: when the parent will pay, and how much each time.
+        this.lblPlan = new LabelControl
+        {
+            Text = "Payment plan — when will they pay, and how much?",
+            Location = new Point(450, 80), Visible = false,
+        };
+        this.lblPlan.Appearance.Font = new Font("Tahoma", 8.25f, FontStyle.Bold);
+        this.gridPlan = new DevExpress.XtraGrid.GridControl
+        {
+            Location = new Point(450, 98), Size = new Size(320, 82), Visible = false, DataSource = _plan,
+        };
+        this.gridViewPlan = new GridView();
+        this.gridPlan.MainView = this.gridViewPlan;
+        this.gridPlan.ViewCollection.Add(this.gridViewPlan);
+        this.gridViewPlan.OptionsView.ShowGroupPanel   = false;
+        this.gridViewPlan.OptionsView.ShowIndicator    = false;
+        this.gridViewPlan.OptionsCustomization.AllowSort   = false;
+        this.gridViewPlan.OptionsCustomization.AllowFilter = false;
+        this.gridViewPlan.OptionsMenu.EnableColumnMenu     = false;
+        var colDue = new DevExpress.XtraGrid.Columns.GridColumn
+            { FieldName = "DueDate", Caption = "Pay by", VisibleIndex = 0, Width = 130 };
+        colDue.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.DateTime;
+        colDue.DisplayFormat.FormatString = "dd-MMM-yyyy";
+        var colAmt = new DevExpress.XtraGrid.Columns.GridColumn
+            { FieldName = "Amount", Caption = "Amount (UGX)", VisibleIndex = 1, Width = 150 };
+        colAmt.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.Numeric;
+        colAmt.DisplayFormat.FormatString = "N0";
+        this.gridViewPlan.Columns.AddRange(new[] { colDue, colAmt });
+        this.gridViewPlan.CellValueChanged += (s, e) => UpdatePlanTotal();
+        this.gridViewPlan.HiddenEditor     += (s, e) => { gridViewPlan.UpdateCurrentRow(); UpdatePlanTotal(); };
+
+        this.btnAddInstalment = new SimpleButton
+            { Text = "+ Add a date", Location = new Point(776, 98), Width = 104, Visible = false };
+        this.btnAddInstalment.Click += (s, e) =>
+        {
+            gridViewPlan.CloseEditor();
+            _plan.Add(new InstalmentRow());
+            UpdatePlanTotal();
+            // Put the cursor straight into the new line's date, ready to type.
+            gridPlan.Focus();
+            gridViewPlan.FocusedRowHandle = _plan.Count - 1;
+            gridViewPlan.FocusedColumn    = gridViewPlan.Columns["DueDate"];
+            gridViewPlan.ShowEditor();
+        };
+        this.btnRemoveInstalment = new SimpleButton
+            { Text = "Remove", Location = new Point(776, 126), Width = 104, Visible = false };
+        this.btnRemoveInstalment.Click += (s, e) =>
+        {
+            gridViewPlan.CloseEditor();
+            if (_plan.Count <= 1) { _plan[0].DueDate = null; _plan[0].Amount = null; gridViewPlan.RefreshData(); }
+            else if (gridViewPlan.GetFocusedRow() is InstalmentRow row) _plan.Remove(row);
+            UpdatePlanTotal();
+        };
+        this.lblPlanTotal = new LabelControl
+        {
+            Location = new Point(450, 184), AutoSizeMode = LabelAutoSizeMode.None,
+            Size = new Size(430, 14), Visible = false,
+        };
+        this.lblPlanTotal.Appearance.ForeColor = Color.DimGray;
+
+        this.btnSave = new SimpleButton { Text = "Save", Location = new Point(8, 208), Width = 80 };
         this.btnSave.Click += BtnSave_Click;
 
-        this.btnSaveNext = new SimpleButton { Text = "Save & Next", Location = new Point(96, 168), Width = 110 };
+        this.btnSaveNext = new SimpleButton { Text = "Save && Next", Location = new Point(96, 208), Width = 110 };
+        this.btnSaveNext.ToolTip = "Save, then open the next family that has not been called today";
         this.btnSaveNext.Click += BtnSaveNext_Click;
 
-        this.btnClear = new SimpleButton { Text = "Clear", Location = new Point(214, 168), Width = 80 };
+        this.btnClear = new SimpleButton { Text = "Clear", Location = new Point(214, 208), Width = 80 };
         this.btnClear.Click += (s, e) => ResetContactForm();
 
         logPanel.Controls.AddRange(new Control[]
@@ -255,7 +372,9 @@ public class dlgFeesContactInteraction : XtraForm
             lblPromiseDate, dtePromiseDate,
             lblPromiseAmount, txtPromiseAmount,
             _lblPromiseStudent, _cboPromiseStudent,
-            memoNote, btnSave, btnSaveNext, btnClear,
+            memoNote,
+            lblPlan, gridPlan, btnAddInstalment, btnRemoveInstalment, lblPlanTotal,
+            btnSave, btnSaveNext, btnClear,
         });
 
         // ── Students grid ─────────────────────────────────────────────────────
@@ -278,6 +397,7 @@ public class dlgFeesContactInteraction : XtraForm
         this.gridViewHistory.OptionsView.ShowGroupPanel = false;
         this.gridViewHistory.OptionsBehavior.Editable   = false;
         this.gridViewHistory.MouseDown += GridViewHistory_MouseDown;
+        this.gridViewHistory.RowStyle  += GridViewHistory_RowStyle;
 
         // ── Assemble ──────────────────────────────────────────────────────────
         this.Controls.Add(this.gridHistory);     // Fill
@@ -312,7 +432,8 @@ public class dlgFeesContactInteraction : XtraForm
         // Navigation buttons
         btnPrev.Enabled = _currentIndex > 0;
         btnNext.Enabled = _currentIndex < _worklist.Count - 1;
-        Text = $"Contact Interaction — {g.GuardianLabel} ({_currentIndex + 1} of {_worklist.Count})";
+        var progress = DailyListLogic.Progress(_worklist);
+        Text = $"Contact Interaction — {g.GuardianLabel}   ({_currentIndex + 1} of {_worklist.Count}  ·  {progress.Worked} worked today)";
 
         // Structured info header
         bool noPhone = g.GuardianContact.StartsWith("NOCONTACT-", StringComparison.Ordinal);
@@ -355,12 +476,40 @@ public class dlgFeesContactInteraction : XtraForm
         _lblTier.Location  = new Point(
             _infoPanel.ClientSize.Width - _lblTier.Width - 12, 56);
 
-        // Student dropdown for promise logging
+        // Today's status badge
+        (string todayText, Color todayBack) = g.TodayStatus switch
+        {
+            TodayStatus.Done  => ("Today: Done",                 Color.ForestGreen),
+            TodayStatus.Tried => ($"Today: {g.TodayStatusText}", Color.FromArgb(180, 140, 0)),
+            _                 => ("Today: Not called",           Color.SlateGray),
+        };
+        _lblToday.Text      = todayText;
+        _lblToday.BackColor = todayBack;
+        _lblToday.ForeColor = Color.White;
+
+        // Promise position
+        string promiseText = g.Promise != null && g.Promise.HasPromise
+            ? "Promise: " + g.Promise.StatusText
+              + (g.Promise.ActivePlans.Sum(p => p.Instalments.Count) > 1
+                    ? $"  ({g.Promise.ActivePlans.Sum(p => p.Instalments.Count)} instalments)" : "")
+            : "No promise this term";
+        _lblPromise.Text      = promiseText;
+        _lblPromise.Location  = new Point(_lblToday.Right + 10, 82);
+        _lblPromise.ForeColor = g.Promise != null && g.Promise.IsBroken ? Color.Firebrick : Color.FromArgb(60, 60, 60);
+
+        // SMS style for this family
+        _loadingRow = true;
+        _cboSmsStyle.SelectedIndex = g.SmsStyle == SmsStyle.PerChild ? 1 : 0;
+        _cboSmsStyle.Enabled       = g.Students.Count > 1;
+        _loadingRow = false;
+
+        // Who the promise is for: the whole family (usual), or one child.
         _cboPromiseStudent.Properties.Items.Clear();
-        foreach (var st in g.Students)
-            _cboPromiseStudent.Properties.Items.Add(st);
-        if (g.Students.Count > 0)
-            _cboPromiseStudent.SelectedIndex = 0;
+        _cboPromiseStudent.Properties.Items.Add(WholeFamily);
+        if (g.Students.Count > 1)
+            foreach (var st in g.Students)
+                _cboPromiseStudent.Properties.Items.Add(st);
+        _cboPromiseStudent.SelectedIndex = 0;
 
         // Students grid
         gridStudents.DataSource = g.Students;
@@ -448,6 +597,12 @@ public class dlgFeesContactInteraction : XtraForm
         if (colGK != null) colGK.Visible = false;
         var colSN = gridViewHistory.Columns["StudentNumber"];
         if (colSN != null) colSN.Visible = false;
+        // The payment plan column replaces the single promise date / amount.
+        foreach (string hidden in new[] { "PromiseScope", "SemesterId", "PromiseDate", "PromiseAmount" })
+        {
+            var hc = gridViewHistory.Columns[hidden];
+            if (hc != null) hc.Visible = false;
+        }
 
         void SetH(string f, string c) { var col = gridViewHistory.Columns[f]; if (col != null) col.Caption = c; }
         SetH("ContactDate",   "Date");
@@ -455,8 +610,8 @@ public class dlgFeesContactInteraction : XtraForm
         SetH("Outcome",       "Outcome");
         SetH("Note",          "Note");
         SetH("LoggedBy",      "Logged By");
-        SetH("PromiseDate",   "Promise Date");
-        SetH("PromiseAmount", "Promise Amt");
+        SetH("PaymentPlan",   "Payment Plan");
+        SetH("Term",          "Term");
 
         // Configure the auto-generated StudentName column (already created by DevExpress from the DataTable)
         var studentCol = gridViewHistory.Columns["StudentName"];
@@ -473,7 +628,11 @@ public class dlgFeesContactInteraction : XtraForm
         {
             if (e.Column.FieldName == "StudentName"
                 && (e.Value == null || e.Value == DBNull.Value || string.IsNullOrEmpty(e.Value.ToString())))
-                e.DisplayText = "All";
+                e.DisplayText = "Whole family";
+            else if (e.Column.FieldName == "Outcome" && Enum.TryParse(e.Value?.ToString(), out ContactOutcome oc))
+                e.DisplayText = OutcomeText(oc, gridViewHistory.GetListSourceRowCellValue(e.ListSourceRowIndex, "Channel")?.ToString());
+            else if (e.Column.FieldName == "Channel" && e.Value?.ToString() == "InPerson")
+                e.DisplayText = "In person";
         };
 
         var colAmt = gridViewHistory.Columns["PromiseAmount"];
@@ -483,10 +642,103 @@ public class dlgFeesContactInteraction : XtraForm
             colAmt.DisplayFormat.FormatString = "N0";
         }
 
-        gridViewHistory.BestFitColumns();
-        var noteCol = gridViewHistory.Columns["Note"];
-        if (noteCol != null) noteCol.Width = Math.Min(noteCol.Width, 200);
-        if (studentCol.Width < 150) studentCol.Width = 150;
+        // Fixed, readable widths: best-fit squeezed the date and outcome to a few characters.
+        void Width(string f, int w) { var c = gridViewHistory.Columns[f]; if (c != null) c.Width = w; }
+        var dateCol = gridViewHistory.Columns["ContactDate"];
+        if (dateCol != null)
+        {
+            dateCol.DisplayFormat.FormatType   = DevExpress.Utils.FormatType.DateTime;
+            dateCol.DisplayFormat.FormatString = "dd-MMM-yy";
+        }
+        Width("ContactDate", 80);
+        Width("Channel",     70);
+        Width("Outcome",     120);
+        Width("StudentName", 130);
+        Width("Note",        230);
+        Width("LoggedBy",    100);
+        Width("PaymentPlan", 190);
+        Width("Term",        90);
+    }
+
+    // Interactions from earlier terms are history only: shown greyed.
+    private void GridViewHistory_RowStyle(object sender, RowStyleEventArgs e)
+    {
+        var row = gridViewHistory.GetDataRow(e.RowHandle);
+        if (row == null) return;
+        string sem = row["SemesterId"] as string;
+        if (!string.Equals(sem, _service.GetWorkingSemester(), StringComparison.OrdinalIgnoreCase))
+            e.Appearance.ForeColor = Color.Gray;
+    }
+
+    /// <summary>Outcome as shown to users; a sent SMS reads "SMS sent" rather than "Spoke to parent".</summary>
+    internal static string OutcomeText(ContactOutcome o, string channel)
+        => o == ContactOutcome.Contacted && channel == "SMS" ? "SMS sent" : OutcomeText(o);
+
+    internal static string OutcomeText(ContactOutcome o) => o switch
+    {
+        ContactOutcome.Contacted          => "Spoke to parent",
+        ContactOutcome.NoAnswer           => "No answer",
+        ContactOutcome.ContactUnavailable => "Number unavailable",
+        ContactOutcome.ContactOff         => "Phone off",
+        ContactOutcome.Promised           => "Promised to pay",
+        ContactOutcome.Refused            => "Refused",
+        _                                 => o.ToString(),
+    };
+
+    private sealed class OutcomeItem
+    {
+        public ContactOutcome Value { get; }
+        public OutcomeItem(ContactOutcome value) { Value = value; }
+        public override string ToString() => OutcomeText(Value);
+    }
+
+    private ContactOutcome? SelectedOutcome => (cboOutcome.SelectedItem as OutcomeItem)?.Value;
+
+    private void SelectOutcome(ContactOutcome outcome)
+    {
+        foreach (object item in cboOutcome.Properties.Items)
+            if (item is OutcomeItem oi && oi.Value == outcome) { cboOutcome.SelectedItem = item; return; }
+    }
+
+    private void ShowPromiseControls(bool promised)
+    {
+        _lblPromiseStudent.Visible = _cboPromiseStudent.Visible = promised;
+        lblPlan.Visible = gridPlan.Visible = lblPlanTotal.Visible = promised;
+        btnAddInstalment.Visible = btnRemoveInstalment.Visible = promised;
+        if (promised && _plan.Count == 0) _plan.Add(new InstalmentRow());
+        if (promised) UpdatePlanTotal();
+    }
+
+    private void UpdatePlanTotal()
+    {
+        var dated = _plan.Where(r => r.DueDate.HasValue).ToList();
+        decimal total = dated.Sum(r => r.Amount ?? 0m);
+        decimal balance = Current.TotalBalance;
+        if (dated.Count == 0)
+            lblPlanTotal.Text = "Leave the amount empty if they promised to clear the whole balance.";
+        else if (dated.Count == 1 && !(dated[0].Amount > 0m))
+            lblPlanTotal.Text = $"Promise to clear the balance (UGX {balance:N0}) by {dated[0].DueDate:dd-MMM}.";
+        else
+            lblPlanTotal.Text = $"Plan total UGX {total:N0} of UGX {balance:N0} owed"
+                + (total < balance ? $"   ·   UGX {balance - total:N0} not covered" : "");
+    }
+
+    private void CboSmsStyle_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        if (_loadingRow) return;
+        var style = _cboSmsStyle.SelectedIndex == 1 ? SmsStyle.PerChild : SmsStyle.FamilyTotal;
+        if (style == Current.SmsStyle && Current.SmsStyleIsOwn) return;
+        try
+        {
+            _service.SetGuardianSmsStyle(Current.GuardianContact, style, CurrentUser.GetSystemUser());
+            Current.SmsStyle      = style;
+            Current.SmsStyleIsOwn = true;
+        }
+        catch (Exception ex)
+        {
+            XtraMessageBox.Show($"Could not save the SMS choice for this family.\n\n{ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Hand);
+        }
     }
 
     private void GridViewStudents_CustomColumnDisplayText(object sender,
@@ -542,15 +794,44 @@ public class dlgFeesContactInteraction : XtraForm
             dteContactDate.EditValue = cd;
         if (Enum.TryParse(row["Channel"]?.ToString(), out ContactChannel ch))
             rgChannel.EditValue = ch;
-        if (Enum.TryParse(row["Outcome"]?.ToString(), out ContactOutcome oc))
+        ContactOutcome oc = default;
+        if (Enum.TryParse(row["Outcome"]?.ToString(), out oc))
         {
-            cboOutcome.SelectedItem = oc;
+            SelectOutcome(oc);
         }
         memoNote.Text = row["Note"]?.ToString() ?? "";
-        if (row["PromiseDate"] != DBNull.Value && DateTime.TryParse(row["PromiseDate"]?.ToString(), out DateTime pd))
-            dtePromiseDate.EditValue = pd;
-        if (row["PromiseAmount"] != DBNull.Value && decimal.TryParse(row["PromiseAmount"]?.ToString(), out decimal pa))
-            txtPromiseAmount.Value = pa;
+
+        // Payment plan: stored instalments, or the single promise on rows logged before plans existed.
+        _plan.Clear();
+        try
+        {
+            foreach (var inst in _service.GetInstalments(contactId))
+                _plan.Add(new InstalmentRow { DueDate = inst.DueDate, Amount = inst.Amount });
+        }
+        catch (Exception ex)
+        {
+            XtraMessageBox.Show($"Could not load the payment plan for this entry.\n\n{ex.Message}", "Error",
+                MessageBoxButtons.OK, MessageBoxIcon.Hand);
+        }
+        if (_plan.Count == 0 && row["PromiseDate"] != DBNull.Value)
+            _plan.Add(new InstalmentRow
+            {
+                DueDate = Convert.ToDateTime(row["PromiseDate"]),
+                Amount  = row["PromiseAmount"] == DBNull.Value ? (decimal?)null : Convert.ToDecimal(row["PromiseAmount"]),
+            });
+        if (_plan.Count == 0) _plan.Add(new InstalmentRow());
+
+        // Who the promise was for.
+        _cboPromiseStudent.SelectedIndex = 0;
+        if (string.Equals(row["PromiseScope"] as string, "Student", StringComparison.OrdinalIgnoreCase))
+        {
+            string sn = row["StudentNumber"]?.ToString() ?? "";
+            for (int i = 1; i < _cboPromiseStudent.Properties.Items.Count; i++)
+                if (_cboPromiseStudent.Properties.Items[i] is StudentSummary st
+                    && string.Equals(st.StudentNumber, sn, StringComparison.OrdinalIgnoreCase))
+                    _cboPromiseStudent.SelectedIndex = i;
+        }
+        ShowPromiseControls(oc == ContactOutcome.Promised && cboOutcome.SelectedItem != null);
 
         btnSave.Text = "Update";
     }
@@ -565,8 +846,8 @@ public class dlgFeesContactInteraction : XtraForm
         try
         {
             _service.DeleteContact(contactId);
-            var nums = Current.Students.Select(s => s.StudentNumber);
-            gridHistory.DataSource = _service.GetGuardianContactHistory(Current.GuardianContact, nums);
+            RefreshCurrentRow();
+            LoadCurrent();
         }
         catch (Exception ex)
         {
@@ -580,14 +861,13 @@ public class dlgFeesContactInteraction : XtraForm
     {
         _editContactId           = -1;
         dteContactDate.EditValue = DateTime.Today;
+        rgChannel.EditValueChanged -= RgChannel_EditValueChanged;   // resetting must not open the SMS window
         rgChannel.SelectedIndex  = 1;   // Phone
+        rgChannel.EditValueChanged += RgChannel_EditValueChanged;
         cboOutcome.SelectedIndex = -1;
         memoNote.Text            = "";
-        dtePromiseDate.EditValue = null;
-        txtPromiseAmount.Value   = 0;
-        lblPromiseDate.Visible     = dtePromiseDate.Visible     = false;
-        lblPromiseAmount.Visible   = txtPromiseAmount.Visible   = false;
-        _lblPromiseStudent.Visible = _cboPromiseStudent.Visible = false;
+        _plan.Clear();
+        ShowPromiseControls(false);
         if (_cboPromiseStudent.Properties.Items.Count > 0)
             _cboPromiseStudent.SelectedIndex = 0;
         btnSave.Text             = "Save";
@@ -595,6 +875,9 @@ public class dlgFeesContactInteraction : XtraForm
 
     private bool TrySaveContact()
     {
+        gridViewPlan.CloseEditor();
+        gridViewPlan.UpdateCurrentRow();
+
         if (dteContactDate.DateTime.Date > DateTime.Today)
         {
             XtraMessageBox.Show("Contact date cannot be in the future.", "Validation",
@@ -603,79 +886,96 @@ public class dlgFeesContactInteraction : XtraForm
         }
         if (cboOutcome.SelectedItem == null)
         {
-            XtraMessageBox.Show("Please select a contact outcome before saving.", "Validation",
+            XtraMessageBox.Show("Please choose what happened (the outcome) before saving.", "Validation",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }
 
         var channel = (ContactChannel)rgChannel.EditValue;
-        var outcome = (ContactOutcome)cboOutcome.SelectedItem;
+        var outcome = SelectedOutcome.Value;
 
-        if (outcome == ContactOutcome.Promised && dtePromiseDate.EditValue == null)
+        // Payment plan (only for a promise). Rows left completely empty are ignored.
+        List<PromiseInstalment> instalments = null;
+        string promiseStudentNumber = null;
+        if (outcome == ContactOutcome.Promised)
         {
-            XtraMessageBox.Show("Please set a promise date when outcome is 'Promised'.", "Validation",
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            return false;
+            if (_plan.Any(r => !r.DueDate.HasValue && r.Amount > 0m))
+            {
+                XtraMessageBox.Show("One line of the payment plan has an amount but no date.", "Validation",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            instalments = _plan.Where(r => r.DueDate.HasValue)
+                .Select(r => new PromiseInstalment
+                {
+                    DueDate = r.DueDate.Value.Date,
+                    Amount  = r.Amount > 0m ? r.Amount : null,
+                }).ToList();
+            // Dates are checked against the day of the conversation, so an old entry can be corrected.
+            if (!PromiseEvaluator.ValidateInstalments(instalments, dteContactDate.DateTime.Date, out string problem))
+            {
+                XtraMessageBox.Show(problem, "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            if (_cboPromiseStudent.SelectedItem is StudentSummary oneChild)
+                promiseStudentNumber = oneChild.StudentNumber;
         }
 
         var entry = new FeesContactLog
         {
-            ContactDate   = dteContactDate.DateTime,
+            // Keep the time of day for entries made today so same-day entries stay in order.
+            ContactDate   = dteContactDate.DateTime.Date == DateTime.Today ? DateTime.Now : dteContactDate.DateTime.Date,
             LoggedBy      = CurrentUser.GetSystemUser(),
             Channel       = channel,
             Outcome       = outcome,
-            Note          = string.IsNullOrWhiteSpace(memoNote.Text) ? null : memoNote.Text,
-            PromiseDate   = outcome == ContactOutcome.Promised
-                            ? dtePromiseDate.DateTime.Date : (DateTime?)null,
-            PromiseAmount = outcome == ContactOutcome.Promised && txtPromiseAmount.Value > 0
-                            ? (decimal?)txtPromiseAmount.Value : null,
+            Note          = string.IsNullOrWhiteSpace(memoNote.Text) ? null : memoNote.Text.Trim(),
+            StudentNumber = promiseStudentNumber,   // blank = whole family
         };
 
         try
         {
-            if (outcome == ContactOutcome.Promised)
+            if (_editContactId >= 0)
             {
-                var selectedStudent = _cboPromiseStudent.SelectedItem as StudentSummary;
-                if (selectedStudent == null)
-                {
-                    XtraMessageBox.Show("Please select a student for this promise.", "Validation",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return false;
-                }
-                entry.StudentNumber = selectedStudent.StudentNumber;
-                if (_editContactId >= 0)
-                {
-                    entry.ContactId = _editContactId;
-                    _service.UpdateContact(entry);
-                }
-                else
-                {
-                    _service.LogGuardianContact(Current.GuardianContact, entry);
-                }
+                entry.ContactId = _editContactId;
+                _service.UpdateContact(entry, instalments);
             }
             else
             {
-                entry.StudentNumber = null;
-                if (_editContactId >= 0)
-                {
-                    entry.ContactId = _editContactId;
-                    _service.UpdateContact(entry);
-                }
-                else
-                {
-                    _service.LogGuardianContact(Current.GuardianContact, entry);
-                }
+                _service.LogGuardianContact(Current.GuardianContact, entry, instalments);
             }
 
-            var nums = Current.Students.Select(s => s.StudentNumber);
-            gridHistory.DataSource = _service.GetGuardianContactHistory(Current.GuardianContact, nums);
-            ResetContactForm();
+            RefreshCurrentRow();
+            LoadCurrent();
             return true;
         }
         catch (Exception ex)
         {
             XtraMessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Hand);
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Re-read the family on screen after a change so its balance, promise, priority and
+    /// "today" status are current. Falls back to the rows already loaded if the reload fails.
+    /// </summary>
+    private void RefreshCurrentRow()
+    {
+        string key = Current.GuardianContact;
+        Cursor = Cursors.WaitCursor;
+        try
+        {
+            var fresh = _reloadRows().FirstOrDefault(r => r.GuardianContact == key);
+            if (fresh != null) _worklist[_currentIndex] = fresh;
+        }
+        catch (Exception ex)
+        {
+            XtraMessageBox.Show($"The entry was saved, but this family could not be refreshed.\n\n{ex.Message}",
+                "Fees Follow-up", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            Cursor = Cursors.Default;
         }
     }
 
@@ -698,16 +998,13 @@ public class dlgFeesContactInteraction : XtraForm
         using var smsForm = new dlgTemplatedSms
         {
             RecipientPhone = phone,
-            Students       = Current.Students,
-            PromiseDate    = Current.LatestPromiseDate,
-            PromisedAmount = Current.LatestPromiseAmount ?? 0m,
-            GuardianKey    = Current.GuardianContact,
+            Guardian       = Current,
         };
         if (smsForm.ShowDialog(this) == DialogResult.OK)
         {
-            int idx = cboOutcome.Properties.Items.IndexOf(ContactOutcome.Contacted);
-            if (idx >= 0) cboOutcome.SelectedIndex = idx;
-            memoNote.Text = smsForm.SentSummary;
+            SelectOutcome(ContactOutcome.Contacted);
+            string summary = smsForm.SentSummary ?? "SMS sent";
+            memoNote.Text = summary.Length > 500 ? summary.Substring(0, 500) : summary;
             TrySaveContact();
         }
         else
@@ -724,9 +1021,15 @@ public class dlgFeesContactInteraction : XtraForm
     private void BtnSaveNext_Click(object sender, EventArgs e)
     {
         if (!TrySaveContact()) return;
-        if (_currentIndex < _worklist.Count - 1)
-            LoadGuardian(_currentIndex + 1);
-        else
-            this.DialogResult = DialogResult.OK;
+        // Go to the next family nobody has called today (then ones to try again), not just the next row.
+        int next = DailyListLogic.NextToWork(_worklist, _currentIndex);
+        if (next >= 0)
+        {
+            LoadGuardian(next);
+            return;
+        }
+        XtraMessageBox.Show("Every family on this list has been worked today.", "Fees Follow-up",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
+        this.DialogResult = DialogResult.OK;
     }
 }

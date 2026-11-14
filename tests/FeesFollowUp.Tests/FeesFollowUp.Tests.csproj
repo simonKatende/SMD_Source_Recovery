@@ -28,6 +28,10 @@
     <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\FeesContactLog.cs"       Link="Models\FeesContactLog.cs" />
     <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\FeesUrgency.cs"  Link="Logic\FeesUrgency.cs" />
     <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\SmsReminderLogic.cs" Link="Logic\SmsReminderLogic.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.Models\FeesPromise.cs"               Link="Models\FeesPromise.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\PromiseEvaluator.cs" Link="Logic\PromiseEvaluator.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\FamilySms.cs"        Link="Logic\FamilySms.cs" />
+    <Compile Include="..\..\decompiled\IXtreme\I_Xtreme.ExtremeClasses\FeesWorkflow.cs"     Link="Logic\FeesWorkflow.cs" />
   </ItemGroup>
 
 </Project>

@@ -43,6 +43,13 @@ public class FeesFollowUpSettings
     // Send Reminder improvements (2026-06-08).
     public int    GeneralReminderCooldownDays { get; set; } = 7;     // min days between balance reminders to a guardian
     public string SmsTemplateGeneral          { get; set; } = "";    // balance-reminder template (falls back to DefaultGeneral)
+
+    // CRM overhaul (2026-11-11).
+    public string   WorkingSemester      { get; set; } = "";     // the application's active term (read-only here)
+    public bool     TermDatesNeedSetting { get; set; }           // true when no dates are stored for WorkingSemester
+    public SmsStyle DefaultSmsStyle      { get; set; } = SmsStyle.FamilyTotal;
+    public bool     AutoRemindersEnabled { get; set; }           // send promise reminders automatically once a day
+    public string   AutoReminderTime     { get; set; } = "09:00"; // HH:mm, 24-hour
 }
 
 public class SmsReminderResult
@@ -83,9 +90,14 @@ public class GuardianWorklistRow
     public string GuardianLabel =>
         !string.IsNullOrWhiteSpace(GuardianName)
             ? $"{GuardianName} ({GuardianRelation})"
-            : !string.IsNullOrWhiteSpace(GuardianRelation)
-                ? $"{GuardianContact} ({GuardianRelation})"
-                : GuardianContact;
+            : IsUnreachable
+                ? "(no guardian details)"
+                : !string.IsNullOrWhiteSpace(GuardianRelation)
+                    ? $"{GuardianContact} ({GuardianRelation})"
+                    : GuardianContact;
+
+    /// <summary>The phone number to show: blank when the family has none (the key is then a placeholder).</summary>
+    public string PhoneDisplay => IsUnreachable ? "" : GuardianContact;
 
     public List<StudentSummary> Students          { get; set; } = new();
     public int   StudentCount   => Students.Count;
@@ -113,6 +125,23 @@ public class GuardianWorklistRow
 
     // Folded into the main query (Task 1) to avoid per-guardian round-trips.
     public bool ContactedToday { get; set; }   // any 'Contacted'/'Promised'/'Refused' log today
+    public int  AttemptsToday  { get; set; }   // every interaction logged today, reached or not
+
+    public TodayStatus TodayStatus =>
+        ContactedToday ? TodayStatus.Done : AttemptsToday > 0 ? TodayStatus.Tried : TodayStatus.NotCalled;
+    public string TodayStatusText =>
+        TodayStatus == TodayStatus.Done ? "Done"
+        : TodayStatus == TodayStatus.Tried ? (AttemptsToday > 1 ? $"Tried x{AttemptsToday}" : "Tried")
+        : "Not called";
+
+    // Evaluated promises / payment plan for this term (set by the service; null in older callers).
+    public PromiseState Promise { get; set; }
+    public string PromiseStatusText => Promise?.StatusText ?? "";
+    public bool   PromiseDueToday   { get; set; }
+
+    // How this family wants fee SMS (family total or one per child).
+    public SmsStyle SmsStyle       { get; set; } = SmsStyle.FamilyTotal;
+    public bool     SmsStyleIsOwn  { get; set; }   // false = using the school default
     public bool CallRequired   { get; set; }   // any Overdue SMS sent (tbl_SmsReminderLog)
 
     // Reminder activity this term (folded in by GetGuardianWorklist; read-only display).
@@ -206,6 +235,69 @@ public class DashboardData
     public List<PriorityGroupStats>  ByPriority   { get; set; } = new List<PriorityGroupStats>();
     public List<GuardianWorklistRow> TopByBalance { get; set; } = new List<GuardianWorklistRow>();
     public DateTime AsOf { get; set; } = DateTime.Now;
+
+    // CRM overhaul (2026-11-11).
+    public string  TermName             { get; set; } = "";
+    public bool    TermDatesNeedSetting { get; set; }
+    public int     DailyListTried       { get; set; }
+    public List<ClassCollectionRow>  ByClass       { get; set; } = new List<ClassCollectionRow>();
+    public List<WeeklyCollectionRow> WeeklyTrend   { get; set; } = new List<WeeklyCollectionRow>();
+    public PromisePipeline           Promises      { get; set; } = new PromisePipeline();
+    public List<OfficerActivityRow>  TeamActivity  { get; set; } = new List<OfficerActivityRow>();
+    public int     RemindersSentToday    { get; set; }
+    public int     RemindersSentThisWeek { get; set; }
+    public DateTime? LastAutoReminderRun { get; set; }
+    public bool    AutoRemindersEnabled  { get; set; }
+    public string  AutoReminderTime      { get; set; } = "09:00";
+}
+
+public class ClassCollectionRow
+{
+    public string  ClassId     { get; set; }
+    public int     Students    { get; set; }
+    public decimal Billed      { get; set; }
+    public decimal Paid        { get; set; }
+    public decimal Outstanding { get; set; }
+    public int     Cleared     { get; set; }
+    public int     ZeroPaid    { get; set; }
+    public double  PercentPaid => Billed > 0m ? (double)(Paid / Billed) * 100.0 : 0.0;
+}
+
+public class WeeklyCollectionRow
+{
+    public int      Week          { get; set; }
+    public DateTime WeekStarting  { get; set; }
+    public decimal  Collected     { get; set; }
+    public double   CumulativePct { get; set; }
+    public double   RequiredPct   { get; set; }
+    public double   GapPct        => CumulativePct - RequiredPct;   // negative = behind the line
+}
+
+public class PromisePipeline
+{
+    public int     FamiliesWithPromise { get; set; }
+    public int     DueTodayCount     { get; set; }
+    public decimal DueTodayAmount    { get; set; }
+    public int     DueThisWeekCount  { get; set; }
+    public decimal DueThisWeekAmount { get; set; }
+    public int     PendingCount      { get; set; }
+    public decimal PendingAmount     { get; set; }
+    public int     KeptCount         { get; set; }
+    public decimal KeptAmount        { get; set; }
+    public int     MissedCount       { get; set; }
+    public decimal MissedAmount      { get; set; }
+    /// <summary>Of promises whose date has passed, the share that was kept (0 when none have fallen due).</summary>
+    public double  KeptRatePercent   => KeptCount + MissedCount == 0 ? 0.0 : KeptCount * 100.0 / (KeptCount + MissedCount);
+}
+
+public class OfficerActivityRow
+{
+    public string  Officer          { get; set; }
+    public int     ContactsToday    { get; set; }
+    public int     ContactsThisWeek { get; set; }
+    public int     ReachedThisWeek  { get; set; }
+    public int     PromisesThisWeek { get; set; }
+    public decimal PromisedThisWeek { get; set; }
 }
 
 public class ReminderItem
@@ -219,7 +311,13 @@ public class ReminderItem
     public decimal  PromisedAmount  { get; set; }
     public decimal  Balance         { get; set; }
     public string   ReminderType    { get; set; }   // "3DayBefore" | "DayOf" | "Overdue"
-    public string   Message         { get; set; }   // pre-rendered SMS text
+    public string   Message         { get; set; }   // pre-rendered SMS text (all messages, for display)
+
+    // The exact SMS to send: one for a family-total guardian, one per child otherwise.
+    public List<string> Messages { get; set; } = new List<string>();
+    public int SmsCount => Messages != null && Messages.Count > 0 ? Messages.Count : 1;
+    // The children this reminder is about (drives per-child messages).
+    public List<StudentSummary> ScopeStudents { get; set; } = new List<StudentSummary>();
 
     // Per-student rows underlying a consolidated promise reminder (empty for General).
     public List<ReminderComponent> Components { get; set; } = new List<ReminderComponent>();
